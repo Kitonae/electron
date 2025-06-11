@@ -1,7 +1,16 @@
-const nmap = require('node-nmap');
 const dgram = require('dgram');
 const fs = require('fs').promises;
 const path = require('path');
+const { exec } = require('child_process');
+
+// Try to load node-nmap, fall back gracefully if not available
+let nmap;
+try {
+  nmap = require('node-nmap');
+} catch (error) {
+  console.log('node-nmap package not available - nmap scanning disabled');
+  nmap = null;
+}
 
 // Try to load bonjour-service, fall back gracefully if not available
 let bonjour;
@@ -120,12 +129,20 @@ class WatchoutAssistant {
     // Clear current scan results but keep cache
     this.servers.clear();
     this.lastScanTime = new Date().toISOString();
-    
-    const discoveryMethods = [
-      this.scanNetworkPorts(),
-      this.listenForMulticast(),
-      this.bonjourDiscovery()
-    ];    try {
+      const discoveryMethods = [
+      this.scanNetworkPorts().catch(err => {
+        console.log('Port scanning skipped:', err?.message || 'Nmap not available');
+        return [];
+      }),
+      this.listenForMulticast().catch(err => {
+        console.warn('Multicast scan failed:', err?.message || 'Unknown multicast error');
+        return [];
+      }),
+      this.bonjourDiscovery().catch(err => {
+        console.warn('Bonjour scan failed:', err?.message || 'Bonjour service not available');
+        return [];
+      })
+    ];try {
       await Promise.allSettled(discoveryMethods);
         // Process cached servers and mark offline ones
       this.processCachedServers();
@@ -139,14 +156,28 @@ class WatchoutAssistant {
       
       console.log(`Discovery complete: ${onlineServers.length} online, ${offlineServers.length} offline (cached)`);
       
-      return totalServers;
-    } catch (error) {
-      console.error('Error during server discovery:', error);
+      return totalServers;    } catch (error) {
+      console.error('Error during server discovery:', error?.message || 'Unknown discovery error');
       throw error;
     }
-  }async scanNetworkPorts() {
-    return new Promise((resolve) => {
-      // Check if nmap is available
+  }  async scanNetworkPorts() {
+    return new Promise(async (resolve) => {
+      // Check if nmap package is available
+      if (!nmap) {
+        console.log('Nmap package not installed - skipping port scan');
+        resolve();
+        return;
+      }
+
+      // Check if nmap executable is available
+      const nmapAvailable = await this.checkNmapAvailability();
+      if (!nmapAvailable) {
+        console.log('Nmap executable not found - skipping port scan');
+        console.log('Note: Install nmap from https://nmap.org/download.html for enhanced server discovery');
+        resolve();
+        return;
+      }
+
       try {
         // Get local network range (simplified - assumes 192.168.x.x)
         const networkRange = '192.168.1.1-254';
@@ -188,19 +219,21 @@ class WatchoutAssistant {
         });
 
         nmapScan.on('error', (error) => {
-          console.warn('Nmap scan failed:', error.message);
-          console.log('Note: Install nmap for port scanning functionality');
+          const errorMsg = error?.message || error?.toString() || 'Unknown nmap error';
+          console.warn('Nmap scan failed:', errorMsg);
+          console.log('Note: Install nmap for enhanced port scanning functionality');
           resolve(); // Don't reject, just continue with other methods
         });
 
         nmapScan.startScan();
       } catch (error) {
-        console.warn('Nmap not available:', error.message);
-        console.log('Port scanning will be skipped. Install nmap for this functionality.');
+        const errorMsg = error?.message || error?.toString() || 'Unknown error initializing nmap';
+        console.log('Nmap scan skipped:', errorMsg);
+        console.log('Note: Install nmap from https://nmap.org/download.html for enhanced server discovery');
         resolve();
       }
     });
-  }  async listenForMulticast() {
+  }async listenForMulticast() {
     return new Promise((resolve) => {
       const socket = dgram.createSocket('udp4');
 
@@ -450,35 +483,50 @@ class WatchoutAssistant {
     // Check all cached servers
     for (const [key, cachedServer] of this.serverCache.entries()) {
       if (!currentServerKeys.has(key)) {
-        // Server not found in current scan - increment missed scan count
-        const currentMissedCount = this.missedScans.get(key) || 0;
-        const newMissedCount = currentMissedCount + 1;
-        this.missedScans.set(key, newMissedCount);
-          if (newMissedCount >= 10) {
-          // Mark as offline only after 10 consecutive missed scans
-          const offlineServer = {
-            ...cachedServer,
-            status: 'offline',
-            lastSeenAt: cachedServer.lastSeenAt,
-            offlineSince: this.lastScanTime,
-            type: cachedServer.type + ' (Offline)'
-          };
-          
-          // Add offline server to current results
-          this.servers.set(key, offlineServer);
-          console.log(`Server marked offline after ${newMissedCount} missed scans:`, offlineServer.hostRef || offlineServer.ip);
-        } else {
-          // Keep server as online but track missed scans
-          const onlineServer = {
+        // Check if this is a manual server - manual servers are always online
+        if (cachedServer.isManual) {
+          // Manual servers always stay online and skip availability checks
+          const manualServer = {
             ...cachedServer,
             status: 'online',
-            lastSeenAt: cachedServer.lastSeenAt,
+            lastSeenAt: currentTime, // Update last seen time for manual servers
             type: cachedServer.type
           };
           
-          // Add server to current results (still online)
-          this.servers.set(key, onlineServer);
-          console.log(`Server missed ${newMissedCount}/10 scans, keeping online:`, onlineServer.hostRef || onlineServer.ip);
+          // Add manual server to current results (always online)
+          this.servers.set(key, manualServer);
+          console.log(`Manual server kept online (skips discovery):`, manualServer.hostname || manualServer.ip);
+        } else {
+          // Regular discovered servers - increment missed scan count
+          const currentMissedCount = this.missedScans.get(key) || 0;
+          const newMissedCount = currentMissedCount + 1;
+          this.missedScans.set(key, newMissedCount);
+            if (newMissedCount >= 10) {
+            // Mark as offline only after 10 consecutive missed scans
+            const offlineServer = {
+              ...cachedServer,
+              status: 'offline',
+              lastSeenAt: cachedServer.lastSeenAt,
+              offlineSince: this.lastScanTime,
+              type: cachedServer.type + ' (Offline)'
+            };
+            
+            // Add offline server to current results
+            this.servers.set(key, offlineServer);
+            console.log(`Server marked offline after ${newMissedCount} missed scans:`, offlineServer.hostRef || offlineServer.ip);
+          } else {
+            // Keep server as online but track missed scans
+            const onlineServer = {
+              ...cachedServer,
+              status: 'online',
+              lastSeenAt: cachedServer.lastSeenAt,
+              type: cachedServer.type
+            };
+            
+            // Add server to current results (still online)
+            this.servers.set(key, onlineServer);
+            console.log(`Server missed ${newMissedCount}/10 scans, keeping online:`, onlineServer.hostRef || onlineServer.ip);
+          }
         }
       }
     }
@@ -524,11 +572,155 @@ class WatchoutAssistant {
       return { success: false, error: error.message };
     }
   }
+
+  /**
+   * Check if nmap is available on the system
+   * @returns {Promise<boolean>}
+   */
+  async checkNmapAvailability() {
+    return new Promise((resolve) => {
+      exec('nmap --version', (error) => {
+        resolve(!error);
+      });
+    });
+  }
+
+  /**
+   * Add a manual server to the cache
+   * Manual servers are always considered online and skip availability checks
+   * @param {Object} serverData - The server data to add
+   * @returns {Promise<Object>} - Result object with success status
+   */
+  async addManualServer(serverData) {
+    try {
+      // Validate required fields
+      if (!serverData.ip || !serverData.ports || !Array.isArray(serverData.ports)) {
+        return { success: false, error: 'Invalid server data: IP and ports are required' };
+      }
+
+      // Create server entry
+      const manualServer = {
+        ...serverData,
+        discoveryMethod: 'manual',
+        status: 'online', // Manual servers are always online
+        isManual: true,
+        discoveredAt: new Date().toISOString(),
+        lastSeenAt: new Date().toISOString(),
+        firstDiscoveredAt: serverData.firstDiscoveredAt || new Date().toISOString()
+      };
+
+      const key = this.getServerId(manualServer);
+      
+      // Add to cache
+      this.serverCache.set(key, manualServer);
+      
+      // Also add to current scan results if we're running
+      this.servers.set(key, manualServer);
+      
+      // Clear missed scan count for this server
+      this.missedScans.delete(key);
+      
+      // Save to cache file
+      await this.saveCacheToFile();
+      
+      console.log('Manual server added to cache:', manualServer);
+      
+      return { success: true, server: manualServer };
+    } catch (error) {
+      console.error('Error adding manual server:', error);      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Update a manual server in the cache
+   * @param {string} serverId - The unique identifier for the server
+   * @param {Object} serverData - The updated server data
+   * @returns {Promise<Object>} - Result object with success status
+   */
+  async updateManualServer(serverId, serverData) {
+    try {
+      // Check if server exists and is manual
+      const existingServer = this.serverCache.get(serverId);
+      if (!existingServer || !existingServer.isManual) {
+        return { success: false, error: 'Manual server not found or not a manual server' };
+      }
+
+      // Validate required fields
+      if (!serverData.ip || !serverData.ports || !Array.isArray(serverData.ports)) {
+        return { success: false, error: 'Invalid server data: IP and ports are required' };
+      }
+
+      // Update server entry
+      const updatedServer = {
+        ...existingServer,
+        ...serverData,
+        discoveryMethod: 'manual',
+        status: 'online', // Manual servers are always online
+        isManual: true,
+        lastSeenAt: new Date().toISOString()
+      };
+
+      // Update in cache
+      this.serverCache.set(serverId, updatedServer);
+      
+      // Also update in current scan results if present
+      if (this.servers.has(serverId)) {
+        this.servers.set(serverId, updatedServer);
+      }
+      
+      // Save to cache file
+      await this.saveCacheToFile();
+      
+      console.log('Manual server updated in cache:', updatedServer);
+      
+      return { success: true, server: updatedServer };
+    } catch (error) {
+      console.error('Error updating manual server:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Remove a manual server from the cache
+   * @param {string} serverId - The unique identifier for the server
+   * @returns {Promise<Object>} - Result object with success status
+   */
+  async removeManualServer(serverId) {
+    try {
+      // Check if server exists and is manual
+      const existingServer = this.serverCache.get(serverId);
+      if (!existingServer || !existingServer.isManual) {
+        return { success: false, error: 'Manual server not found or not a manual server' };
+      }
+
+      // Remove from cache
+      this.serverCache.delete(serverId);
+      
+      // Also remove from current scan results if present
+      this.servers.delete(serverId);
+      
+      // Clear missed scan count for this server
+      this.missedScans.delete(serverId);
+      
+      // Save to cache file
+      await this.saveCacheToFile();
+      
+      console.log('Manual server removed from cache:', existingServer.hostname || existingServer.ip);
+      
+      return { success: true, server: existingServer };
+    } catch (error) {
+      console.error('Error removing manual server:', error);
+      return { success: false, error: error.message };
+    }
+  }
 }
 
 const finder = new WatchoutAssistant();
 
 module.exports = {
   findWatchoutServers: () => finder.findWatchoutServers(),
-  clearOfflineServers: () => finder.clearOfflineServers()
+  clearOfflineServers: () => finder.clearOfflineServers(),
+  addManualServer: (serverData) => finder.addManualServer(serverData),
+  updateManualServer: (serverId, serverData) => finder.updateManualServer(serverId, serverData),
+  removeManualServer: (serverId) => finder.removeManualServer(serverId)
 };

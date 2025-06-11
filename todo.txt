@@ -49,4 +49,23 @@
 
 ✓ change the sidebar divider to a line
 
-- remove settings from web version
+✓ remove settings from web version
+
+✓ remove test button for modal
+
+✓ add nmap detection and fallback methods
+
+✓ add manual way of adding servers as a fallback for discovery (assume that manually added servers are always online and skip all availibility checks for them)
+
+✓ replace text-based plus symbol with plus.svg icon for add server button
+
+✓ update documentation
+
+✓ deal with redundant watchout-commands files
+
+✓ add a button for each manual server to edit its properties or to remove it
+
+✓ change 'Background scan' message to 'Discovery'
+
+✓ add animations to commands buttons to better visualise pressing
+

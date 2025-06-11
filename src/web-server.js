@@ -1,7 +1,7 @@
 const express = require('express');
 const path = require('path');
 const multer = require('multer');
-const { findWatchoutServers, clearOfflineServers } = require('./network-scanner');
+const { findWatchoutServers, clearOfflineServers, addManualServer, updateManualServer, removeManualServer } = require('./network-scanner');
 const WatchoutCommands = require('./watchout-commands');
 
 class WebServer {  constructor() {
@@ -90,6 +90,37 @@ class WebServer {  constructor() {
         res.json(result);
       } catch (error) {
         console.error('Error clearing offline servers:', error);
+        res.status(500).json({ success: false, error: error.message });
+      }
+    });    // Add manual server
+    this.app.post('/api/manual-servers', async (req, res) => {
+      try {
+        const result = await addManualServer(req.body);
+        res.json(result);
+      } catch (error) {
+        console.error('Error adding manual server:', error);
+        res.status(500).json({ success: false, error: error.message });
+      }
+    });
+
+    // Update manual server
+    this.app.put('/api/manual-servers/:serverId', async (req, res) => {
+      try {
+        const result = await updateManualServer(req.params.serverId, req.body);
+        res.json(result);
+      } catch (error) {
+        console.error('Error updating manual server:', error);
+        res.status(500).json({ success: false, error: error.message });
+      }
+    });
+
+    // Remove manual server
+    this.app.delete('/api/manual-servers/:serverId', async (req, res) => {
+      try {
+        const result = await removeManualServer(req.params.serverId);
+        res.json(result);
+      } catch (error) {
+        console.error('Error removing manual server:', error);
         res.status(500).json({ success: false, error: error.message });
       }
     });

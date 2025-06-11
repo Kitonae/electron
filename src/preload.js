@@ -2,9 +2,11 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 // Expose protected methods that allow the renderer process to use
 // the ipcRenderer without exposing the entire object
-contextBridge.exposeInMainWorld('electronAPI', {
-  scanForWatchoutServers: () => ipcRenderer.invoke('scan-for-watchout-servers'),
+contextBridge.exposeInMainWorld('electronAPI', {  scanForWatchoutServers: () => ipcRenderer.invoke('scan-for-watchout-servers'),
   clearOfflineServers: () => ipcRenderer.invoke('clear-offline-servers'),
+  addManualServer: (serverData) => ipcRenderer.invoke('add-manual-server', serverData),
+  updateManualServer: (serverId, serverData) => ipcRenderer.invoke('update-manual-server', serverId, serverData),
+  removeManualServer: (serverId) => ipcRenderer.invoke('remove-manual-server', serverId),
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
     // Settings API
   getAppSettings: () => ipcRenderer.invoke('get-app-settings'),

@@ -74,3 +74,6 @@ electron-userdata/
 # Temporary files
 tmp/
 temp/
+yarn.lock
+package-lock.json
+package-lock.json

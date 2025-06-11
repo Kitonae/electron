@@ -1,4 +1,5 @@
-class WatchoutServerFinderApp {    constructor() {
+class WatchoutServerFinderApp {
+    constructor() {
         this.servers = [];
         this.isScanning = false;
         this.scanInterval = null;
@@ -14,7 +15,9 @@ class WatchoutServerFinderApp {    constructor() {
         this.api = new ApiAdapter();
         
         this.initializeApp();
-    }    async initializeApp() {
+    }
+
+    async initializeApp() {
         this.bindEvents();
         await this.loadAppVersion();
         
@@ -30,35 +33,68 @@ class WatchoutServerFinderApp {    constructor() {
         setTimeout(() => {
             this.bindWindowControls();
         }, 200);
-        
-        this.updateUI();
+          this.updateUI();
         this.startBackgroundScanning();
-    }bindEvents() {
+    }
+
+    bindEvents() {
         const scanButton = document.getElementById('scanButton');
         scanButton.addEventListener('click', () => this.startManualScan());
         
         const clearOfflineButton = document.getElementById('clearOfflineButton');
         clearOfflineButton.addEventListener('click', () => this.clearOfflineServers());
-          // Settings button event
+        
+        const addServerButton = document.getElementById('addServerButton');
+        addServerButton.addEventListener('click', () => this.showAddServerDialog());
+        
+        // Settings button event
         const settingsButton = document.getElementById('settingsButton');
         settingsButton.addEventListener('click', () => this.showSettingsDialog());
-        
-        // Command button events (no more tab events needed)
+          // Command button events (no more tab events needed)
         this.bindCommandEvents();
-    }bindCommandEvents() {
+    }
+
+    bindCommandEvents() {
         // Timeline control commands
-        document.getElementById('playBtn')?.addEventListener('click', () => this.executeCommand('play'));
-        document.getElementById('pauseBtn')?.addEventListener('click', () => this.executeCommand('pause'));
-        document.getElementById('stopBtn')?.addEventListener('click', () => this.executeCommand('stop'));
+        document.getElementById('playBtn')?.addEventListener('click', (e) => {
+            this.addRippleEffect(e.currentTarget);
+            this.executeCommand('play');
+        });
+        document.getElementById('pauseBtn')?.addEventListener('click', (e) => {
+            this.addRippleEffect(e.currentTarget);
+            this.executeCommand('pause');
+        });
+        document.getElementById('stopBtn')?.addEventListener('click', (e) => {
+            this.addRippleEffect(e.currentTarget);
+            this.executeCommand('stop');
+        });
           // Information commands
-        document.getElementById('statusBtn')?.addEventListener('click', () => this.executeCommand('status'));
-        document.getElementById('timelinesBtn')?.addEventListener('click', () => this.executeCommand('timelines'));
-        document.getElementById('showBtn')?.addEventListener('click', () => this.executeCommand('show'));
-        document.getElementById('uploadShowBtn')?.addEventListener('click', () => this.executeCommand('uploadShow'));
+        document.getElementById('statusBtn')?.addEventListener('click', (e) => {
+            this.addRippleEffect(e.currentTarget);
+            this.executeCommand('status');
+        });
+        document.getElementById('timelinesBtn')?.addEventListener('click', (e) => {
+            this.addRippleEffect(e.currentTarget);
+            this.executeCommand('timelines');
+        });
+        document.getElementById('showBtn')?.addEventListener('click', (e) => {
+            this.addRippleEffect(e.currentTarget);
+            this.executeCommand('show');
+        });
+        document.getElementById('uploadShowBtn')?.addEventListener('click', (e) => {
+            this.addRippleEffect(e.currentTarget);
+            this.executeCommand('uploadShow');
+        });
         
         // Advanced commands
-        document.getElementById('testConnectionBtn')?.addEventListener('click', () => this.executeCommand('testConnection'));
-        document.getElementById('customCommandBtn')?.addEventListener('click', () => this.showCustomCommandDialog());
+        document.getElementById('testConnectionBtn')?.addEventListener('click', (e) => {
+            this.addRippleEffect(e.currentTarget);
+            this.executeCommand('testConnection');
+        });
+        document.getElementById('customCommandBtn')?.addEventListener('click', (e) => {
+            this.addRippleEffect(e.currentTarget);
+            this.showCustomCommandDialog();
+        });
         
         // Timeline selector change event
         document.getElementById('timelineSelector')?.addEventListener('change', () => this.onTimelineSelectionChange());
@@ -168,7 +204,7 @@ class WatchoutServerFinderApp {    constructor() {
                 
                 // Only update status if servers were found or count changed
                 if (this.servers.length !== previousCount) {
-                    this.updateScanStatus(`Background scan: Found ${this.servers.length} server(s).`);
+                    this.updateScanStatus(`Discovery: Found ${this.servers.length} server(s).`);
                     console.log(`Background scan found ${this.servers.length} servers`);
                 }
                 
@@ -643,20 +679,43 @@ class WatchoutServerFinderApp {    constructor() {
             
         // Determine simplified type
         const simplifiedType = this.getSimplifiedServerType(server);
-        
-        // Determine status info
+          // Determine status info
         const isOnline = server.status === 'online';
-        const statusText = isOnline ? 'Online' : 'Offline';
+        let statusText = isOnline ? 'Online' : 'Offline';
+        let statusClass = isOnline ? 'online' : 'offline';
+          // Override for manual servers
+        if (server.isManual && isOnline) {
+            statusText = 'Manual';
+            statusClass = 'manual';
+        }
+        
+        // Build manual server actions if this is a manual server
+        let manualActions = '';
+        if (server.isManual) {
+            manualActions = `
+                <div class="manual-server-actions">
+                    <button class="manual-edit-btn" title="Edit server" onclick="event.stopPropagation(); app.editManualServer('${serverId}')">
+                        ✏️
+                    </button>
+                    <button class="manual-remove-btn" title="Remove server" onclick="event.stopPropagation(); app.removeManualServer('${serverId}')">
+                        🗑️
+                    </button>
+                </div>
+            `;
+        }
         
         item.innerHTML = `
-            <div class="server-item-name">${this.escapeHtml(displayName)}</div>
-            <div class="server-item-details">
-                <div class="server-item-ip">${this.escapeHtml(server.ip)}</div>
-                <div class="server-item-type">${this.escapeHtml(simplifiedType)}</div>
-                <div class="server-item-status">
-                    <div class="status-indicator ${isOnline ? 'online' : 'offline'}"></div>
-                    <span class="status-text">${statusText}</span>
+            <div class="server-item-content">
+                <div class="server-item-name">${this.escapeHtml(displayName)}</div>
+                <div class="server-item-details">
+                    <div class="server-item-ip">${this.escapeHtml(server.ip)}</div>
+                    <div class="server-item-type">${this.escapeHtml(simplifiedType)}</div>
+                    <div class="server-item-status">
+                        <div class="status-indicator ${statusClass}"></div>
+                        <span class="status-text">${statusText}</span>
+                    </div>
                 </div>
+                ${manualActions}
             </div>
         `;
         
@@ -1519,150 +1578,298 @@ class WatchoutServerFinderApp {    constructor() {
             if (stopBtn) stopBtn.disabled = false;
             if (restartBtn) restartBtn.disabled = false;
         }
-    }    initializeStartupWarnings() {
-        // Listen for startup warnings from main process
-        if (this.api.onStartupWarning) {
-            this.api.onStartupWarning((notification) => {
-                this.showStartupWarning(notification);
-            });
-        }
-
-        // Listen for web server errors
-        if (this.api.onWebServerError) {
-            this.api.onWebServerError((error) => {
-                console.warn('Web server error:', error);
-                // Could show a non-blocking notification here
-            });
-        }
-
-        // Listen for window state changes to update maximize button
-        if (this.api.onWindowStateChanged) {
-            this.api.onWindowStateChanged((state) => {
-                console.log('Window state changed:', state);
-                this.updateMaximizeButtonState(state.maximized);
-            });
-        }
     }
 
-    // Startup Warning Methods
-    showStartupWarning(notification) {
-        const modal = document.getElementById('startupWarningModal');
-        const icon = document.getElementById('startupWarningIcon');
-        const title = document.getElementById('startupWarningTitle');
-        const message = document.getElementById('startupWarningMessage');
-        const actions = document.getElementById('startupWarningActions');
-
-        // Set icon and colors based on severity
-        if (notification.icon) {
-            icon.textContent = notification.icon;
-        }
-
-        // Set title and message
-        title.textContent = notification.title;
-        message.textContent = notification.message;
-
-        // Clear existing actions
-        actions.innerHTML = '';
-
-        // Create action buttons
-        if (notification.actions) {
-            notification.actions.forEach(action => {
-                const button = document.createElement('button');
-                button.className = `warning-action-btn ${action.primary ? 'primary' : 'secondary'}`;
-                button.textContent = action.label;
-                button.onclick = () => this.handleStartupWarningAction(action.id, notification.type);
-                actions.appendChild(button);
-            });
-        }
-
-        // Show modal
+    // Add Server Modal Methods
+    showAddServerDialog() {
+        const modal = document.getElementById('addServerModal');
         modal.style.display = 'flex';
-    }
-
-    async handleStartupWarningAction(actionId, warningType) {
-        const modal = document.getElementById('startupWarningModal');
         
-        switch (actionId) {
-            case 'refresh':
-                // Perform startup checks again
-                try {
-                    const result = await this.api.performStartupChecks();
-                    if (result.success && result.result) {
-                        // Check if issues are resolved
-                        if (result.result.warnings.length === 0) {
-                            this.hideStartupWarning();
-                        } else {
-                            // Show updated warning
-                            const notification = this.createNotificationFromCheckResult(result.result);
-                            if (notification) {
-                                this.showStartupWarning(notification);
-                            } else {
-                                this.hideStartupWarning();
-                            }
-                        }
-                    }
-                } catch (error) {
-                    console.error('Failed to refresh startup checks:', error);
+        // Bind modal events
+        this.bindAddServerModal();
+        
+        // Clear previous values
+        document.getElementById('serverIp').value = '';
+        document.getElementById('serverName').value = '';
+        document.getElementById('serverPorts').value = '3040,3041,3042';
+        document.getElementById('serverType').value = 'Manual Entry';
+        
+        // Focus on IP input
+        setTimeout(() => {
+            document.getElementById('serverIp').focus();
+        }, 100);
+    }
+
+    bindAddServerModal() {
+        const modal = document.getElementById('addServerModal');
+        const closeBtn = document.getElementById('closeAddServerModal');
+        const cancelBtn = document.getElementById('cancelAddServer');
+        const saveBtn = document.getElementById('saveAddServer');
+        const form = document.getElementById('addServerForm');
+        
+        // Close modal handlers
+        const closeModal = () => {
+            modal.style.display = 'none';
+        };
+        
+        closeBtn.onclick = closeModal;
+        cancelBtn.onclick = closeModal;
+        
+        // Close on overlay click
+        modal.onclick = (e) => {
+            if (e.target === modal) {
+                closeModal();
+            }
+        };
+          // Save server
+        saveBtn.onclick = async () => {
+            if (form.checkValidity()) {
+                const modal = document.getElementById('addServerModal');
+                const isEditing = modal.dataset.editingServerId;
+                
+                if (isEditing) {
+                    await this.updateManualServer(isEditing);
+                } else {
+                    await this.addManualServer();
                 }
-                break;
                 
-            case 'retry':
-                // Retry the failed operation
-                this.hideStartupWarning();
-                break;
+                // Reset modal state
+                delete modal.dataset.editingServerId;
+                const modalTitle = modal.querySelector('.modal-header h3');
+                modalTitle.textContent = 'Add Server Manually';
+                saveBtn.textContent = 'Add Server';
                 
-            case 'continue':
-            case 'ok':
-            default:
-                // Dismiss the warning
-                this.hideStartupWarning();
-                break;
-        }
-
-        // Dismiss the warning in the main process
-        try {
-            await this.api.dismissStartupWarning(warningType);
-        } catch (error) {
-            console.error('Failed to dismiss startup warning:', error);
-        }
-    }
-
-    hideStartupWarning() {
-        const modal = document.getElementById('startupWarningModal');
-        modal.style.display = 'none';
-    }
-
-    createNotificationFromCheckResult(checkResult) {
-        // Helper method to convert check results to notification format
-        if (checkResult.warnings.length === 0) {
-            return null;
-        }
-
-        const warning = checkResult.warnings[0];
-        return {
-            type: warning.type,
-            title: warning.title,
-            message: warning.message,
-            icon: warning.type === 'watchout-running' ? '⚠️' : '🔌',
-            actions: warning.type === 'watchout-running' 
-                ? [
-                    { id: 'refresh', label: 'Refresh Check', primary: true },
-                    { id: 'continue', label: 'Continue Anyway', secondary: true }
-                ]
-                : [
-                    { id: 'ok', label: 'OK', primary: true }
-                ],
-            severity: warning.severity || 'warning'
+                closeModal();
+            } else {
+                // Show validation errors
+                form.reportValidity();
+            }
+        };
+        
+        // Add server on Enter key in IP field
+        document.getElementById('serverIp').onkeydown = (e) => {
+            if (e.key === 'Enter' && form.checkValidity()) {
+                const modal = document.getElementById('addServerModal');
+                const isEditing = modal.dataset.editingServerId;
+                
+                if (isEditing) {
+                    this.updateManualServer(isEditing);
+                } else {
+                    this.addManualServer();
+                }
+                
+                // Reset modal state
+                delete modal.dataset.editingServerId;
+                const modalTitle = modal.querySelector('.modal-header h3');
+                modalTitle.textContent = 'Add Server Manually';
+                saveBtn.textContent = 'Add Server';
+                
+                closeModal();
+            }
         };
     }
-}
 
-// Initialize the app when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    const app = new WatchoutServerFinderApp();
-    
-    // Cleanup when window is closing
-    window.addEventListener('beforeunload', () => {
-        app.cleanup();
-    });
-});
+    async addManualServer() {
+        try {
+            const serverIp = document.getElementById('serverIp').value.trim();
+            const serverName = document.getElementById('serverName').value.trim();
+            const serverPorts = document.getElementById('serverPorts').value.trim();
+            const serverType = document.getElementById('serverType').value;
+            
+            // Validate IP address
+            if (!this.isValidIpAddress(serverIp)) {
+                alert('Please enter a valid IP address (e.g., 192.168.1.100)');
+                return;
+            }
+            
+            // Parse ports
+            let ports = [3040, 3041, 3042]; // Default ports
+            if (serverPorts) {
+                try {
+                    ports = serverPorts.split(',').map(p => parseInt(p.trim())).filter(p => p > 0 && p <= 65535);
+                    if (ports.length === 0) {
+                        ports = [3040, 3041, 3042]; // Fallback to defaults
+                    }
+                } catch (error) {
+                    console.warn('Invalid ports specified, using defaults:', error);
+                }
+            }
+            
+            // Create server object
+            const manualServer = {
+                ip: serverIp,
+                hostname: serverName || serverIp,
+                ports: ports,
+                type: serverType,
+                discoveryMethod: 'manual',
+                status: 'online', // Manual servers are always considered online
+                isManual: true, // Flag to identify manual servers
+                discoveredAt: new Date().toISOString(),
+                lastSeenAt: new Date().toISOString(),
+                firstDiscoveredAt: new Date().toISOString()
+            };
+            
+            // Check if server already exists
+            const serverId = this.getServerId(manualServer);
+            const existingServer = this.servers.find(server => this.getServerId(server) === serverId);
+            
+            if (existingServer) {
+                // Update existing server with manual flag
+                existingServer.isManual = true;
+                existingServer.status = 'online';
+                existingServer.type = serverType;
+                existingServer.hostname = serverName || existingServer.hostname;
+                this.updateScanStatus(`Updated existing server: ${serverName || serverIp}`);
+            } else {
+                // Add new manual server
+                this.servers.push(manualServer);
+                this.updateScanStatus(`Added manual server: ${serverName || serverIp}`);
+            }
+            
+            // Save to backend cache (optional - manual servers persist in memory)
+            try {
+                await this.api.addManualServer(manualServer);
+            } catch (error) {
+                console.warn('Could not save manual server to backend:', error);
+                // Continue anyway - manual servers work in memory
+            }
+            
+            // Update UI
+            this.updateUI();
+            
+            // Auto-select the newly added server
+            this.selectedServerId = serverId;
+            this.selectedServerIp = serverIp;
+            
+            console.log('Manual server added successfully:', manualServer);
+            
+        } catch (error) {
+            console.error('Error adding manual server:', error);
+            alert('Failed to add server. Please check the details and try again.');
+        }
+    }    async updateManualServer(serverId) {
+        try {
+            const serverIp = document.getElementById('serverIp').value.trim();
+            const serverName = document.getElementById('serverName').value.trim();
+            const serverPorts = document.getElementById('serverPorts').value.trim();
+            const serverType = document.getElementById('serverType').value;
+            
+            // Validate IP address
+            if (!this.isValidIpAddress(serverIp)) {
+                alert('Please enter a valid IP address (e.g., 192.168.1.100)');
+                return;
+            }
+            
+            // Parse ports
+            let ports = [3040, 3041, 3042]; // Default ports
+            if (serverPorts) {
+                try {
+                    ports = serverPorts.split(',').map(p => parseInt(p.trim())).filter(p => p > 0 && p <= 65535);
+                    if (ports.length === 0) {
+                        ports = [3040, 3041, 3042]; // Fallback to defaults
+                    }
+                } catch (error) {
+                    console.warn('Invalid ports specified, using defaults:', error);
+                }
+            }
+            
+            // Create updated server object
+            const updatedServerData = {
+                ip: serverIp,
+                hostname: serverName || serverIp,
+                ports: ports,
+                type: serverType,
+                discoveryMethod: 'manual',
+                status: 'online',
+                isManual: true
+            };
+              // Update server in backend
+            const result = await this.api.updateManualServer(serverId, updatedServerData);
+            
+            if (result.success) {                // Update local servers array
+                const serverIndex = this.servers.findIndex(s => this.getServerId(s) === serverId);
+                if (serverIndex !== -1) {
+                    // Preserve existing metadata while updating with new data
+                    this.servers[serverIndex] = {
+                        ...this.servers[serverIndex],
+                        ...updatedServerData,
+                        lastSeenAt: new Date().toISOString()
+                    };
+                    
+                    // Update selected server IP if this server is currently selected
+                    if (this.selectedServerId === serverId) {
+                        this.selectedServerIp = serverIp;
+                    }
+                }
+                
+                // Update UI
+                this.updateUI();
+                
+                this.updateScanStatus(`Updated manual server: ${serverName || serverIp}`);
+                console.log('Manual server updated successfully:', updatedServerData);
+            } else {
+                console.error('Failed to update manual server:', result.error);
+                alert('Failed to update server: ' + result.error);
+            }
+        } catch (error) {
+            console.error('Error updating manual server:', error);
+            alert('Failed to update server. Please check the details and try again.');
+        }
+    }
+
+    async removeManualServer(serverId) {
+        // Find the server to remove
+        const server = this.servers.find(s => this.getServerId(s) === serverId);
+        if (!server || !server.isManual) {
+            console.error('Server not found or not a manual server:', serverId);
+            return;
+        }
+
+        // Confirm removal
+        const serverName = server.hostname || server.ip;
+        if (!confirm(`Are you sure you want to remove the manual server "${serverName}"?`)) {
+            return;
+        }
+
+        try {
+            // Remove from backend
+            const result = await this.api.removeManualServer(serverId);
+            
+            if (result.success) {
+                // Remove from local servers array
+                this.servers = this.servers.filter(s => this.getServerId(s) !== serverId);
+                
+                // Clear selection if removed server was selected
+                if (this.selectedServerId === serverId) {
+                    this.selectedServerId = null;
+                    this.selectedServerIp = null;
+                }
+                
+                // Update UI
+                this.updateUI();
+                
+                this.updateScanStatus(`Removed manual server: ${serverName}`);
+                console.log('Manual server removed successfully:', serverName);
+            } else {
+                console.error('Failed to remove manual server:', result.error);
+                alert('Failed to remove server: ' + result.error);
+            }
+        } catch (error) {
+            console.error('Error removing manual server:', error);
+            alert('Failed to remove server. Please try again.');
+        }
+    }
+
+    // Add ripple effect animation to buttons
+    addRippleEffect(button) {
+        if (!button || button.disabled) return;
+        
+        // Add ripple class
+        button.classList.add('ripple-effect');
+        
+        // Remove class after animation
+        setTimeout(() => {
+            button.classList.remove('ripple-effect');
+        }, 600);
+    }
+}

@@ -124,13 +124,13 @@ body {
     max-height: calc(100vh - 32px);
     background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(10px);
-    overflow: hidden; /* Prevent container from growing beyond viewport */
+    overflow: visible; /* Allow shadows to show */
 }
 
 .app-main {
     flex: 1;
     padding: 2rem;
-    overflow: hidden;
+    overflow: visible; /* Allow shadows to show */
     min-height: 0; /* Ensure flex shrinking works properly */
     display: flex;
     flex-direction: column;
@@ -143,6 +143,7 @@ body {
     gap: 1.5rem;
     flex: 1;
     min-height: 0; /* Allow flexbox shrinking */
+    overflow: visible; /* Allow shadows to show */
 }
 
 /* Sidebar Styles */
@@ -150,11 +151,18 @@ body {
     width: 300px;
     background: white;
     border-radius: 15px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
     display: flex;
     flex-direction: column;
     overflow: hidden;
     max-height: 100%; /* Prevent sidebar from overflowing */
+    position: relative;
+    z-index: 2;
+    transition: box-shadow 0.3s ease;
+}
+
+.sidebar:hover {
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.2);
 }
 
 .sidebar-header {
@@ -249,6 +257,42 @@ body {
     justify-content: center;
     transition: all 0.3s ease;
     box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+}
+
+.add-server-button-sidebar {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 0.4rem;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(40, 167, 69, 0.4);
+}
+
+.add-server-button-sidebar .button-icon {
+    width: 16px;
+    height: 16px;
+    filter: brightness(0) invert(1); /* Make SVG white */
+    transition: transform 0.2s ease;
+}
+
+.add-server-button-sidebar:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.6);
+}
+
+.add-server-button-sidebar:active {
+    transform: translateY(0);
+}
+
+.add-server-button-sidebar:hover .button-icon {
+    transform: scale(1.1);
 }
 
 .clear-offline-button-sidebar:hover {
@@ -387,8 +431,57 @@ body {
     background: #dc3545;
 }
 
+.status-indicator.manual {
+    background: #ffc107;
+}
+
 .status-text {
     color: #666;
+}
+
+/* Manual Server Actions */
+.server-item-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    width: 100%;
+}
+
+.manual-server-actions {
+    display: flex;
+    gap: 0.3rem;
+    flex-shrink: 0;
+    margin-left: 0.5rem;
+}
+
+.manual-edit-btn,
+.manual-remove-btn {
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.7rem;
+    transition: all 0.2s ease;
+    opacity: 0.7;
+}
+
+.manual-edit-btn:hover {
+    background: #007bff;
+    border-color: #007bff;
+    transform: scale(1.1);
+    opacity: 1;
+}
+
+.manual-remove-btn:hover {
+    background: #dc3545;
+    border-color: #dc3545;
+    transform: scale(1.1);
+    opacity: 1;
 }
 
 /* Server Divider */
@@ -427,8 +520,7 @@ body {
     flex: 1;
     display: flex;
     flex-direction: column;
-    overflow-x: visible; /* Allow horizontal shadows */
-    overflow-y: hidden; /* Prevent vertical scrolling at this level */
+    overflow: visible; /* Allow shadows to show properly */
     max-height: 100%; /* Prevent content area from overflowing */
 }
 
@@ -437,9 +529,8 @@ body {
     display: flex;
     gap: 1.5rem;
     flex: 1;
-    overflow-x: visible; /* Allow horizontal shadows */
-    overflow-y: auto; /* Allow vertical scrolling if needed */
-    padding: 0.5rem; /* Add padding to prevent shadow clipping */
+    overflow: visible; /* Allow all shadows to show */
+    padding: 1rem; /* Increased padding to prevent shadow clipping */
     min-height: 0; /* Allow flexbox shrinking */
 }
 
@@ -448,11 +539,19 @@ body {
     flex: 1;
     background: white;
     border-radius: 15px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
     display: flex;
     flex-direction: column;
     overflow: hidden;
     min-height: 0;
+    position: relative;
+    z-index: 1;
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+
+.panel:hover {
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.2);
+    transform: translateY(-2px);
 }
 
 /* Panel Header */
@@ -934,11 +1033,45 @@ body {
     cursor: pointer;
     transition: all 0.2s ease;
     min-height: 70px;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Ripple effect for button press */
+.command-btn::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(102, 126, 234, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+    z-index: 0;
+}
+
+.command-btn.ripple-effect::before {
+    width: 300px;
+    height: 300px;
+}
+
+.command-btn > * {
+    position: relative;
+    z-index: 1;
 }
 
 .command-btn:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border-color: rgba(102, 126, 234, 0.2);
+}
+
+.command-btn:active {
+    transform: translateY(-1px) scale(0.98);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    background: rgba(102, 126, 234, 0.05);
 }
 
 .command-btn:disabled {
@@ -946,6 +1079,11 @@ body {
     cursor: not-allowed;
     transform: none;
     box-shadow: none;
+}
+
+.command-btn:disabled:hover {
+    transform: none;
+    border-color: transparent;
 }
 
 .command-btn .cmd-icon {
@@ -989,6 +1127,56 @@ body {
 .stop-btn:hover .timeline-icon {
     filter: brightness(0) saturate(100%) invert(22%) sepia(77%) saturate(2785%) hue-rotate(347deg) brightness(101%) contrast(93%);
     transform: scale(1.1);
+}
+
+/* Active/Press effects for timeline icons */
+.play-btn:active .timeline-icon {
+    filter: brightness(0) saturate(100%) invert(26%) sepia(77%) saturate(2785%) hue-rotate(95deg) brightness(96%) contrast(104%);
+    transform: scale(1.05) rotate(5deg);
+}
+
+.pause-btn:active .timeline-icon {
+    filter: brightness(0) saturate(100%) invert(57%) sepia(98%) saturate(1168%) hue-rotate(2deg) brightness(103%) contrast(113%);
+    transform: scale(1.05);
+}
+
+.stop-btn:active .timeline-icon {
+    filter: brightness(0) saturate(100%) invert(17%) sepia(77%) saturate(2785%) hue-rotate(347deg) brightness(81%) contrast(93%);
+    transform: scale(1.05);
+}
+
+/* Enhanced animations for command icons */
+.command-btn .cmd-icon {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.command-btn:hover .cmd-icon {
+    transform: scale(1.1);
+}
+
+.command-btn:active .cmd-icon {
+    transform: scale(1.05);
+}
+
+/* Specific button type animations */
+.play-btn:active {
+    background: rgba(40, 167, 69, 0.1);
+}
+
+.pause-btn:active {
+    background: rgba(255, 193, 7, 0.1);
+}
+
+.stop-btn:active {
+    background: rgba(220, 53, 69, 0.1);
+}
+
+.info-btn:active {
+    background: rgba(23, 162, 184, 0.1);
+}
+
+.advanced-btn:active {
+    background: rgba(108, 117, 125, 0.1);
 }
 
 /* Timeline Selection Styles */
@@ -1237,16 +1425,55 @@ body {
     backdrop-filter: blur(4px);
 }
 
+/* Fix for startup warning modal structure */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal .modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    z-index: 10000;
+}
+
 .modal-content {
     background: white;
     border-radius: 15px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
     max-width: 600px; /* Increased width for better spacing */
     width: 90%;
     max-height: 85vh; /* Increased max height */
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    position: relative;
+    z-index: 10001;
+    transform: scale(1);
+    animation: modalAppear 0.2s ease-out;
+}
+
+@keyframes modalAppear {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
 }
 
 .modal-header {
@@ -1364,6 +1591,10 @@ body {
 .startup-warning-modal {
     max-width: 500px;
     min-height: auto;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    animation: modalAppear 0.2s ease-out;
 }
 
 .startup-warning-modal .modal-header {
@@ -1372,6 +1603,7 @@ body {
     display: flex;
     align-items: center;
     gap: 1rem;
+    border-radius: 12px 12px 0 0;
 }
 
 .startup-warning-modal .warning-icon {
@@ -1398,6 +1630,8 @@ body {
     background: #f8f9fa;
     justify-content: center;
     gap: 1rem;
+    border-radius: 0 0 12px 12px;
+    border-top: 1px solid #e9ecef;
 }
 
 .startup-warning-modal .modal-actions {
@@ -1415,6 +1649,12 @@ body {
     cursor: pointer;
     transition: all 0.2s ease;
     min-width: 100px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.warning-action-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
 .warning-action-btn.primary {
@@ -1440,6 +1680,36 @@ body {
     cursor: not-allowed;
     transform: none;
     box-shadow: none;
+}
+
+/* Ensure modal appears above everything */
+.modal[style*="display: flex"] {
+    display: flex !important;
+}
+
+/* Focus management for accessibility */
+.modal:focus {
+    outline: none;
+}
+
+.warning-action-btn:focus {
+    outline: 2px solid #007bff;
+    outline-offset: 2px;
+}
+
+/* Backdrop blur effect for content behind modal */
+body.modal-open {
+    overflow: hidden;
+}
+
+body.modal-open .app-container {
+    filter: blur(2px);
+    pointer-events: none;
+}
+
+body.modal-open .modal {
+    filter: none;
+    pointer-events: auto;
 }
 
 /* Settings Modal Styles */

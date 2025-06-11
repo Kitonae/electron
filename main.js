@@ -1,7 +1,7 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs').promises;
-const { findWatchoutServers, clearOfflineServers } = require('./src/network-scanner');
+const { findWatchoutServers, clearOfflineServers, addManualServer, updateManualServer, removeManualServer } = require('./src/network-scanner');
 const WatchoutCommands = require('./src/watchout-commands');
 const WebServer = require('./src/web-server');
 const StartupChecker = require('./src/startup-checker');
@@ -126,6 +126,36 @@ ipcMain.handle('clear-offline-servers', async () => {
     return result;
   } catch (error) {
     console.error('Error clearing offline servers:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('add-manual-server', async (event, serverData) => {
+  try {
+    const result = await addManualServer(serverData);
+    return result;
+  } catch (error) {
+    console.error('Error adding manual server:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('update-manual-server', async (event, serverId, serverData) => {
+  try {
+    const result = await updateManualServer(serverId, serverData);
+    return result;
+  } catch (error) {
+    console.error('Error updating manual server:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('remove-manual-server', async (event, serverId) => {
+  try {
+    const result = await removeManualServer(serverId);
+    return result;
+  } catch (error) {
+    console.error('Error removing manual server:', error);
     return { success: false, error: error.message };
   }
 });

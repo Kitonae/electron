@@ -20,6 +20,36 @@ class ApiAdapter {
         } else {
             return this.webApiCall('/offline-servers', { method: 'DELETE' });
         }
+    }    async addManualServer(serverData) {
+        if (this.isElectron) {
+            return window.electronAPI.addManualServer(serverData);
+        } else {
+            return this.webApiCall('/manual-servers', {
+                method: 'POST',
+                body: JSON.stringify(serverData)
+            });
+        }
+    }
+
+    async updateManualServer(serverId, serverData) {
+        if (this.isElectron) {
+            return window.electronAPI.updateManualServer(serverId, serverData);
+        } else {
+            return this.webApiCall(`/manual-servers/${serverId}`, {
+                method: 'PUT',
+                body: JSON.stringify(serverData)
+            });
+        }
+    }
+
+    async removeManualServer(serverId) {
+        if (this.isElectron) {
+            return window.electronAPI.removeManualServer(serverId);
+        } else {
+            return this.webApiCall(`/manual-servers/${serverId}`, {
+                method: 'DELETE'
+            });
+        }
     }
 
     async getAppVersion() {
