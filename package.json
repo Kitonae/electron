@@ -1,5 +1,5 @@
 {
-  "name": "watchout-server-finder",
+  "name": "watchout-assistant",
   "version": "1.0.0",
   "description": "Electron app to find Watchout 7 servers on the network",
   "main": "main.js",

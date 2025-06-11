@@ -278,7 +278,89 @@ body {
     flex-direction: column;
 }
 
-/* Tab Navigation */
+/* Responsive Layout: Wide Screen Split View */
+@media (min-width: 1601px) {
+    .tabbed-panel {
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 8px; /* Increased gap for better visual separation */
+        background: transparent; /* Remove background since we want actual space */
+        border-radius: 15px;
+        overflow: hidden;
+    }
+    
+    .tab-nav {
+        display: none !important; /* Completely hide tabs in wide view */
+    }
+    
+    .tab-content {
+        display: flex !important;
+        flex-direction: row !important;
+        width: 100%;
+        gap: 8px; /* Match parent gap for consistent spacing */
+        background: transparent;
+    }
+      .tab-panel {
+        /* Force both panels to show as flex items */
+        display: flex !important;
+        opacity: 1 !important;
+        transform: translateY(0) !important;
+        background: white;
+        overflow: hidden;
+        flex-direction: column;
+        flex: 1 !important; /* Equal width */
+        /* Remove animations in wide layout */
+        animation: none !important;
+        transition: none !important;
+    }
+      /* Panels now have individual styling with full border radius and shadows */
+    #detailsPanel,
+    #commandsPanel {
+        border-radius: 15px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Add visual headers for each panel in wide view */
+    .tab-panel .panel-header {
+        position: relative;
+        padding: 1.5rem 2rem; /* Ensure consistent header padding */
+    }
+    
+    .tab-panel .panel-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        border-radius: 3px 3px 0 0;
+    }
+    
+    #detailsPanel .panel-header::before {
+        background: #667eea;
+    }
+    
+    #commandsPanel .panel-header::before {
+        background: #28a745;
+    }
+    
+    /* Ensure panel content has consistent padding in wide layout */
+    .tab-panel .panel-content {
+        overflow-y: auto;
+        flex: 1;
+        padding: 1.5rem 2rem; /* Match header padding */
+    }
+    
+    /* Remove any tab-related animations in wide layout */
+    .tab-panel {
+        animation: none !important;
+        transition: none !important;
+    }
+}
+
+
+
+/* Tab Navigation - Hidden in wide view, shown in narrow view */
 .tab-nav {
     display: flex;
     background: #f8f9fa;
@@ -824,30 +906,43 @@ body {
     font-size: 1.5rem;
 }
 
-/* Command button types */
-.play-btn:hover {
-    border-color: #28a745;
-    background: rgba(40, 167, 69, 0.1);
+/* Timeline icon styles */
+.timeline-icon {
+    width: 24px;
+    height: 24px;
+    display: block;
+    transition: all 0.2s ease;
+    object-fit: contain;
+    margin: 0 auto;
 }
 
-.pause-btn:hover {
-    border-color: #ffc107;
-    background: rgba(255, 193, 7, 0.1);
+/* Color timeline icons based on button type */
+.play-btn .timeline-icon {
+    filter: brightness(0) saturate(100%) invert(31%) sepia(19%) saturate(1471%) hue-rotate(95deg) brightness(96%) contrast(94%);
 }
 
-.stop-btn:hover {
-    border-color: #dc3545;
-    background: rgba(220, 53, 69, 0.1);
+.pause-btn .timeline-icon {
+    filter: brightness(0) saturate(100%) invert(62%) sepia(98%) saturate(1168%) hue-rotate(2deg) brightness(103%) contrast(103%);
 }
 
-.info-btn:hover {
-    border-color: #17a2b8;
-    background: rgba(23, 162, 184, 0.1);
+.stop-btn .timeline-icon {
+    filter: brightness(0) saturate(100%) invert(22%) sepia(77%) saturate(2785%) hue-rotate(347deg) brightness(91%) contrast(83%);
 }
 
-.advanced-btn:hover {
-    border-color: #6f42c1;
-    background: rgba(111, 66, 193, 0.1);
+/* Hover effects for timeline icons */
+.play-btn:hover .timeline-icon {
+    filter: brightness(0) saturate(100%) invert(31%) sepia(19%) saturate(1471%) hue-rotate(95deg) brightness(106%) contrast(104%);
+    transform: scale(1.1);
+}
+
+.pause-btn:hover .timeline-icon {
+    filter: brightness(0) saturate(100%) invert(62%) sepia(98%) saturate(1168%) hue-rotate(2deg) brightness(113%) contrast(113%);
+    transform: scale(1.1);
+}
+
+.stop-btn:hover .timeline-icon {
+    filter: brightness(0) saturate(100%) invert(22%) sepia(77%) saturate(2785%) hue-rotate(347deg) brightness(101%) contrast(93%);
+    transform: scale(1.1);
 }
 
 /* Command Response */
@@ -1107,6 +1202,86 @@ body {
     color: #495057;
 }
 
+/* Timeline Selection Styles */
+.timeline-selection {
+    margin-bottom: 1.5rem;
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 1rem;
+    border: 1px solid #e9ecef;
+}
+
+.timeline-selector-group {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    margin-bottom: 0.5rem;
+}
+
+.timeline-selector-group label {
+    font-weight: 500;
+    color: #333;
+    min-width: 100px;
+}
+
+.timeline-selector {
+    flex: 1;
+    padding: 0.5rem 0.8rem;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background: white;
+    font-size: 0.9rem;
+    color: #333;
+    transition: all 0.2s ease;
+}
+
+.timeline-selector:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.timeline-selector:disabled {
+    background: #f5f5f5;
+    color: #999;
+    cursor: not-allowed;
+}
+
+.timeline-selector option {
+    padding: 0.5rem;
+}
+
+.refresh-btn {
+    min-width: 80px !important;
+    padding: 0.5rem 0.8rem !important;
+    height: auto !important;
+    min-height: auto !important;
+}
+
+.timeline-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0;
+}
+
+.timeline-status {
+    font-size: 0.85rem;
+    color: #666;
+    font-style: italic;
+}
+
+.timeline-status.selected {
+    color: #667eea;
+    font-weight: 500;
+    font-style: normal;
+}
+
+.timeline-status.selected::before {
+    content: "📋 ";
+    margin-right: 0.3rem;
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
     .app-main {
@@ -1173,14 +1348,42 @@ body {
         min-height: 60px;
         padding: 0.8rem 0.6rem;
     }
+    
+    /* Ensure tabs remain visible on mobile */
+    .tab-nav {
+        display: flex !important;
+    }
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1600px) and (min-width: 769px) {
     .sidebar {
-        width: 250px;
+        width: 280px;
     }
     
     .command-buttons {
         grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    }
+    
+    /* Ensure tabbed interface for medium and smaller desktop screens */
+    .tabbed-panel {
+        flex-direction: column !important;
+        display: flex !important;
+    }
+    
+    .tab-nav {
+        display: flex !important;
+    }
+    
+    .tab-content {
+        flex-direction: column !important;
+        display: flex !important;
+    }
+    
+    .tab-panel {
+        display: none !important;
+    }
+    
+    .tab-panel.active {
+        display: flex !important;
     }
 }

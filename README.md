@@ -1,4 +1,4 @@
-# Watchout Server Finder
+# WATCHOUT Assistant
 
 An Electron application designed to discover and control Watchout 7 servers on a local network.
 
@@ -16,13 +16,17 @@ An Electron application designed to discover and control Watchout 7 servers on a
 - **Server Selection**: Click to select and view detailed server information
 - **Responsive Design**: Works on desktop, tablet, and mobile devices
 - **Real-time Updates**: Live status indicators and connection monitoring
+- **Adaptive Layout**: Automatically switches between tabbed and grid panel layouts
+  - **Standard screens (≤1600px)**: Traditional tabbed interface for most users
+  - **Ultra-wide screens (>1600px)**: Horizontal grid layout showing server details and commands simultaneously without tabs
 
 ### ⚡ **Watchout Commands & Control**
-- **Timeline Control**: Play, Pause, Stop timelines
-- **Server Information**: Get status, timelines, and show details
-- **API Connection Testing**: Verify HTTP API connectivity
+- **Context-Aware Timeline Control**: Select specific timelines and control play/pause/stop
+- **Timeline Management**: Load and browse available timelines from servers
+- **Server Information**: Get status, show details, and system information
+- **API Connection Testing**: Verify HTTP API connectivity with detailed feedback
 - **Custom Commands**: Execute custom API endpoints with full flexibility
-- **Command History**: View response history with timestamps
+- **Command History**: View response history with timestamps per server
 
 ## Watchout 7 API Integration
 
@@ -31,14 +35,15 @@ This application integrates with the [Watchout 7 External Protocol](https://docs
 ### Supported Commands
 
 #### Timeline Control
-- `POST /v0/play/0` - Play main timeline
-- `POST /v0/pause/0` - Pause main timeline  
-- `POST /v0/stop/0` - Stop main timeline
+- `POST /v0/play/{timelineId}` - Play specific timeline by ID
+- `POST /v0/pause/{timelineId}` - Pause specific timeline by ID  
+- `POST /v0/stop/{timelineId}` - Stop specific timeline by ID
+- **Context-Aware**: Timeline ID is selected from dropdown interface
 
 #### Information Retrieval
 - `GET /v0/state` - Current playback status
 - `GET /v0/show` - Current show information
-- `GET /v0/timelines` - Available timelines
+- `GET /v0/timelines` - Available timelines for selection
 
 #### Advanced Features
 - Custom endpoint execution
@@ -58,7 +63,7 @@ This application integrates with the [Watchout 7 External Protocol](https://docs
 ### Setup
 ```bash
 # Clone and install dependencies
-cd watchout-server-finder
+cd watchout-assistant
 npm install
 
 # Run in development mode

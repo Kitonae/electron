@@ -25,10 +25,10 @@ const WATCHOUT_RESPONSE_PORT = 3012; // Watchout discovery response port
 const TIMEOUT_MS = 5000;
 
 // Cache configuration
-const CACHE_FILE_NAME = 'watchout-server-cache.json';
+const CACHE_FILE_NAME = 'watchout-assistant-cache.json';
 const CACHE_EXPIRY_HOURS = 24; // Cache servers for 24 hours
 
-class WatchoutServerFinder {
+class WatchoutAssistant {
   constructor() {
     this.servers = new Map();
     this.serverCache = new Map(); // Cache to track all discovered servers
@@ -461,7 +461,7 @@ class WatchoutServerFinder {
   }
 }
 
-const finder = new WatchoutServerFinder();
+const finder = new WatchoutAssistant();
 
 module.exports = {
   findWatchoutServers: () => finder.findWatchoutServers()

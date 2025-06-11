@@ -1,0 +1,32 @@
+/* Debug CSS for Wide Layout - Temporary */
+@media (min-width: 1601px) {
+    .tabbed-panel {
+        /* Add a colored border to see the grid container */
+        border: 3px solid red !important;
+    }
+    
+    .tab-content {
+        /* Add a colored border to see the content area */
+        border: 2px solid blue !important;
+    }
+    
+    .tab-panel {
+        /* Add colored borders to see each panel */
+        border: 2px solid green !important;
+    }
+    
+    .tab-panel:first-child {
+        background: rgba(255, 0, 0, 0.1) !important;
+    }
+    
+    .tab-panel:last-child {
+        background: rgba(0, 0, 255, 0.1) !important;
+    }
+}
+
+/* Current layout analysis:
+- .tabbed-panel should be the grid container (red border)
+- .tab-content should span the grid (blue border) 
+- .tab-panel elements should be grid items side by side (green borders)
+- First panel should have red tint, second should have blue tint
+*/

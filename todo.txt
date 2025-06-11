@@ -1,0 +1,5 @@
+- in timeline control instead of selected label, list all timelines there.
+
+- settings page with:
+    -toggle loading cache from disk
+    -toggle webserver

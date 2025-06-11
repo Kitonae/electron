@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Watchout Server Finder</title>
+    <title>WATCHOUT Assistant</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>    <div class="app-container">
@@ -85,22 +85,46 @@
                                         <p class="hint">Choose a server from the sidebar first</p>
                                     </div>
 
-                                    <div class="commands-area" id="commandsArea" style="display: none;">
-                                        <div class="command-categories">
+                                    <div class="commands-area" id="commandsArea" style="display: none;">                                        <div class="command-categories">
                                             <!-- Timeline Control Commands -->
                                             <div class="command-category">
                                                 <h3>Timeline Control</h3>
+                                                
+                                                <!-- Timeline Selection -->
+                                                <div class="timeline-selection">
+                                                    <div class="timeline-selector-group">
+                                                        <label for="timelineSelector">Select Timeline:</label>
+                                                        <select id="timelineSelector" class="timeline-selector" disabled>
+                                                            <option value="">Load timelines first...</option>
+                                                        </select>
+                                                        <button class="command-btn refresh-btn" id="timelinesBtn" title="Load Available Timelines">
+                                                            <span class="cmd-icon">📑</span>
+                                                            <span>Refresh</span>
+                                                        </button>
+                                                    </div>
+                                                    <div class="timeline-info" id="timelineInfo" style="display: none;">
+                                                        <span class="timeline-status">No timeline selected</span>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Control Buttons -->
                                                 <div class="command-buttons">
-                                                    <button class="command-btn play-btn" id="playBtn">
-                                                        <span class="cmd-icon">▶️</span>
+                                                    <button class="command-btn play-btn" id="playBtn" disabled title="Select a timeline first">
+                                                        <span class="cmd-icon">
+                                                            <img src="../assets/play-solid.svg" alt="Play" class="timeline-icon">
+                                                        </span>
                                                         <span>Play</span>
                                                     </button>
-                                                    <button class="command-btn pause-btn" id="pauseBtn">
-                                                        <span class="cmd-icon">⏸️</span>
+                                                    <button class="command-btn pause-btn" id="pauseBtn" disabled title="Select a timeline first">
+                                                        <span class="cmd-icon">
+                                                            <img src="../assets/pause-solid.svg" alt="Pause" class="timeline-icon">
+                                                        </span>
                                                         <span>Pause</span>
                                                     </button>
-                                                    <button class="command-btn stop-btn" id="stopBtn">
-                                                        <span class="cmd-icon">⏹️</span>
+                                                    <button class="command-btn stop-btn" id="stopBtn" disabled title="Select a timeline first">
+                                                        <span class="cmd-icon">
+                                                            <img src="../assets/stop-solid.svg" alt="Stop" class="timeline-icon">
+                                                        </span>
                                                         <span>Stop</span>
                                                     </button>
                                                 </div>
@@ -113,10 +137,6 @@
                                                     <button class="command-btn info-btn" id="statusBtn">
                                                         <span class="cmd-icon">📊</span>
                                                         <span>Get Status</span>
-                                                    </button>
-                                                    <button class="command-btn info-btn" id="timelinesBtn">
-                                                        <span class="cmd-icon">📑</span>
-                                                        <span>Get Timelines</span>
                                                     </button>
                                                     <button class="command-btn info-btn" id="showBtn">
                                                         <span class="cmd-icon">🎭</span>
@@ -158,11 +178,9 @@
                     </div>
                 </div>
             </div>
-        </main>
-
-        <footer class="app-footer">
+        </main>        <footer class="app-footer">
             <div class="footer-content">
-                <span>Watchout Server Finder v<span id="appVersion">1.0.0</span></span>
+                <span>WATCHOUT Assistant v<span id="appVersion">1.0.0</span></span>
                 <span class="separator">•</span>
                 <span>Built with Electron</span>
             </div>

@@ -1,6 +1,6 @@
 <!-- Use this file to provide workspace-specific custom instructions to Copilot. For more details, visit https://code.visualstudio.com/docs/copilot/copilot-customization#_use-a-githubcopilotinstructionsmd-file -->
 
-# Watchout Server Finder - Copilot Instructions
+# WATCHOUT Assistant - Copilot Instructions
 
 This is an Electron application designed to discover Watchout 7 servers on a local network.
 
