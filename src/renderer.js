@@ -5,6 +5,7 @@ class WatchoutServerFinderApp {
         this.scanInterval = null;
         this.backgroundScanEnabled = true;
         this.scanIntervalMs = 30000; // 30 seconds
+        this.selectedServerId = null; // Track selected server
         this.initializeApp();
     }
 
@@ -128,43 +129,85 @@ class WatchoutServerFinderApp {
 
     updateScanStatus(message) {
         document.getElementById('scanStatus').textContent = message;
+    }    updateUI() {
+        this.updateServerCounts();
+        this.renderSidebar();
+        this.renderMainContent();
     }
 
-    updateUI() {
-        this.updateServerCount();
-        this.renderServers();
-    }
-
-    updateServerCount() {
+    updateServerCounts() {
         const count = this.servers.length;
+        
+        // Update main server count
         const serverCount = document.getElementById('serverCount');
         serverCount.textContent = `${count} server${count !== 1 ? 's' : ''} found`;
+        
+        // Update sidebar server count
+        const serverCountSidebar = document.getElementById('serverCountSidebar');
+        serverCountSidebar.textContent = count.toString();
+    }    renderSidebar() {
+        const serverList = document.getElementById('serverList');
+        const noServersSidebar = document.getElementById('noServersSidebar');
+
+        if (this.servers.length === 0) {
+            noServersSidebar.style.display = 'flex';
+            // Clear selection when no servers
+            this.selectedServerId = null;
+            // Remove any existing server items
+            const existingItems = serverList.querySelectorAll('.server-item');
+            existingItems.forEach(item => item.remove());
+            return;
+        }
+
+        noServersSidebar.style.display = 'none';
+        
+        // Auto-select first server if none selected or selected server no longer exists
+        if (!this.selectedServerId || !this.servers.some(s => this.getServerId(s) === this.selectedServerId)) {
+            this.selectedServerId = this.getServerId(this.servers[0]);
+        }
+        
+        // Remove existing server items
+        const existingItems = serverList.querySelectorAll('.server-item');
+        existingItems.forEach(item => item.remove());
+
+        // Create new server items
+        this.servers.forEach(server => {
+            const serverItem = this.createServerItem(server);
+            serverList.appendChild(serverItem);
+        });
     }
 
-    renderServers() {
+    renderMainContent() {
         const container = document.getElementById('serversContainer');
         const noServers = document.getElementById('noServers');
+        const noSelection = document.getElementById('noSelection');
+
+        // Remove any existing server cards
+        const existingCards = container.querySelectorAll('.server-card');
+        existingCards.forEach(card => card.remove());
 
         if (this.servers.length === 0) {
             noServers.style.display = 'flex';
-            // Remove any existing server cards
-            const existingCards = container.querySelectorAll('.server-card');
-            existingCards.forEach(card => card.remove());
+            noSelection.style.display = 'none';
             return;
         }
 
         noServers.style.display = 'none';
-        
-        // Remove existing server cards
-        const existingCards = container.querySelectorAll('.server-card');
-        existingCards.forEach(card => card.remove());
 
-        // Create new server cards
-        this.servers.forEach(server => {
-            const serverCard = this.createServerCard(server);
+        if (!this.selectedServerId) {
+            noSelection.style.display = 'flex';
+            return;
+        }
+
+        noSelection.style.display = 'none';
+
+        // Find and render the selected server
+        const selectedServer = this.servers.find(server => this.getServerId(server) === this.selectedServerId);
+        if (selectedServer) {
+            const serverCard = this.createServerCard(selectedServer);
             container.appendChild(serverCard);
-        });
-    }    createServerCard(server) {
+        }
+    }createServerCard(server) {
         const card = document.createElement('div');
         card.className = 'server-card';
 
@@ -183,13 +226,16 @@ class WatchoutServerFinderApp {
         // Add Watchout-specific details if available (from JSON response)
         if (server.hostRef || server.machineId || server.services) {
             detailsHtml += this.buildWatchoutDetails(server);
-        }
-
-        card.innerHTML = `
+        }        card.innerHTML = `
             <div class="server-header">
                 <div>
                     <div class="server-title">${this.escapeHtml(serverName)}</div>
-                    <div style="font-size: 0.9rem; color: #666;">Discovered at ${discoveredTime}</div>
+                    <div style="font-size: 0.9rem; color: #666;">
+                        ${server.status === 'online' ? 
+                            `Discovered at ${discoveredTime}` : 
+                            `Last seen: ${new Date(server.lastSeenAt).toLocaleTimeString()}`
+                        }
+                    </div>
                 </div>
                 <div class="server-type">${this.escapeHtml(server.type)}</div>
             </div>
@@ -201,19 +247,44 @@ class WatchoutServerFinderApp {
 
         return card;
     }    buildBasicDetails(server) {
-        return `
+        let html = `
             <div class="detail-item">
                 <span class="detail-label">IP Address:</span>
                 <span class="detail-value">${this.escapeHtml(server.ip)}</span>
             </div>
-            
-            ${server.hostname && server.hostname !== server.ip && !server.hostRef ? `
+        `;
+
+        // Show status information
+        if (server.status === 'offline' && server.offlineSince) {
+            html += `
+            <div class="detail-item">
+                <span class="detail-label">Offline Since:</span>
+                <span class="detail-value offline-time">${new Date(server.offlineSince).toLocaleString()}</span>
+            </div>
+            `;
+        }
+
+        // Show first discovery time for cached servers
+        if (server.firstDiscoveredAt && server.firstDiscoveredAt !== server.discoveredAt) {
+            html += `
+            <div class="detail-item">
+                <span class="detail-label">First Seen:</span>
+                <span class="detail-value">${new Date(server.firstDiscoveredAt).toLocaleString()}</span>
+            </div>
+            `;
+        }
+
+        // Show hostname if different from IP and no hostRef
+        if (server.hostname && server.hostname !== server.ip && !server.hostRef) {
+            html += `
             <div class="detail-item">
                 <span class="detail-label">Hostname:</span>
                 <span class="detail-value">${this.escapeHtml(server.hostname)}</span>
             </div>
-            ` : ''}
-        `;
+            `;
+        }
+
+        return html;
     }
 
     buildWatchoutDetails(server) {
@@ -354,6 +425,88 @@ class WatchoutServerFinderApp {
 
     cleanup() {
         this.stopBackgroundScanning();
+    }
+
+    createServerItem(server) {
+        const item = document.createElement('div');
+        item.className = 'server-item';
+        
+        const serverId = this.getServerId(server);
+        item.dataset.serverId = serverId;
+        
+        // Check if this item should be selected
+        if (this.selectedServerId === serverId) {
+            item.classList.add('selected');
+        }
+        
+        // Use hostRef as the primary name, fallback to hostname or IP
+        const serverName = server.hostRef || server.hostname || server.ip || 'Unknown Server';
+        
+        // Truncate long names for sidebar
+        const displayName = serverName.length > 25 ? 
+            serverName.substring(0, 22) + '...' : serverName;
+            
+        // Determine simplified type
+        const simplifiedType = this.getSimplifiedServerType(server);
+        
+        // Determine status info
+        const isOnline = server.status === 'online';
+        const statusText = isOnline ? 'Online' : 'Offline';
+        
+        item.innerHTML = `
+            <div class="server-item-name">${this.escapeHtml(displayName)}</div>
+            <div class="server-item-details">
+                <div class="server-item-ip">${this.escapeHtml(server.ip)}</div>
+                <div class="server-item-type">${this.escapeHtml(simplifiedType)}</div>
+                <div class="server-item-status">
+                    <div class="status-indicator ${isOnline ? 'online' : 'offline'}"></div>
+                    <span class="status-text">${statusText}</span>
+                </div>
+            </div>
+        `;
+        
+        // Add click event listener
+        item.addEventListener('click', () => {
+            this.selectServer(serverId);
+        });
+        
+        return item;
+    }
+
+    getServerId(server) {
+        // Create a unique identifier for the server
+        return `${server.ip}:${server.ports.join(',')}`;
+    }
+
+    getSimplifiedServerType(server) {
+        // Simplify server types for sidebar display
+        if (server.type.includes('Production')) return 'Production';
+        if (server.type.includes('Director')) return 'Director';
+        if (server.type.includes('Display')) return 'Display';
+        if (server.type.includes('Asset Manager')) return 'Asset Manager';
+        if (server.type.includes('Watchout')) return 'Watchout Server';
+        return 'Server';
+    }
+
+    selectServer(serverId) {
+        // Update selected server
+        const previouslySelected = this.selectedServerId;
+        this.selectedServerId = serverId;
+        
+        // Update sidebar selection visual state
+        const serverItems = document.querySelectorAll('.server-item');
+        serverItems.forEach(item => {
+            if (item.dataset.serverId === serverId) {
+                item.classList.add('selected');
+            } else {
+                item.classList.remove('selected');
+            }
+        });
+        
+        // Re-render main content to show selected server
+        this.renderMainContent();
+        
+        console.log('Selected server:', serverId);
     }
 }
 

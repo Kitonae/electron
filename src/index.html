@@ -16,27 +16,51 @@
                 </h1>
                 <p class="subtitle">Discover Watchout 7 servers on your network</p>
             </div>
-        </header>
+        </header>        <main class="app-main">
+            <div class="main-content">
+                <!-- Left Sidebar -->
+                <aside class="sidebar">
+                    <div class="sidebar-header">
+                        <h3>Servers</h3>
+                        <div class="server-count-sidebar" id="serverCountSidebar">0</div>
+                    </div>
+                    <div class="sidebar-content">
+                        <div class="server-list" id="serverList">
+                            <div class="no-servers-sidebar" id="noServersSidebar">
+                                <div class="no-servers-icon-sidebar">📡</div>
+                                <p>No servers found</p>
+                            </div>
+                        </div>
+                    </div>
+                </aside>
 
-        <main class="app-main">
-            <div class="control-panel">                <button id="scanButton" class="scan-button">
-                    <span class="button-icon">🔄</span>
-                    Manual Scan
-                </button>
-                <div class="scan-status" id="scanStatus">Background scanning every 30 seconds...</div>
-            </div>
+                <!-- Main Content Area -->
+                <div class="content-area">
+                    <div class="control-panel">
+                        <button id="scanButton" class="scan-button">
+                            <span class="button-icon">🔄</span>
+                            Manual Scan
+                        </button>
+                        <div class="scan-status" id="scanStatus">Background scanning every 30 seconds...</div>
+                    </div>
 
-            <div class="results-section">
-                <div class="results-header">
-                    <h2>Discovered Servers</h2>
-                    <div class="server-count" id="serverCount">0 servers found</div>
-                </div>
-                
-                <div class="servers-container" id="serversContainer">
-                    <div class="no-servers" id="noServers">
-                        <div class="no-servers-icon">📡</div>
-                        <p>No Watchout servers discovered yet</p>
-                        <p class="hint">Click "Start Network Scan" to begin discovery</p>
+                    <div class="results-section">
+                        <div class="results-header">
+                            <h2>Server Details</h2>
+                            <div class="server-count" id="serverCount">0 servers found</div>
+                        </div>
+                        
+                        <div class="servers-container" id="serversContainer">
+                            <div class="no-servers" id="noServers">
+                                <div class="no-servers-icon">📡</div>
+                                <p>No Watchout servers discovered yet</p>
+                                <p class="hint">Click "Manual Scan" to begin discovery</p>
+                            </div>
+                            <div class="no-selection" id="noSelection" style="display: none;">
+                                <div class="no-selection-icon">👈</div>
+                                <p>Select a server from the sidebar to view details</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

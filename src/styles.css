@@ -51,7 +51,174 @@ body {
 .app-main {
     flex: 1;
     padding: 2rem;
+    overflow: hidden;
+}
+
+.main-content {
+    display: flex;
+    height: 100%;
+    gap: 1.5rem;
+}
+
+/* Sidebar Styles */
+.sidebar {
+    width: 300px;
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.sidebar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem 1.5rem 1rem 1.5rem;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.sidebar-header h3 {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #333;
+    margin: 0;
+}
+
+.server-count-sidebar {
+    background: #667eea;
+    color: white;
+    padding: 0.3rem 0.8rem;
+    border-radius: 15px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    min-width: 2rem;
+    text-align: center;
+}
+
+.sidebar-content {
+    flex: 1;
     overflow-y: auto;
+    padding: 0.5rem;
+}
+
+.server-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.server-item {
+    padding: 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+    background: #f8f9fa;
+}
+
+.server-item:hover {
+    background: #e9ecef;
+    border-color: rgba(102, 126, 234, 0.3);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.server-item.selected {
+    background: rgba(102, 126, 234, 0.15);
+    border-color: #667eea;
+    box-shadow: 0 2px 12px rgba(102, 126, 234, 0.3);
+}
+
+.server-item.selected:hover {
+    background: rgba(102, 126, 234, 0.2);
+    transform: none;
+}
+
+.server-item-name {
+    font-weight: 600;
+    color: #333;
+    font-size: 0.95rem;
+    margin-bottom: 0.3rem;
+    word-break: break-word;
+}
+
+.server-item-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.server-item-ip {
+    font-family: 'Courier New', monospace;
+    font-size: 0.8rem;
+    color: #666;
+}
+
+.server-item-type {
+    font-size: 0.75rem;
+    color: #888;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.server-item-status {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.75rem;
+    margin-top: 0.2rem;
+}
+
+.status-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+.status-indicator.online {
+    background: #28a745;
+}
+
+.status-indicator.offline {
+    background: #dc3545;
+}
+
+.status-text {
+    color: #666;
+}
+
+.no-servers-sidebar {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1rem;
+    color: #666;
+    text-align: center;
+}
+
+.no-servers-icon-sidebar {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    opacity: 0.6;
+}
+
+.no-servers-sidebar p {
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+/* Content Area */
+.content-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 .control-panel {
@@ -59,7 +226,8 @@ body {
     flex-direction: column;
     align-items: center;
     gap: 1rem;
-    margin-bottom: 2rem;
+    margin-bottom: 1.5rem;
+    flex-shrink: 0;
 }
 
 .scan-button {
@@ -121,6 +289,9 @@ body {
     border-radius: 15px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
     overflow: hidden;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
 }
 
 .results-header {
@@ -130,6 +301,7 @@ body {
     padding: 1.5rem 2rem;
     background: #f8f9fa;
     border-bottom: 1px solid #e9ecef;
+    flex-shrink: 0;
 }
 
 .results-header h2 {
@@ -148,11 +320,12 @@ body {
 }
 
 .servers-container {
-    min-height: 300px;
+    flex: 1;
     padding: 1rem;
+    overflow-y: auto;
 }
 
-.no-servers {
+.no-servers, .no-selection {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -162,7 +335,7 @@ body {
     text-align: center;
 }
 
-.no-servers-icon {
+.no-servers-icon, .no-selection-icon {
     font-size: 3rem;
     margin-bottom: 1rem;
     opacity: 0.6;
@@ -188,6 +361,8 @@ body {
     box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
 }
 
+
+
 .server-header {
     display: flex;
     justify-content: space-between;
@@ -202,12 +377,23 @@ body {
     margin-bottom: 0.2rem;
 }
 
+
+
 .server-type {
     background: #28a745;
     color: white;
     padding: 0.2rem 0.6rem;
     border-radius: 12px;
     font-size: 0.8rem;
+    font-weight: 500;
+}
+
+
+
+
+
+.offline-time {
+    color: #dc3545;
     font-weight: 500;
 }
 
@@ -392,5 +578,50 @@ body {
     
     .server-details {
         grid-template-columns: 1fr;
+    }
+}
+
+/* Mobile and tablet responsive design for sidebar */
+@media (max-width: 768px) {
+    .main-content {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .sidebar {
+        width: 100%;
+        height: 200px;
+        order: 2;
+    }
+    
+    .content-area {
+        order: 1;
+    }
+    
+    .sidebar-content {
+        padding: 0.3rem;
+    }
+    
+    .server-item {
+        padding: 0.8rem;
+    }
+    
+    .server-item-name {
+        font-size: 0.9rem;
+    }
+    
+    .server-item-details {
+        font-size: 0.8rem;
+    }
+}
+
+@media (max-width: 1024px) {
+    .sidebar {
+        width: 250px;
+    }
+    
+    .scan-button {
+        padding: 0.8rem 1.5rem;
+        font-size: 1rem;
     }
 }

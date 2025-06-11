@@ -25,8 +25,14 @@ const TIMEOUT_MS = 5000;
 class WatchoutServerFinder {
   constructor() {
     this.servers = new Map();
+    this.serverCache = new Map(); // Cache to track all discovered servers
+    this.lastScanTime = null;
   }  async findWatchoutServers() {
     console.log('Starting Watchout server discovery...');
+    
+    // Clear current scan results but keep cache
+    this.servers.clear();
+    this.lastScanTime = new Date().toISOString();
     
     const discoveryMethods = [
       this.scanNetworkPorts(),
@@ -36,12 +42,16 @@ class WatchoutServerFinder {
 
     try {
       await Promise.allSettled(discoveryMethods);
+      
+      // Process cached servers and mark offline ones
+      this.processCachedServers();
+      
       return Array.from(this.servers.values());
     } catch (error) {
       console.error('Error during server discovery:', error);
       throw error;
     }
-  }  async scanNetworkPorts() {
+  }async scanNetworkPorts() {
     return new Promise((resolve) => {
       // Check if nmap is available
       try {
@@ -308,18 +318,58 @@ class WatchoutServerFinder {
       serviceName.includes(identifier) || serviceType.includes(identifier)
     ) || allWatchoutPorts.includes(service.port);
   }
-
   addServer(serverInfo) {
     const key = `${serverInfo.ip}:${serverInfo.ports.join(',')}`;
     
+    // Add timestamp for this discovery
+    serverInfo.discoveredAt = new Date().toISOString();
+    serverInfo.lastSeenAt = serverInfo.discoveredAt;
+    serverInfo.status = 'online';
+    
+    // Add to current scan results
     if (!this.servers.has(key)) {
-      serverInfo.discoveredAt = new Date().toISOString();
       this.servers.set(key, serverInfo);
       console.log('Found Watchout server:', serverInfo);
     } else {
       // Update existing server with additional info
       const existing = this.servers.get(key);
       this.servers.set(key, { ...existing, ...serverInfo });
+    }
+    
+    // Update cache with latest information
+    if (this.serverCache.has(key)) {
+      const cached = this.serverCache.get(key);
+      // Preserve first discovery time but update last seen
+      serverInfo.firstDiscoveredAt = cached.firstDiscoveredAt;
+      serverInfo.lastSeenAt = serverInfo.discoveredAt;
+    } else {
+      // New server - set first discovery time
+      serverInfo.firstDiscoveredAt = serverInfo.discoveredAt;
+    }
+    
+    this.serverCache.set(key, { ...serverInfo });
+  }
+
+  processCachedServers() {
+    const currentTime = new Date().toISOString();
+    const currentServerKeys = new Set(this.servers.keys());
+    
+    // Check all cached servers
+    for (const [key, cachedServer] of this.serverCache.entries()) {
+      if (!currentServerKeys.has(key)) {
+        // Server not found in current scan - mark as offline
+        const offlineServer = {
+          ...cachedServer,
+          status: 'offline',
+          lastSeenAt: cachedServer.lastSeenAt,
+          offlineSince: this.lastScanTime,
+          type: cachedServer.type + ' (Offline)'
+        };
+        
+        // Add offline server to current results
+        this.servers.set(key, offlineServer);
+        console.log('Server marked offline:', offlineServer.hostRef || offlineServer.ip);
+      }
     }
   }
 }
