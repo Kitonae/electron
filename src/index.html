@@ -9,14 +9,19 @@
 <body>    <div class="app-container">
         <main class="app-main">
             <div class="main-content">                <!-- Left Sidebar -->
-                <aside class="sidebar">
-                    <div class="sidebar-header">
+                <aside class="sidebar">                    <div class="sidebar-header">
                         <div class="sidebar-title-group">
                             <h3>Servers</h3>
                             <div class="server-count-sidebar" id="serverCountSidebar">0</div>
-                        </div>                        <button id="scanButton" class="scan-button-sidebar">
-                            <img src="../assets/refresh.svg" class="button-icon" alt="Refresh">
-                        </button>
+                        </div>
+                        <div class="sidebar-buttons">
+                            <button id="scanButton" class="scan-button-sidebar">
+                                <img src="../assets/refresh.svg" class="button-icon" alt="Refresh">
+                            </button>
+                            <button id="clearOfflineButton" class="clear-offline-button-sidebar" title="Clear offline cached servers">
+                                🗑️
+                            </button>
+                        </div>
                     </div>
                     <div class="sidebar-scan-status">
                         <div class="scan-status" id="scanStatus">Background scanning every 30 seconds...</div>
@@ -34,14 +39,12 @@
                     <!-- Main Panels -->
                     <div class="main-panels">
                         <!-- Server Details Panel -->
-                        <div class="panel" id="detailsPanel">
-                            <div class="panel-header">
+                        <div class="panel" id="detailsPanel">                            <div class="panel-header">
                                 <div class="panel-title-group">
                                     <span class="panel-icon">📋</span>
                                     <h3>Server Details</h3>
                                 </div>
-                                <div class="server-count" id="serverCount">0 servers found</div>
-                            </div>                            <div class="panel-content" id="serversContainer">
+                            </div><div class="panel-content" id="serversContainer">
                                 <div class="no-servers" id="noServers">
                                     <div class="no-servers-icon">📡</div>
                                     <p>No Watchout servers discovered yet</p>
@@ -90,9 +93,11 @@
                                                             <span class="cmd-icon">📑</span>
                                                             <span>Refresh</span>
                                                         </button>
-                                                    </div>
-                                                    <div class="timeline-info" id="timelineInfo" style="display: none;">
-                                                        <span class="timeline-status">No timeline selected</span>
+                                                    </div>                                                    <div class="timeline-info" id="timelineInfo" style="display: none;">
+                                                        <div class="timeline-list-header">Available Timelines:</div>
+                                                        <div class="timeline-list" id="timelineList">
+                                                            <div class="timeline-list-item">No timelines loaded</div>
+                                                        </div>
                                                     </div>
                                                 </div>
 
@@ -166,16 +171,18 @@
                     </div>
                 </div>
             </div>
-        </main><footer class="app-footer">
+        </main>        <footer class="app-footer">
             <div class="footer-content">
                 <span>WATCHOUT Assistant v<span id="appVersion">1.0.0</span></span>
                 <span class="separator">•</span>
                 <span>Built with Electron</span>
+                <button id="debugFooterBtn" style="background: orange; color: black; padding: 5px; margin: 0 10px; border: none; border-radius: 3px; cursor: pointer;">Debug Footer</button>
+                <button id="settingsButton" class="settings-button" title="Application Settings">
+                    ⚙️ Settings
+                </button>
             </div>
         </footer>
-    </div>
-
-    <!-- Custom Command Modal -->
+    </div>    <!-- Custom Command Modal -->
     <div class="modal-overlay" id="customCommandModal" style="display: none;">
         <div class="modal-content">
             <div class="modal-header">
@@ -217,9 +224,64 @@
                 <button class="btn-secondary" id="cancelCustomCommand">Cancel</button>
                 <button class="btn-primary" id="executeCustomCommand">Execute</button>
             </div>
+        </div>    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settingsModal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Settings</h3>
+                <button class="modal-close" id="closeSettingsModal">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="settings-section">
+                    <h4>Server Discovery</h4>
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="enableCacheFromDisk" checked>
+                            <span class="checkmark"></span>
+                            Load server cache from disk
+                        </label>
+                        <small class="form-help">Save and load discovered servers between application sessions</small>
+                    </div>
+                </div>
+                
+                <div class="settings-section">
+                    <h4>Web Server</h4>
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="enableWebServer" checked>
+                            <span class="checkmark"></span>
+                            Enable web server (Port 3080)
+                        </label>
+                        <small class="form-help">Allow browser access to WATCHOUT Assistant at http://localhost:3080</small>
+                    </div>
+                    <div class="form-group" id="webServerStatusGroup">
+                        <label>Web Server Status:</label>
+                        <span id="webServerStatus" class="status-indicator-text">Unknown</span>
+                    </div>
+                </div>
+                
+                <div class="settings-section">
+                    <h4>Application</h4>
+                    <div class="form-group">
+                        <label>Version:</label>
+                        <span id="settingsVersion">1.0.0</span>
+                    </div>
+                    <div class="form-group">
+                        <label>Cache File Location:</label>
+                        <span id="cacheFileLocation" class="file-path">Loading...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" id="cancelSettings">Cancel</button>
+                <button class="btn-primary" id="saveSettings">Save Settings</button>
+            </div>
         </div>
     </div>
 
+    <script src="api-adapter.js"></script>
     <script src="renderer.js"></script>
 </body>
 </html>

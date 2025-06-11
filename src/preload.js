@@ -4,8 +4,16 @@ const { contextBridge, ipcRenderer } = require('electron');
 // the ipcRenderer without exposing the entire object
 contextBridge.exposeInMainWorld('electronAPI', {
   scanForWatchoutServers: () => ipcRenderer.invoke('scan-for-watchout-servers'),
+  clearOfflineServers: () => ipcRenderer.invoke('clear-offline-servers'),
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
-    // Watchout Commands API
+  
+  // Settings API
+  getAppSettings: () => ipcRenderer.invoke('get-app-settings'),
+  saveAppSettings: (settings) => ipcRenderer.invoke('save-app-settings', settings),
+  getWebServerStatus: () => ipcRenderer.invoke('get-web-server-status'),
+  getCacheFileLocation: () => ipcRenderer.invoke('get-cache-file-location'),
+  
+  // Watchout Commands API
   watchout: {
     testConnection: (serverIp) => ipcRenderer.invoke('watchout-test-connection', serverIp),
     getStatus: (serverIp) => ipcRenderer.invoke('watchout-get-status', serverIp),

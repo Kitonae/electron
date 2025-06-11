@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WATCHOUT Assistant - Web</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>    <div class="app-container">
+        <main class="app-main">
+            <div class="main-content">                <!-- Left Sidebar -->
+                <aside class="sidebar">                    <div class="sidebar-header">
+                        <div class="sidebar-title-group">
+                            <h3>Servers</h3>
+                            <div class="server-count-sidebar" id="serverCountSidebar">0</div>
+                        </div>
+                        <div class="sidebar-buttons">
+                            <button id="scanButton" class="scan-button-sidebar">
+                                <img src="../assets/refresh.svg" class="button-icon" alt="Refresh">
+                            </button>
+                            <button id="clearOfflineButton" class="clear-offline-button-sidebar" title="Clear offline cached servers">
+                                🗑️
+                            </button>
+                        </div>
+                    </div>
+                    <div class="sidebar-scan-status">
+                        <div class="scan-status" id="scanStatus">Background scanning every 30 seconds...</div>
+                    </div>
+                    <div class="sidebar-content">
+                        <div class="server-list" id="serverList">
+                            <div class="no-servers-sidebar" id="noServersSidebar">
+                                <div class="no-servers-icon">🔍</div>
+                                <div class="no-servers-text">No servers found</div>
+                            </div>
+                        </div>
+                    </div>
+                </aside>
+
+                <!-- Right Main Content Area -->
+                <div class="main-content-area">
+                    <!-- Header with app info -->
+                    <header class="app-header">
+                        <div class="app-title-section">
+                            <h1>WATCHOUT Assistant</h1>
+                            <span class="app-subtitle">Web Version</span>
+                        </div>
+                        <div class="app-version-section">
+                            <span class="app-version" id="appVersion">v1.0.0</span>
+                        </div>
+                    </header>
+
+                    <!-- Server Details Panel -->
+                    <section class="server-details-panel">
+                        <div class="server-details-header">
+                            <h2>Server Details</h2>
+                        </div>
+                        <div class="server-details-content" id="serverDetailsContent">
+                            <div class="no-server-selected">
+                                <div class="no-server-icon">📡</div>
+                                <div class="no-server-text">Select a server from the sidebar to view details</div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Commands Panel -->
+                    <section class="commands-panel">
+                        <div class="commands-header">
+                            <div class="commands-title-section">
+                                <h2>Server Control</h2>
+                                <div class="connection-status" id="connectionStatus">
+                                    <span class="connection-indicator" id="connectionIndicator">●</span>
+                                    <span class="connection-text" id="connectionText">Not connected</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="commands-content">
+                            <!-- No Server Selected State -->
+                            <div class="no-server-selected" id="noServerSelected">
+                                <div class="no-server-icon">🎮</div>
+                                <div class="no-server-text">Select a server to access controls</div>
+                            </div>
+
+                            <!-- Commands Available State -->
+                            <div class="commands-area" id="commandsArea" style="display: none;">
+                                <div class="commands-sections">
+                                    <!-- Timeline Control Section -->
+                                    <div class="command-section">
+                                        <h3>Timeline Control</h3>
+                                        <div class="timeline-selector-section">
+                                            <div class="timeline-info" id="timelineInfo">
+                                                <div class="timeline-list" id="timelineList">
+                                                    <div class="timeline-list-item no-timelines">No timelines available - Click "Get Timelines" to refresh</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="command-buttons timeline-controls">
+                                            <button id="playBtn" class="cmd-button cmd-button-play" title="Play Timeline">
+                                                <img src="../assets/play-solid.svg" alt="Play" class="button-icon">
+                                                Play
+                                            </button>
+                                            <button id="pauseBtn" class="cmd-button cmd-button-pause" title="Pause Timeline">
+                                                <img src="../assets/pause-solid.svg" alt="Pause" class="button-icon">
+                                                Pause
+                                            </button>
+                                            <button id="stopBtn" class="cmd-button cmd-button-stop" title="Stop Timeline">
+                                                <img src="../assets/stop-solid.svg" alt="Stop" class="button-icon">
+                                                Stop
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Information Section -->
+                                    <div class="command-section">
+                                        <h3>Information</h3>
+                                        <div class="command-buttons info-controls">
+                                            <button id="statusBtn" class="cmd-button cmd-button-info">📊 Get Status</button>
+                                            <button id="timelinesBtn" class="cmd-button cmd-button-info">📋 Get Timelines</button>
+                                            <button id="showBtn" class="cmd-button cmd-button-info">🎬 Get Show Info</button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Advanced Section -->
+                                    <div class="command-section">
+                                        <h3>Advanced</h3>
+                                        <div class="command-buttons advanced-controls">
+                                            <button id="testConnectionBtn" class="cmd-button cmd-button-test">🔗 Test Connection</button>
+                                            <button id="customCommandBtn" class="cmd-button cmd-button-custom">⚙️ Custom Command</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Command Response Area -->
+                                <div class="command-response-area">
+                                    <div class="response-header">
+                                        <h4>Response</h4>
+                                        <button id="clearResponseBtn" class="clear-response-btn">Clear</button>
+                                    </div>
+                                    <div class="response-content" id="commandResponse">
+                                        <div class="no-response">No commands executed yet</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Custom Command Modal -->
+    <div class="modal" id="customCommandModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Custom API Command</h3>
+                <button class="modal-close" id="closeCustomCommand">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="customEndpoint">API Endpoint:</label>
+                    <select id="customEndpoint">
+                        <option value="">Select endpoint or enter custom...</option>
+                        <optgroup label="Timeline Control">
+                            <option value="/v0/play/0">Play Timeline 0</option>
+                            <option value="/v0/pause/0">Pause Timeline 0</option>
+                            <option value="/v0/stop/0">Stop Timeline 0</option>
+                        </optgroup>
+                        <optgroup label="Information">
+                            <option value="/v0/status">Get Status</option>
+                            <option value="/v0/timelines">Get Timelines</option>
+                            <option value="/v0/show">Get Show</option>
+                        </optgroup>
+                        <optgroup label="Examples">
+                            <option value="/v0/jump-to-time/0?time=5000&state=play">Jump to 5 seconds</option>
+                            <option value="/v0/cues/0">Get Timeline 0 Cues</option>
+                        </optgroup>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="customMethod">HTTP Method:</label>
+                    <select id="customMethod">
+                        <option value="GET">GET</option>
+                        <option value="POST">POST</option>
+                        <option value="PUT">PUT</option>
+                        <option value="DELETE">DELETE</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="customData">Request Data (JSON):</label>
+                    <textarea id="customData" placeholder='{"key": "value"}' rows="4"></textarea>
+                    <small class="form-help">Leave empty for GET requests. Use JSON format for POST/PUT requests.</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" id="cancelCustomCommand">Cancel</button>
+                <button class="btn-primary" id="executeCustomCommand">Execute</button>
+            </div>
+        </div>    </div>
+
+    <script src="api-adapter.js"></script>
+    <script src="renderer-web.js"></script>
+    <script>
+        // Initialize the web version
+        const app = new WatchoutServerFinderWebApp();
+    </script>
+</body>
+</html>

@@ -10,12 +10,15 @@ body {
     color: #333;
     height: 100vh;
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 .app-container {
     display: flex;
     flex-direction: column;
     height: 100vh;
+    max-height: 100vh; /* Prevent overflow */
     background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(10px);
 }
@@ -24,11 +27,14 @@ body {
     flex: 1;
     padding: 2rem;
     overflow: hidden;
+    min-height: 0; /* Ensure flex shrinking works properly */
+    max-height: calc(100vh - 80px); /* Reserve space for footer */
 }
 
 .main-content {
     display: flex;
     height: 100%;
+    max-height: 100%; /* Prevent overflow */
     gap: 1.5rem;
 }
 
@@ -41,6 +47,7 @@ body {
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    max-height: 100%; /* Prevent sidebar from overflowing */
 }
 
 .sidebar-header {
@@ -80,10 +87,10 @@ body {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
     border: none;
-    padding: 0.6rem;
+    padding: 0.4rem;
     border-radius: 50%;
-    width: 40px;
-    height: 40px;
+    width: 32px;
+    height: 32px;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -109,10 +116,50 @@ body {
 }
 
 .scan-button-sidebar .button-icon {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     filter: brightness(0) invert(1); /* Make SVG white */
     transition: transform 0.2s ease;
+}
+
+.sidebar-buttons {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.clear-offline-button-sidebar {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    color: white;
+    border: none;
+    padding: 0.4rem;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(220, 53, 69, 0.4);
+    font-size: 14px;
+}
+
+.clear-offline-button-sidebar:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.6);
+}
+
+.clear-offline-button-sidebar:active {
+    transform: translateY(0);
+}
+
+.clear-offline-button-sidebar:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+    opacity: 0.5;
 }
 
 .scan-button-sidebar:hover .button-icon {
@@ -266,6 +313,7 @@ body {
     flex-direction: column;
     overflow-x: visible; /* Allow horizontal shadows */
     overflow-y: hidden; /* Prevent vertical scrolling at this level */
+    max-height: 100%; /* Prevent content area from overflowing */
 }
 
 /* Main Panels Container */
@@ -326,9 +374,6 @@ body {
     overflow-y: auto;
     min-height: 0;
 }
-
-
-
 
 /* No Server Selected State */
 .no-server-selected {
@@ -601,9 +646,17 @@ body {
 }
 
 .app-footer {
-    background: #f8f9fa;
-    border-top: 1px solid #e9ecef;
+    height: 60px; /* Fixed height */
+    min-height: 60px; /* Minimum height */
+    max-height: 60px; /* Maximum height */
+    background: rgba(255, 0, 0, 0.3) !important; /* Red background for visibility */
+    border-top: 2px solid #ff0000 !important; /* Red border for visibility */
     padding: 1rem 2rem;
+    flex-shrink: 0 !important; /* Prevent footer from shrinking */
+    z-index: 1000 !important; /* Higher z-index to ensure visibility */
+    position: relative;
+    display: flex !important;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3) !important; /* Shadow for visibility */
 }
 
 .footer-content {
@@ -612,11 +665,31 @@ body {
     align-items: center;
     gap: 1rem;
     font-size: 0.9rem;
-    color: #666;
+    color: #ffffff !important; /* White text for visibility */
+    font-weight: bold !important;
+    width: 100%;
 }
 
 .separator {
     opacity: 0.5;
+}
+
+.settings-button {
+    background: #6c757d;
+    color: white !important;
+    border: none;
+    padding: 0.4rem 0.8rem;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    font-weight: bold !important;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-left: auto;
+}
+
+.settings-button:hover {
+    background: #5a6268;
+    transform: translateY(-1px);
 }
 
 /* Main Sections Layout */
@@ -1048,6 +1121,115 @@ body {
     color: #495057;
 }
 
+/* Settings Modal Styles */
+.settings-section {
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: #f8f9fa;
+    border-radius: 10px;
+    border: 1px solid #e9ecef;
+}
+
+.settings-section:last-child {
+    margin-bottom: 0;
+}
+
+.settings-section h4 {
+    margin: 0 0 1rem 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #333;
+    border-bottom: 2px solid #667eea;
+    padding-bottom: 0.5rem;
+}
+
+/* Custom Checkbox Styles */
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    font-weight: 500;
+    color: #333;
+    margin-bottom: 0.5rem;
+}
+
+.checkbox-label input[type="checkbox"] {
+    display: none;
+}
+
+.checkmark {
+    width: 20px;
+    height: 20px;
+    background: white;
+    border: 2px solid #ddd;
+    border-radius: 4px;
+    margin-right: 0.8rem;
+    position: relative;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.checkbox-label input[type="checkbox"]:checked + .checkmark {
+    background: #667eea;
+    border-color: #667eea;
+}
+
+.checkbox-label input[type="checkbox"]:checked + .checkmark::after {
+    content: "✓";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-weight: bold;
+    font-size: 0.9rem;
+}
+
+.checkbox-label:hover .checkmark {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* Status Indicator Text */
+.status-indicator-text {
+    font-weight: 500;
+    padding: 0.3rem 0.8rem;
+    border-radius: 15px;
+    font-size: 0.9rem;
+}
+
+.status-indicator-text.online {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.status-indicator-text.offline {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.status-indicator-text.unknown {
+    background: #e2e3e5;
+    color: #383d41;
+    border: 1px solid #d6d8db;
+}
+
+/* File Path Display */
+.file-path {
+    font-family: 'Courier New', monospace;
+    background: #f8f9fa;
+    padding: 0.5rem 0.8rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    color: #495057;
+    border: 1px solid #e9ecef;
+    word-break: break-all;
+    display: block;
+    margin-top: 0.3rem;
+}
+
 /* Timeline Selection Styles */
 .timeline-selection {
     margin-bottom: 1.5rem;
@@ -1126,4 +1308,60 @@ body {
 .timeline-status.selected::before {
     content: "📋 ";
     margin-right: 0.3rem;
+}
+
+/* Timeline List Styles */
+.timeline-list-header {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 0.5rem;
+}
+
+.timeline-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    max-height: 120px;
+    overflow-y: auto;
+}
+
+.timeline-list-item {
+    font-size: 0.8rem;
+    padding: 0.4rem 0.6rem;
+    background: #fff;
+    border: 1px solid #e9ecef;
+    border-radius: 4px;
+    color: #666;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.timeline-list-item:hover {
+    background: #f8f9fa;
+    border-color: #dee2e6;
+}
+
+.timeline-list-item.selected {
+    background: #667eea;
+    color: white;
+    border-color: #667eea;
+    font-weight: 500;
+}
+
+.timeline-list-item.selected::before {
+    content: "▶ ";
+    margin-right: 0.3rem;
+}
+
+.timeline-list-item.no-timelines {
+    color: #999;
+    font-style: italic;
+    cursor: default;
+    border-style: dashed;
+}
+
+.timeline-list-item.no-timelines:hover {
+    background: #fff;
+    border-color: #e9ecef;
 }

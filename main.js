@@ -1,9 +1,11 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
-const { findWatchoutServers } = require('./src/network-scanner');
+const { findWatchoutServers, clearOfflineServers } = require('./src/network-scanner');
 const WatchoutCommands = require('./src/watchout-commands');
+const WebServer = require('./src/web-server');
 
 let mainWindow;
+let webServer;
 const watchoutCommands = new WatchoutCommands();
 
 function createWindow() {  // Create the browser window
@@ -37,11 +39,25 @@ function createWindow() {  // Create the browser window
 }
 
 // This method will be called when Electron has finished initialization
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  createWindow();
+  
+  // Start web server for browser access
+  webServer = new WebServer();
+  webServer.start().then(() => {
+    console.log('Web server started successfully');
+  }).catch(error => {
+    console.error('Failed to start web server:', error);
+  });
+});
 
 // Quit when all windows are closed, except on macOS
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
+    // Stop web server when quitting
+    if (webServer) {
+      webServer.stop();
+    }
     app.quit();
   }
 });
@@ -59,6 +75,16 @@ ipcMain.handle('scan-for-watchout-servers', async () => {
     return { success: true, servers };
   } catch (error) {
     console.error('Error scanning for Watchout servers:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('clear-offline-servers', async () => {
+  try {
+    const result = await clearOfflineServers();
+    return result;
+  } catch (error) {
+    console.error('Error clearing offline servers:', error);
     return { success: false, error: error.message };
   }
 });
@@ -161,5 +187,77 @@ ipcMain.handle('watchout-send-custom-request', async (event, serverIp, endpoint,
     return await watchoutCommands.sendCustomRequest(serverIp, endpoint, method, data);
   } catch (error) {
     return { success: false, error: error.message };
+  }
+});
+
+// Settings IPC handlers
+ipcMain.handle('get-app-settings', async () => {
+  try {
+    // In a real app, you'd load from a config file or store
+    // For now, we'll return default settings
+    return {
+      enableCacheFromDisk: true,
+      enableWebServer: true
+    };
+  } catch (error) {
+    console.error('Error getting app settings:', error);
+    return { enableCacheFromDisk: true, enableWebServer: true };
+  }
+});
+
+ipcMain.handle('save-app-settings', async (event, settings) => {
+  try {
+    console.log('Saving app settings:', settings);
+    
+    // Handle web server enable/disable
+    if (settings.enableWebServer !== undefined) {
+      if (settings.enableWebServer && !webServer.isRunning()) {
+        await webServer.start();
+        console.log('Web server started due to settings change');
+      } else if (!settings.enableWebServer && webServer.isRunning()) {
+        await webServer.stop();
+        console.log('Web server stopped due to settings change');
+      }
+    }
+    
+    // In a real app, you'd save to a config file or store
+    // For now, we'll just log the settings
+    console.log('Settings saved successfully');
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error saving app settings:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('get-web-server-status', async () => {
+  try {
+    return {
+      running: webServer && webServer.isRunning(),
+      port: webServer ? webServer.getPort() : null
+    };
+  } catch (error) {
+    console.error('Error getting web server status:', error);
+    return { running: false, port: null };
+  }
+});
+
+ipcMain.handle('get-cache-file-location', async () => {
+  try {
+    // This would ideally come from the network scanner instance
+    // For now, return a placeholder
+    const userDataPath = app.getPath('userData');
+    return path.join(userDataPath, 'watchout-servers-cache.json');
+  } catch (error) {
+    console.error('Error getting cache file location:', error);
+    return 'Unknown';
+  }
+});
+
+// Development helper
+ipcMain.handle('open-dev-tools', () => {
+  if (mainWindow) {
+    mainWindow.webContents.openDevTools();
   }
 });

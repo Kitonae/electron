@@ -34,6 +34,7 @@ class WatchoutAssistant {
     this.serverCache = new Map(); // Cache to track all discovered servers
     this.lastScanTime = null;
     this.cacheFilePath = null;
+    this.missedScans = new Map(); // Track missed scan counts per server
     this.initializeCachePath();
   }
 
@@ -53,7 +54,6 @@ class WatchoutAssistant {
       this.cacheFilePath = path.join(__dirname, CACHE_FILE_NAME);
     }
   }
-
   async loadCacheFromFile() {
     try {
       if (!this.cacheFilePath) return;
@@ -79,6 +79,12 @@ class WatchoutAssistant {
           }
         }
         
+        // Load missed scan counts if available
+        if (parsedCache.missedScans && typeof parsedCache.missedScans === 'object') {
+          this.missedScans = new Map(Object.entries(parsedCache.missedScans));
+          console.log(`Loaded missed scan counts for ${this.missedScans.size} servers`);
+        }
+        
         console.log(`Loaded ${loadedCount} servers from cache`);
       }
     } catch (error) {
@@ -87,14 +93,14 @@ class WatchoutAssistant {
       }
     }
   }
-
   async saveCacheToFile() {
     try {
       if (!this.cacheFilePath) return;
       
       const cacheData = {
         lastUpdated: new Date().toISOString(),
-        servers: Array.from(this.serverCache.values())
+        servers: Array.from(this.serverCache.values()),
+        missedScans: Object.fromEntries(this.missedScans)
       };
       
       await fs.writeFile(this.cacheFilePath, JSON.stringify(cacheData, null, 2), 'utf8');
@@ -404,14 +410,16 @@ class WatchoutAssistant {
     return watchoutIdentifiers.some(identifier => 
       serviceName.includes(identifier) || serviceType.includes(identifier)
     ) || allWatchoutPorts.includes(service.port);
-  }
-  addServer(serverInfo) {
+  }  addServer(serverInfo) {
     const key = `${serverInfo.ip}:${serverInfo.ports.join(',')}`;
     
     // Add timestamp for this discovery
     serverInfo.discoveredAt = new Date().toISOString();
     serverInfo.lastSeenAt = serverInfo.discoveredAt;
     serverInfo.status = 'online';
+    
+    // Reset missed scan count when server is found
+    this.missedScans.delete(key);
     
     // Add to current scan results
     if (!this.servers.has(key)) {
@@ -435,28 +443,86 @@ class WatchoutAssistant {
     }
     
     this.serverCache.set(key, { ...serverInfo });
-  }
-
-  processCachedServers() {
+  }  processCachedServers() {
     const currentTime = new Date().toISOString();
     const currentServerKeys = new Set(this.servers.keys());
     
     // Check all cached servers
     for (const [key, cachedServer] of this.serverCache.entries()) {
       if (!currentServerKeys.has(key)) {
-        // Server not found in current scan - mark as offline
-        const offlineServer = {
-          ...cachedServer,
-          status: 'offline',
-          lastSeenAt: cachedServer.lastSeenAt,
-          offlineSince: this.lastScanTime,
-          type: cachedServer.type + ' (Offline)'
-        };
+        // Server not found in current scan - increment missed scan count
+        const currentMissedCount = this.missedScans.get(key) || 0;
+        const newMissedCount = currentMissedCount + 1;
+        this.missedScans.set(key, newMissedCount);
         
-        // Add offline server to current results
-        this.servers.set(key, offlineServer);
-        console.log('Server marked offline:', offlineServer.hostRef || offlineServer.ip);
+        if (newMissedCount >= 3) {
+          // Mark as offline only after 3 consecutive missed scans
+          const offlineServer = {
+            ...cachedServer,
+            status: 'offline',
+            lastSeenAt: cachedServer.lastSeenAt,
+            offlineSince: this.lastScanTime,
+            type: cachedServer.type + ' (Offline)'
+          };
+          
+          // Add offline server to current results
+          this.servers.set(key, offlineServer);
+          console.log(`Server marked offline after ${newMissedCount} missed scans:`, offlineServer.hostRef || offlineServer.ip);
+        } else {
+          // Keep server as online but track missed scans
+          const onlineServer = {
+            ...cachedServer,
+            status: 'online',
+            lastSeenAt: cachedServer.lastSeenAt,
+            type: cachedServer.type
+          };
+          
+          // Add server to current results (still online)
+          this.servers.set(key, onlineServer);
+          console.log(`Server missed ${newMissedCount}/3 scans, keeping online:`, onlineServer.hostRef || onlineServer.ip);
+        }
       }
+    }
+  }
+  async clearOfflineServers() {
+    let removedCount = 0;
+    
+    try {
+      // Remove offline servers from both cache and current scan results
+      const keysToRemove = [];
+      
+      // Check cache for offline servers
+      for (const [key, server] of this.serverCache.entries()) {
+        if (server.status === 'offline') {
+          keysToRemove.push(key);
+          removedCount++;
+        }
+      }
+      
+      // Also check current scan results for offline servers
+      for (const [key, server] of this.servers.entries()) {
+        if (server.status === 'offline' && !keysToRemove.includes(key)) {
+          keysToRemove.push(key);
+          removedCount++;
+        }
+      }
+      
+      // Remove the servers from both cache and current results
+      keysToRemove.forEach(key => {
+        this.serverCache.delete(key);
+        this.servers.delete(key);
+        this.missedScans.delete(key); // Also clear missed scan counts
+      });
+      
+      // Save updated cache to file
+      await this.saveCacheToFile();
+      
+      console.log(`Cleared ${removedCount} offline servers from cache`);
+      
+      return { success: true, removedCount };
+    } catch (error) {
+      console.error('Error clearing offline servers:', error);
+      return { success: false, error: error.message };
     }
   }
 }
@@ -464,5 +530,6 @@ class WatchoutAssistant {
 const finder = new WatchoutAssistant();
 
 module.exports = {
-  findWatchoutServers: () => finder.findWatchoutServers()
+  findWatchoutServers: () => finder.findWatchoutServers(),
+  clearOfflineServers: () => finder.clearOfflineServers()
 };

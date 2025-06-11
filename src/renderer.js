@@ -1,5 +1,4 @@
-class WatchoutServerFinderApp {
-    constructor() {
+class WatchoutServerFinderApp {    constructor() {
         this.servers = [];
         this.isScanning = false;
         this.scanInterval = null;
@@ -9,23 +8,41 @@ class WatchoutServerFinderApp {
         this.selectedServerIp = null; // Track selected server IP for commands
         this.apiConnectionStatus = false; // Track API connection status
         this.serverCommandStates = new Map(); // Track command state per server
+        this.availableTimelines = []; // Store available timelines for current server
+        
+        // Initialize API adapter for cross-platform compatibility
+        this.api = new ApiAdapter();
+        
         this.initializeApp();
-    }    async initializeApp() {
+    }async initializeApp() {
         this.bindEvents();
         await this.loadAppVersion();
+        
+        // Ensure footer visibility after DOM is loaded
+        setTimeout(() => {
+            this.ensureFooterVisibility();
+        }, 100);
+        
         this.updateUI();
         this.startBackgroundScanning();
-    }
-
-    bindEvents() {
+    }    bindEvents() {
         const scanButton = document.getElementById('scanButton');
         scanButton.addEventListener('click', () => this.startManualScan());
         
+        const clearOfflineButton = document.getElementById('clearOfflineButton');
+        clearOfflineButton.addEventListener('click', () => this.clearOfflineServers());
+        
+        // Settings button event
+        const settingsButton = document.getElementById('settingsButton');
+        settingsButton.addEventListener('click', () => this.showSettingsDialog());
+        
+        // Debug footer button event
+        const debugFooterBtn = document.getElementById('debugFooterBtn');
+        debugFooterBtn.addEventListener('click', () => this.ensureFooterVisibility());
+        
         // Command button events (no more tab events needed)
         this.bindCommandEvents();
-    }
-
-    bindCommandEvents() {
+    }bindCommandEvents() {
         // Timeline control commands
         document.getElementById('playBtn')?.addEventListener('click', () => this.executeCommand('play'));
         document.getElementById('pauseBtn')?.addEventListener('click', () => this.executeCommand('pause'));
@@ -39,6 +56,9 @@ class WatchoutServerFinderApp {
         // Advanced commands
         document.getElementById('testConnectionBtn')?.addEventListener('click', () => this.executeCommand('testConnection'));
         document.getElementById('customCommandBtn')?.addEventListener('click', () => this.showCustomCommandDialog());
+        
+        // Timeline selector change event
+        document.getElementById('timelineSelector')?.addEventListener('change', () => this.onTimelineSelectionChange());
         
         // Response area
         document.getElementById('clearResponseBtn')?.addEventListener('click', () => this.clearCommandResponse());
@@ -64,15 +84,13 @@ class WatchoutServerFinderApp {
             this.scanInterval = null;
             console.log('Background scanning stopped');
         }
-    }
-
-    async performBackgroundScan() {
+    }    async performBackgroundScan() {
         if (this.isScanning) return;
 
         console.log('Performing background scan...');
         
         try {
-            const result = await window.electronAPI.scanForWatchoutServers();
+            const result = await this.api.scanForWatchoutServers();
             
             if (result.success) {
                 const previousCount = this.servers.length;
@@ -91,9 +109,7 @@ class WatchoutServerFinderApp {
         } catch (error) {
             console.error('Background scan error:', error);
         }
-    }
-
-    async startManualScan() {
+    }    async startManualScan() {
         if (this.isScanning) return;
 
         // Temporarily disable background scanning during manual scan
@@ -105,7 +121,7 @@ class WatchoutServerFinderApp {
         this.updateScanStatus('Manual scan: Scanning network for Watchout servers...');
         
         try {
-            const result = await window.electronAPI.scanForWatchoutServers();
+            const result = await this.api.scanForWatchoutServers();
             
             if (result.success) {
                 this.servers = result.servers;
@@ -125,12 +141,12 @@ class WatchoutServerFinderApp {
         }
     }    async loadAppVersion() {
         try {
-            const version = await window.electronAPI.getAppVersion();
+            const version = await this.api.getAppVersion();
             document.getElementById('appVersion').textContent = version;
         } catch (error) {
             console.error('Failed to load app version:', error);
         }
-    }    updateScanButton() {
+    }updateScanButton() {
         const button = document.getElementById('scanButton');
         
         if (this.isScanning) {
@@ -146,21 +162,57 @@ class WatchoutServerFinderApp {
         document.getElementById('scanStatus').textContent = message;
     }    updateUI() {
         this.updateServerCounts();
+        this.updateClearOfflineButtonState();
         this.renderSidebar();
         this.renderMainContent();
-    }
-
-    updateServerCounts() {
+    }    updateServerCounts() {
         const count = this.servers.length;
-        
-        // Update main server count
-        const serverCount = document.getElementById('serverCount');
-        serverCount.textContent = `${count} server${count !== 1 ? 's' : ''} found`;
         
         // Update sidebar server count
         const serverCountSidebar = document.getElementById('serverCountSidebar');
         serverCountSidebar.textContent = count.toString();
-    }    renderSidebar() {
+    }
+
+    updateClearOfflineButtonState() {
+        const clearOfflineButton = document.getElementById('clearOfflineButton');
+        const hasOfflineServers = this.servers.some(server => server.status === 'offline');
+        
+        if (clearOfflineButton) {
+            clearOfflineButton.disabled = !hasOfflineServers;
+            clearOfflineButton.style.opacity = hasOfflineServers ? '1' : '0.5';
+        }
+    }    async clearOfflineServers() {
+        try {
+            const result = await this.api.clearOfflineServers();
+            
+            if (result.success) {
+                // Update the servers list to remove offline servers
+                this.servers = this.servers.filter(server => server.status !== 'offline');
+                
+                // Clear selection if selected server was offline
+                if (this.selectedServerId) {
+                    const selectedServer = this.servers.find(server => this.getServerId(server) === this.selectedServerId);
+                    if (!selectedServer) {
+                        this.selectedServerId = null;
+                        this.selectedServerIp = null;
+                    }
+                }
+                
+                // Update UI
+                this.updateUI();
+                
+                // Show success message
+                this.updateScanStatus(`Cleared ${result.removedCount || 0} offline server(s) from cache.`);
+                console.log(`Cleared ${result.removedCount || 0} offline servers from cache`);
+            } else {
+                this.updateScanStatus('Failed to clear offline servers: ' + result.error);
+                console.error('Failed to clear offline servers:', result.error);
+            }
+        } catch (error) {
+            this.updateScanStatus('Error clearing offline servers');
+            console.error('Error clearing offline servers:', error);
+        }
+    }renderSidebar() {
         const serverList = document.getElementById('serverList');
         const noServersSidebar = document.getElementById('noServersSidebar');
 
@@ -567,6 +619,9 @@ class WatchoutServerFinderApp {
         const selectedServer = this.servers.find(server => this.getServerId(server) === serverId);
         this.selectedServerIp = selectedServer ? selectedServer.ip : null;
         
+        // Reset timeline selector when switching servers
+        this.resetTimelineSelector();
+        
         // Update sidebar selection visual state
         const serverItems = document.querySelectorAll('.server-item');
         serverItems.forEach(item => {
@@ -594,7 +649,7 @@ class WatchoutServerFinderApp {
         }
         
         console.log('Selected server:', serverId, 'IP:', this.selectedServerIp);
-    }    updateCommandsVisibility() {
+    }updateCommandsVisibility() {
         const noServerSelected = document.getElementById('noServerSelected');
         const commandsArea = document.getElementById('commandsArea');
         
@@ -655,18 +710,16 @@ class WatchoutServerFinderApp {
             
             responseContent.appendChild(responseItem);
         });
-    }
-
-    async testApiConnection() {
+    }    async testApiConnection() {
         if (!this.selectedServerIp) return;
         
         try {
-            const result = await window.electronAPI.watchout.testConnection(this.selectedServerIp);
+            const result = await this.api.watchoutTestConnection(this.selectedServerIp);
             this.updateConnectionStatus(result.connected, result.message);
         } catch (error) {
             this.updateConnectionStatus(false, 'Connection test failed');
         }
-    }    updateConnectionStatus(connected, message) {
+    }updateConnectionStatus(connected, message) {
         const connectionStatus = document.getElementById('connectionStatus');
         const statusIndicator = document.getElementById('apiStatusIndicator');
         const statusText = document.getElementById('apiStatusText');
@@ -692,14 +745,27 @@ class WatchoutServerFinderApp {
         
         // Enable/disable command buttons based on connection
         this.updateCommandButtonStates();
-    }
-
-    updateCommandButtonStates() {
+    }    updateCommandButtonStates() {
         const commandButtons = document.querySelectorAll('.command-btn');
+        const timelineSelector = document.getElementById('timelineSelector');
+        const hasTimelineSelected = timelineSelector && timelineSelector.value;
+        
         commandButtons.forEach(button => {
             if (button.id === 'testConnectionBtn') {
                 // Test connection button is always enabled when server is selected
                 button.disabled = !this.selectedServerIp;
+            } else if (['playBtn', 'pauseBtn', 'stopBtn'].includes(button.id)) {
+                // Timeline control buttons require API connection AND timeline selection
+                button.disabled = !this.apiConnectionStatus || !hasTimelineSelected;
+                
+                // Update button titles to show requirements
+                if (!this.apiConnectionStatus) {
+                    button.title = 'Connect to server first';
+                } else if (!hasTimelineSelected) {
+                    button.title = 'Select a timeline first';
+                } else {
+                    button.title = button.querySelector('span:last-child')?.textContent || '';
+                }
             } else {
                 // Other command buttons require API connection
                 button.disabled = !this.apiConnectionStatus;
@@ -717,29 +783,43 @@ class WatchoutServerFinderApp {
         let result;
 
         try {
-            this.setCommandButtonLoading(commandType, true);
-
-            switch (commandType) {
+            this.setCommandButtonLoading(commandType, true);            switch (commandType) {
                 case 'play':
-                    result = await window.electronAPI.watchout.playTimeline(this.selectedServerIp, 0);
+                    const playTimelineId = this.getSelectedTimelineId();
+                    result = await this.api.watchoutPlayTimeline(this.selectedServerIp, playTimelineId);
+                    if (result.success) {
+                        result.timelineContext = `Timeline ID: ${playTimelineId}`;
+                    }
                     break;
                 case 'pause':
-                    result = await window.electronAPI.watchout.pauseTimeline(this.selectedServerIp, 0);
+                    const pauseTimelineId = this.getSelectedTimelineId();
+                    result = await this.api.watchoutPauseTimeline(this.selectedServerIp, pauseTimelineId);
+                    if (result.success) {
+                        result.timelineContext = `Timeline ID: ${pauseTimelineId}`;
+                    }
                     break;
                 case 'stop':
-                    result = await window.electronAPI.watchout.stopTimeline(this.selectedServerIp, 0);
+                    const stopTimelineId = this.getSelectedTimelineId();
+                    result = await this.api.watchoutStopTimeline(this.selectedServerIp, stopTimelineId);
+                    if (result.success) {
+                        result.timelineContext = `Timeline ID: ${stopTimelineId}`;
+                    }
                     break;
                 case 'status':
-                    result = await window.electronAPI.watchout.getStatus(this.selectedServerIp);
+                    result = await this.api.watchoutGetStatus(this.selectedServerIp);
                     break;
                 case 'timelines':
-                    result = await window.electronAPI.watchout.getTimelines(this.selectedServerIp);
+                    result = await this.api.watchoutGetTimelines(this.selectedServerIp);
+                    // Populate timeline selector with the results
+                    if (result.success && result.data) {
+                        this.populateTimelineSelector(result.data);
+                    }
                     break;
                 case 'show':
-                    result = await window.electronAPI.watchout.getShow(this.selectedServerIp);
+                    result = await this.api.watchoutGetShow(this.selectedServerIp);
                     break;
                 case 'testConnection':
-                    result = await window.electronAPI.watchout.testConnection(this.selectedServerIp);
+                    result = await this.api.watchoutTestConnection(this.selectedServerIp);
                     this.updateConnectionStatus(result.connected, result.message);
                     break;
                 default:
@@ -753,9 +833,7 @@ class WatchoutServerFinderApp {
         } finally {
             this.setCommandButtonLoading(commandType, false);
         }
-    }
-
-    setCommandButtonLoading(commandType, loading) {
+    }    setCommandButtonLoading(commandType, loading) {
         const buttonMap = {
             'play': 'playBtn',
             'pause': 'pauseBtn',
@@ -772,17 +850,34 @@ class WatchoutServerFinderApp {
         if (button) {
             button.disabled = loading;
             const icon = button.querySelector('.cmd-icon');
+            
             if (loading) {
-                button.dataset.originalIcon = icon.textContent;
-                icon.textContent = '⏳';
+                // Check if this button has SVG icons
+                const svgIcon = icon.querySelector('.timeline-icon');
+                
+                if (svgIcon) {
+                    // Store original SVG HTML and replace with loading emoji
+                    button.dataset.originalSvg = icon.innerHTML;
+                    icon.innerHTML = '⏳';
+                } else {
+                    // Handle emoji icons (fallback for non-timeline buttons)
+                    button.dataset.originalIcon = icon.textContent;
+                    icon.textContent = '⏳';
+                }
             } else {
-                if (button.dataset.originalIcon) {
+                // Restore original content
+                if (button.dataset.originalSvg) {
+                    // Restore original SVG
+                    icon.innerHTML = button.dataset.originalSvg;
+                    delete button.dataset.originalSvg;
+                } else if (button.dataset.originalIcon) {
+                    // Restore original emoji
                     icon.textContent = button.dataset.originalIcon;
                     delete button.dataset.originalIcon;
                 }
             }
         }
-    }    addCommandResponse(type, command, result) {
+    }addCommandResponse(type, command, result) {
         // Add to server-specific command history
         if (this.selectedServerId) {
             this.addCommandToServerHistory(this.selectedServerId, type, command, result);
@@ -920,7 +1015,7 @@ class WatchoutServerFinderApp {
         }
     }    async sendCustomWatchoutRequest(endpoint, method, data) {
         try {
-            return await window.electronAPI.watchout.sendCustomRequest(
+            return await this.api.watchoutSendCustomRequest(
                 this.selectedServerIp, 
                 endpoint, 
                 method, 
@@ -932,6 +1027,370 @@ class WatchoutServerFinderApp {
                 error: error.message
             };
         }
+    }
+
+    // Timeline Selection Methods
+    getSelectedTimelineId() {
+        const selector = document.getElementById('timelineSelector');
+        const selectedValue = selector?.value;
+        return selectedValue ? parseInt(selectedValue) : 0;
+    }    populateTimelineSelector(timelinesData) {
+        const selector = document.getElementById('timelineSelector');
+        const timelineInfo = document.getElementById('timelineInfo');
+        const timelineList = document.getElementById('timelineList');
+        
+        if (!selector) return;
+
+        // Clear existing options
+        selector.innerHTML = '<option value="">Select a timeline...</option>';
+        
+        // Clear timeline list
+        if (timelineList) {
+            timelineList.innerHTML = '';
+        }
+        
+        let timelines = [];
+        
+        // Handle various response formats
+        if (Array.isArray(timelinesData)) {
+            timelines = timelinesData;
+        } else if (timelinesData && timelinesData.timelines && Array.isArray(timelinesData.timelines)) {
+            timelines = timelinesData.timelines;
+        } else if (timelinesData && typeof timelinesData === 'object') {
+            // Try to extract timeline names/IDs from object
+            timelines = Object.entries(timelinesData).map(([key, value]) => ({
+                id: key,
+                name: value || `Timeline ${key}`
+            }));
+        }
+        
+        // Store timelines data for later use
+        this.availableTimelines = timelines;
+        
+        // Populate selector options
+        timelines.forEach((timeline, index) => {
+            const option = document.createElement('option');
+            
+            if (typeof timeline === 'string') {
+                option.value = index;
+                option.textContent = timeline;
+            } else if (timeline && typeof timeline === 'object') {
+                option.value = timeline.id !== undefined ? timeline.id : index;
+                option.textContent = timeline.name || timeline.title || `Timeline ${option.value}`;
+            }
+            
+            selector.appendChild(option);
+        });
+        
+        // Populate timeline list display
+        this.populateTimelineList(timelines);
+        
+        // Enable selector if we have timelines
+        if (timelines.length > 0) {
+            selector.disabled = false;
+            if (timelineInfo) {
+                timelineInfo.style.display = 'block';
+                this.updateTimelineInfo();
+            }
+        } else {
+            selector.disabled = true;
+            if (timelineInfo) {
+                timelineInfo.style.display = 'none';
+            }
+        }
+        
+        this.updateCommandButtonStates();
+    }
+
+    populateTimelineList(timelines) {
+        const timelineList = document.getElementById('timelineList');
+        
+        if (!timelineList) return;
+        
+        // Clear existing items
+        timelineList.innerHTML = '';
+        
+        if (!timelines || timelines.length === 0) {
+            const noTimelinesItem = document.createElement('div');
+            noTimelinesItem.className = 'timeline-list-item no-timelines';
+            noTimelinesItem.textContent = 'No timelines available';
+            timelineList.appendChild(noTimelinesItem);
+            return;
+        }
+        
+        // Create timeline list items
+        timelines.forEach((timeline, index) => {
+            const item = document.createElement('div');
+            item.className = 'timeline-list-item';
+            
+            let timelineId, timelineName;
+            
+            if (typeof timeline === 'string') {
+                timelineId = index;
+                timelineName = timeline;
+            } else if (timeline && typeof timeline === 'object') {
+                timelineId = timeline.id !== undefined ? timeline.id : index;
+                timelineName = timeline.name || timeline.title || `Timeline ${timelineId}`;
+            }
+            
+            item.textContent = `${timelineId}: ${timelineName}`;
+            item.dataset.timelineId = timelineId;
+            
+            // Add click handler to select timeline
+            item.addEventListener('click', () => {
+                const selector = document.getElementById('timelineSelector');
+                if (selector) {
+                    selector.value = timelineId;
+                    this.onTimelineSelectionChange();
+                }
+            });
+            
+            timelineList.appendChild(item);
+        });
+    }    resetTimelineSelector() {
+        const selector = document.getElementById('timelineSelector');
+        const timelineInfo = document.getElementById('timelineInfo');
+        const timelineList = document.getElementById('timelineList');
+        
+        if (selector) {
+            selector.innerHTML = '<option value="">Load timelines first...</option>';
+            selector.disabled = true;
+        }
+        
+        if (timelineList) {
+            timelineList.innerHTML = '<div class="timeline-list-item no-timelines">No timelines loaded</div>';
+        }
+        
+        if (timelineInfo) {
+            timelineInfo.style.display = 'none';
+        }
+        
+        // Clear stored timelines
+        this.availableTimelines = [];
+        
+        this.updateCommandButtonStates();
+    }
+
+    onTimelineSelectionChange() {
+        this.updateTimelineInfo();
+        this.updateCommandButtonStates();
+    }    updateTimelineInfo() {
+        const selector = document.getElementById('timelineSelector');
+        const timelineList = document.getElementById('timelineList');
+        
+        if (!selector || !timelineList) return;
+        
+        const selectedValue = selector.value;
+        
+        // Update timeline list items to show selection
+        const timelineItems = timelineList.querySelectorAll('.timeline-list-item');
+        timelineItems.forEach(item => {
+            if (item.dataset.timelineId === selectedValue && selectedValue !== '') {
+                item.classList.add('selected');
+            } else {
+                item.classList.remove('selected');
+            }
+        });
+    }
+
+    // Settings Modal Methods
+    showSettingsDialog() {
+        const modal = document.getElementById('settingsModal');
+        modal.style.display = 'flex';
+        
+        // Load current settings values
+        this.loadCurrentSettings();
+        
+        // Bind modal events
+        this.bindSettingsModal();
+        
+        // Focus on first input
+        setTimeout(() => {
+            const firstCheckbox = document.getElementById('enableCacheFromDisk');
+            if (firstCheckbox) firstCheckbox.focus();
+        }, 100);
+    }
+
+    async loadCurrentSettings() {
+        try {
+            // Load settings from the main process
+            const settings = await this.api.getAppSettings();
+            
+            // Update cache from disk checkbox
+            const enableCacheFromDisk = document.getElementById('enableCacheFromDisk');
+            if (enableCacheFromDisk) {
+                enableCacheFromDisk.checked = settings.enableCacheFromDisk !== false; // default to true
+            }
+            
+            // Update web server checkbox
+            const enableWebServer = document.getElementById('enableWebServer');
+            if (enableWebServer) {
+                enableWebServer.checked = settings.enableWebServer !== false; // default to true
+            }
+            
+            // Update web server status
+            await this.updateWebServerStatus();
+            
+            // Update app version in settings
+            const settingsVersion = document.getElementById('settingsVersion');
+            if (settingsVersion) {
+                const version = await this.api.getAppVersion();
+                settingsVersion.textContent = version;
+            }
+            
+            // Update cache file location
+            const cacheFileLocation = document.getElementById('cacheFileLocation');
+            if (cacheFileLocation) {
+                const cacheLocation = await this.api.getCacheFileLocation();
+                cacheFileLocation.textContent = cacheLocation || 'Default location';
+            }
+            
+        } catch (error) {
+            console.error('Failed to load settings:', error);
+        }
+    }
+
+    async updateWebServerStatus() {
+        try {
+            const webServerStatus = document.getElementById('webServerStatus');
+            if (webServerStatus) {
+                const status = await this.api.getWebServerStatus();
+                webServerStatus.textContent = status.running ? 'Running' : 'Stopped';
+                webServerStatus.className = `status-indicator-text ${status.running ? 'online' : 'offline'}`;
+            }
+        } catch (error) {
+            const webServerStatus = document.getElementById('webServerStatus');
+            if (webServerStatus) {
+                webServerStatus.textContent = 'Unknown';
+                webServerStatus.className = 'status-indicator-text unknown';
+            }
+        }
+    }
+
+    bindSettingsModal() {
+        const modal = document.getElementById('settingsModal');
+        const closeBtn = document.getElementById('closeSettingsModal');
+        const cancelBtn = document.getElementById('cancelSettings');
+        const saveBtn = document.getElementById('saveSettings');
+        
+        // Close modal handlers
+        const closeModal = () => {
+            modal.style.display = 'none';
+        };
+        
+        closeBtn.onclick = closeModal;
+        cancelBtn.onclick = closeModal;
+        
+        // Close on overlay click
+        modal.onclick = (e) => {
+            if (e.target === modal) {
+                closeModal();
+            }
+        };
+        
+        // Save settings
+        saveBtn.onclick = async () => {
+            await this.saveSettings();
+            closeModal();
+        };
+        
+        // Update web server status when checkbox changes
+        const enableWebServer = document.getElementById('enableWebServer');
+        if (enableWebServer) {
+            enableWebServer.onchange = () => {
+                // Update status immediately to show expected state
+                this.updateWebServerStatus();
+            };
+        }
+    }
+
+    async saveSettings() {
+        try {
+            const enableCacheFromDisk = document.getElementById('enableCacheFromDisk');
+            const enableWebServer = document.getElementById('enableWebServer');
+            
+            const settings = {
+                enableCacheFromDisk: enableCacheFromDisk ? enableCacheFromDisk.checked : true,
+                enableWebServer: enableWebServer ? enableWebServer.checked : true
+            };
+            
+            // Save settings to main process
+            await this.api.saveAppSettings(settings);
+            
+            // Update web server status after saving
+            setTimeout(() => {
+                this.updateWebServerStatus();
+            }, 500);
+            
+            console.log('Settings saved:', settings);
+            
+        } catch (error) {
+            console.error('Failed to save settings:', error);
+            // Could show an error message to the user here
+        }
+    }    // Add method to ensure footer is visible
+    ensureFooterVisibility() {
+        console.log('--- Footer Visibility Debug ---');
+        const footer = document.querySelector('.app-footer');
+        const appContainer = document.querySelector('.app-container');
+        const appMain = document.querySelector('.app-main');
+        
+        console.log('Footer element:', footer);
+        console.log('App container:', appContainer);
+        console.log('App main:', appMain);
+        
+        if (footer) {
+            // Log current styles
+            const computedStyles = window.getComputedStyle(footer);
+            console.log('Footer current styles:', {
+                display: computedStyles.display,
+                position: computedStyles.position,
+                height: computedStyles.height,
+                minHeight: computedStyles.minHeight,
+                flexShrink: computedStyles.flexShrink,
+                zIndex: computedStyles.zIndex,
+                bottom: computedStyles.bottom,
+                visibility: computedStyles.visibility
+            });
+            
+            // Check if footer is in viewport
+            const rect = footer.getBoundingClientRect();
+            console.log('Footer position:', rect);
+            console.log('Viewport height:', window.innerHeight);
+            console.log('Footer visible in viewport:', rect.top < window.innerHeight);
+            
+            // Force footer to be visible
+            footer.style.display = 'flex';
+            footer.style.position = 'relative';
+            footer.style.zIndex = '1000';
+            footer.style.minHeight = '60px';
+            footer.style.flexShrink = '0';
+            footer.style.visibility = 'visible';
+            
+            console.log('Footer element found and styles applied:', footer);
+            
+            // Check again after applying styles
+            const newRect = footer.getBoundingClientRect();
+            console.log('Footer position after fix:', newRect);
+            
+        } else {
+            console.error('Footer element not found!');
+            console.log('Available elements with footer-related classes:', 
+                document.querySelectorAll('[class*="footer"]'));
+        }
+        
+        // Also log app layout info
+        if (appContainer) {
+            const containerRect = appContainer.getBoundingClientRect();
+            console.log('App container position:', containerRect);
+        }
+        
+        if (appMain) {
+            const mainRect = appMain.getBoundingClientRect();
+            console.log('App main position:', mainRect);
+        }
+        
+        console.log('--- End Footer Debug ---');
     }
 }
 

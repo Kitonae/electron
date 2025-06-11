@@ -1,20 +1,36 @@
-- make the refresh button smaller
+✓ make the refresh button smaller
 
-- in timeline control instead of selected label, list all timelines there.
+✓ timelines don't load correctly after hitting refresh
 
-- only mark server offline if it hasnt been seen in last 3 scans
+✓ in timeline control instead of selected label, list all timelines there.
 
-- make the UI be accesible also from browser (webserver)
+✓ after pushing play, pause or stop buttons its icon dissapears
 
-- settings page with:
-    -toggle loading cache from disk
-    -toggle webserver
+✓ remove the 'servers found' label from server details
+
+✓ only mark server offline if it hasnt been seen in last 3 scans
+
+✓ add a button for removing offline cached servers
+
+✓ make the UI be accesible also from browser (webserver)
+
+✓ settings page with:
+    ✓ toggle loading cache from disk
+    ✓ toggle webserver
+
+- sort the server list in the sidebar online first offline below add a divider
 
 - add error handling on startup
     - socket occupied
-    - detect Watchout being run by checking if any of these processes exist
+    - detect Watchout being run by checking if any of these processes exist, if Watchout is running show modal window with refresh and message that Watchout needs to be closed first before running this app
         -"runner"
         -"process-manager"
         -"Producer"
         -"director"
         -"operative"
+
+- create a header to replace default window title bar, hide menu bar
+
+- replace get show info with a save show that saves the json from response to disk
+
+- add a upload show button that takes .watch file or .json file and uses a correct way to upload it.
