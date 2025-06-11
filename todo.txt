@@ -1,5 +1,20 @@
+- make the refresh button smaller
+
 - in timeline control instead of selected label, list all timelines there.
+
+- only mark server offline if it hasnt been seen in last 3 scans
+
+- make the UI be accesible also from browser (webserver)
 
 - settings page with:
     -toggle loading cache from disk
     -toggle webserver
+
+- add error handling on startup
+    - socket occupied
+    - detect Watchout being run by checking if any of these processes exist
+        -"runner"
+        -"process-manager"
+        -"Producer"
+        -"director"
+        -"operative"

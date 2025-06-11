@@ -10,56 +10,19 @@ class WatchoutServerFinderApp {
         this.apiConnectionStatus = false; // Track API connection status
         this.serverCommandStates = new Map(); // Track command state per server
         this.initializeApp();
-    }
-
-    async initializeApp() {
+    }    async initializeApp() {
         this.bindEvents();
         await this.loadAppVersion();
         this.updateUI();
         this.startBackgroundScanning();
-        }    bindEvents() {
+    }
+
+    bindEvents() {
         const scanButton = document.getElementById('scanButton');
         scanButton.addEventListener('click', () => this.startManualScan());
         
-        // Tab switching events
-        this.bindTabEvents();
-        
-        // Command button events
+        // Command button events (no more tab events needed)
         this.bindCommandEvents();
-    }
-
-    bindTabEvents() {
-        const detailsTab = document.getElementById('detailsTab');
-        const commandsTab = document.getElementById('commandsTab');
-        
-        detailsTab.addEventListener('click', () => this.switchTab('details'));
-        commandsTab.addEventListener('click', () => this.switchTab('commands'));
-    }    switchTab(tabName) {
-        // Don't switch to commands tab if disabled
-        if (tabName === 'commands') {
-            const commandsTab = document.getElementById('commandsTab');
-            if (commandsTab.classList.contains('disabled')) {
-                return;
-            }
-        }
-        
-        // Update tab buttons
-        const tabs = document.querySelectorAll('.tab-btn');
-        const panels = document.querySelectorAll('.tab-panel');
-        const indicator = document.querySelector('.tab-indicator');
-        
-        tabs.forEach(tab => tab.classList.remove('active'));
-        panels.forEach(panel => panel.classList.remove('active'));
-        
-        if (tabName === 'details') {
-            document.getElementById('detailsTab').classList.add('active');
-            document.getElementById('detailsPanel').classList.add('active');
-            indicator.classList.remove('commands');
-        } else if (tabName === 'commands') {
-            document.getElementById('commandsTab').classList.add('active');
-            document.getElementById('commandsPanel').classList.add('active');
-            indicator.classList.add('commands');
-        }
     }
 
     bindCommandEvents() {
@@ -595,9 +558,7 @@ class WatchoutServerFinderApp {
         }
         
         this.updateServerCommandState(serverId, state);
-    }
-
-    selectServer(serverId) {
+    }    selectServer(serverId) {
         // Update selected server
         const previouslySelected = this.selectedServerId;
         this.selectedServerId = serverId;
@@ -614,17 +575,14 @@ class WatchoutServerFinderApp {
             } else {
                 item.classList.remove('selected');
             }
-        });        // Show/hide commands area in the commands tab
+        });
+
+        // Show/hide commands area in the commands panel
         this.updateCommandsVisibility();
         
         // Load server-specific command state
         if (this.selectedServerId && this.selectedServerIp) {
             this.loadServerCommandsUI(this.selectedServerId);
-        }
-        
-        // If a server was just selected, auto-switch to commands tab for better UX
-        if (this.selectedServerId && this.selectedServerIp && !previouslySelected) {
-            setTimeout(() => this.switchTab('commands'), 300);
         }
         
         // Re-render main content to show selected server
@@ -639,18 +597,14 @@ class WatchoutServerFinderApp {
     }    updateCommandsVisibility() {
         const noServerSelected = document.getElementById('noServerSelected');
         const commandsArea = document.getElementById('commandsArea');
-        const commandsTab = document.getElementById('commandsTab');
         
         if (this.selectedServerId && this.selectedServerIp) {
             noServerSelected.style.display = 'none';
             commandsArea.style.display = 'block';
-            commandsTab.classList.remove('disabled');
-            commandsTab.title = 'Send commands to selected server';
         } else {
             noServerSelected.style.display = 'flex';
             commandsArea.style.display = 'none';
-            commandsTab.classList.add('disabled');
-            commandsTab.title = 'Select a server first to enable commands';        }
+        }
     }
 
     loadServerCommandsUI(serverId) {
@@ -664,13 +618,11 @@ class WatchoutServerFinderApp {
         
         // Update panel header to show server name
         this.updateCommandsPanelHeader(serverId);
-    }
-
-    updateCommandsPanelHeader(serverId) {
+    }    updateCommandsPanelHeader(serverId) {
         const selectedServer = this.servers.find(server => this.getServerId(server) === serverId);
         const serverName = selectedServer ? (selectedServer.hostRef || selectedServer.hostname || selectedServer.ip) : 'Unknown Server';
         
-        const panelHeader = document.querySelector('#commandsPanel .panel-header h2');
+        const panelHeader = document.querySelector('#commandsPanel .panel-header h3');
         if (panelHeader) {
             panelHeader.textContent = `Commands - ${serverName}`;
         }

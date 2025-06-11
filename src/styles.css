@@ -264,200 +264,30 @@ body {
     flex: 1;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    overflow-x: visible; /* Allow horizontal shadows */
+    overflow-y: hidden; /* Prevent vertical scrolling at this level */
 }
 
-/* Tabbed Panel Styles */
-.tabbed-panel {
+/* Main Panels Container */
+.main-panels {
+    display: flex;
+    gap: 1.5rem;
+    flex: 1;
+    overflow-x: visible; /* Allow horizontal shadows */
+    overflow-y: hidden; /* Prevent vertical scrolling at this level */
+    padding: 0.5rem; /* Add padding to prevent shadow clipping */
+}
+
+/* Panel Styles (Sidebar-like) */
+.panel {
+    flex: 1;
     background: white;
     border-radius: 15px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-    overflow: hidden;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-}
-
-/* Responsive Layout: Wide Screen Split View */
-@media (min-width: 1601px) {
-    .tabbed-panel {
-        display: flex !important;
-        flex-direction: row !important;
-        gap: 8px; /* Increased gap for better visual separation */
-        background: transparent; /* Remove background since we want actual space */
-        border-radius: 15px;
-        overflow: hidden;
-    }
-    
-    .tab-nav {
-        display: none !important; /* Completely hide tabs in wide view */
-    }
-    
-    .tab-content {
-        display: flex !important;
-        flex-direction: row !important;
-        width: 100%;
-        gap: 8px; /* Match parent gap for consistent spacing */
-        background: transparent;
-    }
-      .tab-panel {
-        /* Force both panels to show as flex items */
-        display: flex !important;
-        opacity: 1 !important;
-        transform: translateY(0) !important;
-        background: white;
-        overflow: hidden;
-        flex-direction: column;
-        flex: 1 !important; /* Equal width */
-        /* Remove animations in wide layout */
-        animation: none !important;
-        transition: none !important;
-    }
-      /* Panels now have individual styling with full border radius and shadows */
-    #detailsPanel,
-    #commandsPanel {
-        border-radius: 15px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-    }
-    
-    /* Add visual headers for each panel in wide view */
-    .tab-panel .panel-header {
-        position: relative;
-        padding: 1.5rem 2rem; /* Ensure consistent header padding */
-    }
-    
-    .tab-panel .panel-header::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 3px;
-        border-radius: 3px 3px 0 0;
-    }
-    
-    #detailsPanel .panel-header::before {
-        background: #667eea;
-    }
-    
-    #commandsPanel .panel-header::before {
-        background: #28a745;
-    }
-    
-    /* Ensure panel content has consistent padding in wide layout */
-    .tab-panel .panel-content {
-        overflow-y: auto;
-        flex: 1;
-        padding: 1.5rem 2rem; /* Match header padding */
-    }
-    
-    /* Remove any tab-related animations in wide layout */
-    .tab-panel {
-        animation: none !important;
-        transition: none !important;
-    }
-}
-
-
-
-/* Tab Navigation - Hidden in wide view, shown in narrow view */
-.tab-nav {
-    display: flex;
-    background: #f8f9fa;
-    border-bottom: 1px solid #e9ecef;
-    position: relative;
-}
-
-.tab-btn {
-    flex: 1;
-    background: none;
-    border: none;
-    padding: 1rem 1.5rem;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    font-size: 1rem;
-    font-weight: 500;
-    color: #666;
-    position: relative;
-}
-
-.tab-btn:hover {
-    background: rgba(102, 126, 234, 0.05);
-    color: #333;
-}
-
-.tab-btn.active {
-    color: #667eea;
-    background: rgba(102, 126, 234, 0.1);
-}
-
-.tab-btn.disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.tab-btn.disabled:hover {
-    background: none;
-    color: #666;
-}
-
-.tab-icon {
-    font-size: 1.1rem;
-}
-
-.tab-indicator {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    height: 3px;
-    background: #667eea;
-    width: 50%;
-    transition: transform 0.3s ease;
-    border-radius: 3px 3px 0 0;
-}
-
-.tab-indicator.commands {
-    transform: translateX(100%);
-}
-
-/* Tab Content */
-.tab-content {
-    flex: 1;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-}
-
-.tab-panel {
-    flex: 1;
-    display: none;
-    flex-direction: column;
-    overflow: hidden;
-    opacity: 0;
-    transform: translateY(10px);
-    transition: all 0.3s ease;
-}
-
-.tab-panel.active {
-    display: flex;
-    opacity: 1;
-    transform: translateY(0);
-    animation: fadeInUp 0.3s ease-out;
-}
-
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    min-height: 0;
 }
 
 /* Panel Header */
@@ -465,24 +295,40 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1.5rem 2rem;
+    padding: 1.5rem 1.5rem 1rem 1.5rem;
     background: #f8f9fa;
     border-bottom: 1px solid #e9ecef;
     flex-shrink: 0;
+    position: relative;
 }
 
-.panel-header h2 {
-    font-size: 1.5rem;
-    font-weight: 500;
+.panel-title-group {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.panel-icon {
+    font-size: 1.2rem;
+}
+
+.panel-header h3 {
+    font-size: 1.3rem;
+    font-weight: 600;
     color: #333;
+    margin: 0;
 }
 
 /* Panel Content */
 .panel-content {
     flex: 1;
-    padding: 1.5rem;
+    padding: 0.5rem;
     overflow-y: auto;
+    min-height: 0;
 }
+
+
+
 
 /* No Server Selected State */
 .no-server-selected {
@@ -1254,7 +1100,7 @@ body {
 .refresh-btn {
     min-width: 80px !important;
     padding: 0.5rem 0.8rem !important;
-    height: auto !important;
+    height: 40 !important;
     min-height: auto !important;
 }
 
@@ -1280,110 +1126,4 @@ body {
 .timeline-status.selected::before {
     content: "📋 ";
     margin-right: 0.3rem;
-}
-
-/* Responsive design */
-@media (max-width: 768px) {
-    .app-main {
-        padding: 1rem;
-    }
-      .panel-header {
-        flex-direction: column;
-        gap: 1rem;
-        align-items: flex-start;
-    }
-    
-    .tab-btn {
-        font-size: 0.9rem;
-        padding: 0.8rem 1rem;
-    }
-    
-    .tab-icon {
-        font-size: 1rem;
-    }
-}
-
-/* Mobile and tablet responsive design for sidebar */
-@media (max-width: 768px) {
-    .main-content {
-        flex-direction: column;
-        gap: 1rem;
-    }
-    
-    .sidebar {
-        width: 100%;
-        height: 200px;
-        order: 2;
-    }
-    
-    .content-area {
-        order: 1;
-    }
-    
-    .tabbed-panel {
-        order: 1;
-    }
-    
-    .sidebar-content {
-        padding: 0.3rem;
-    }
-    
-    .server-item {
-        padding: 0.8rem;
-    }
-    
-    .server-item-name {
-        font-size: 0.9rem;
-    }
-    
-    .server-item-details {
-        font-size: 0.8rem;
-    }
-    
-    .command-buttons {
-        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-    }
-    
-    .command-btn {
-        min-height: 60px;
-        padding: 0.8rem 0.6rem;
-    }
-    
-    /* Ensure tabs remain visible on mobile */
-    .tab-nav {
-        display: flex !important;
-    }
-}
-
-@media (max-width: 1600px) and (min-width: 769px) {
-    .sidebar {
-        width: 280px;
-    }
-    
-    .command-buttons {
-        grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-    }
-    
-    /* Ensure tabbed interface for medium and smaller desktop screens */
-    .tabbed-panel {
-        flex-direction: column !important;
-        display: flex !important;
-    }
-    
-    .tab-nav {
-        display: flex !important;
-    }
-    
-    .tab-content {
-        flex-direction: column !important;
-        display: flex !important;
-    }
-    
-    .tab-panel {
-        display: none !important;
-    }
-    
-    .tab-panel.active {
-        display: flex !important;
-    }
 }

@@ -6,11 +6,11 @@ const WatchoutCommands = require('./src/watchout-commands');
 let mainWindow;
 const watchoutCommands = new WatchoutCommands();
 
-function createWindow() {
-  // Create the browser window
+function createWindow() {  // Create the browser window
   mainWindow = new BrowserWindow({
-    width: 1200,
+    width: 1600,
     height: 800,
+    minWidth: 1600,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,

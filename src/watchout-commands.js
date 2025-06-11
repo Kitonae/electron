@@ -71,7 +71,7 @@ class WatchoutCommands {
                 req.destroy();
                 reject({
                     success: false,
-                    error: `Connection to server ${serverIp} timed out`,
+                    error: `Connection timed out`,
                     code: 'TIMEOUT'
                 });
             });
@@ -98,6 +98,7 @@ class WatchoutCommands {
         try {
             return await this.sendRequest(serverIp, '/v0/show');
         } catch (error) {
+         
             return error;
         }
     }
@@ -228,7 +229,7 @@ class WatchoutCommands {
         const code = error.code;
         
         if (code === 'ECONNREFUSED') {
-            return `Cannot connect to server}'`;
+            return `Cannot connect to server`;
         } else if (code === 'ENOTFOUND') {
             return `Cannot reach server - host not found`;
         } else if (code === 'EHOSTUNREACH') {
@@ -241,7 +242,7 @@ class WatchoutCommands {
             return `Connection to server timed out`;
         } else {
             // For other errors, return a generic message but preserve some detail
-            return `Connection to server ${serverIp} failed: ${message.split(' ').slice(-1)[0] || 'Unknown error'}`;
+            return `Connection to server failed: ${message.split(' ').slice(-1)[0] || 'Unknown error'}`;
         }
     }
     

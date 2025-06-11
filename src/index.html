@@ -31,54 +31,43 @@
                     </div>
                 </aside>                <!-- Main Content Area -->
                 <div class="content-area">
-                    <!-- Tabbed Panel -->
-                    <div class="tabbed-panel">
-                        <!-- Tab Navigation -->
-                        <div class="tab-nav">
-                            <button class="tab-btn active" id="detailsTab" data-tab="details">
-                                <span class="tab-icon">📋</span>
-                                <span>Server Details</span>
-                            </button>
-                            <button class="tab-btn" id="commandsTab" data-tab="commands">
-                                <span class="tab-icon">⚡</span>
-                                <span>Commands</span>
-                            </button>
-                            <div class="tab-indicator"></div>
-                        </div>
-
-                        <!-- Tab Content -->
-                        <div class="tab-content">
-                            <!-- Server Details Tab -->
-                            <div class="tab-panel active" id="detailsPanel">
-                                <div class="panel-header">
-                                    <h2>Server Details</h2>
-                                    <div class="server-count" id="serverCount">0 servers found</div>
+                    <!-- Main Panels -->
+                    <div class="main-panels">
+                        <!-- Server Details Panel -->
+                        <div class="panel" id="detailsPanel">
+                            <div class="panel-header">
+                                <div class="panel-title-group">
+                                    <span class="panel-icon">📋</span>
+                                    <h3>Server Details</h3>
                                 </div>
-                                
-                                <div class="panel-content" id="serversContainer">
-                                    <div class="no-servers" id="noServers">
-                                        <div class="no-servers-icon">📡</div>
-                                        <p>No Watchout servers discovered yet</p>
-                                        <p class="hint">Click "Manual Scan" to begin discovery</p>
-                                    </div>
-                                    <div class="no-selection" id="noSelection" style="display: none;">
-                                        <div class="no-selection-icon">👈</div>
-                                        <p>Select a server from the sidebar to view details</p>
-                                    </div>
+                                <div class="server-count" id="serverCount">0 servers found</div>
+                            </div>                            <div class="panel-content" id="serversContainer">
+                                <div class="no-servers" id="noServers">
+                                    <div class="no-servers-icon">📡</div>
+                                    <p>No Watchout servers discovered yet</p>
+                                    <p class="hint">Click "Manual Scan" to begin discovery</p>
+                                </div>
+                                <div class="no-selection" id="noSelection" style="display: none;">
+                                    <div class="no-selection-icon">👈</div>
+                                    <p>Select a server from the sidebar to view details</p>
                                 </div>
                             </div>
+                        </div>
 
-                            <!-- Commands Tab -->
-                            <div class="tab-panel" id="commandsPanel">
-                                <div class="panel-header">
-                                    <h2>Server Commands</h2>
-                                    <div class="connection-status" id="connectionStatus">
-                                        <span class="status-indicator" id="apiStatusIndicator"></span>
-                                        <span id="apiStatusText">Not connected</span>
-                                    </div>
+                        <!-- Server Commands Panel -->
+                        <div class="panel" id="commandsPanel">
+                            <div class="panel-header">
+                                <div class="panel-title-group">
+                                    <span class="panel-icon">⚡</span>
+                                    <h3>Server Commands</h3>
                                 </div>
-                                
-                                <div class="panel-content" id="commandsContainer">
+                                <div class="connection-status" id="connectionStatus">
+                                    <span class="status-indicator" id="apiStatusIndicator"></span>
+                                    <span id="apiStatusText">Not connected</span>
+                                </div>
+                            </div>
+                            
+                            <div class="panel-content" id="commandsContainer">
                                     <div class="no-server-selected" id="noServerSelected">
                                         <div class="no-server-icon">🖥️</div>
                                         <p>Select a server to send commands</p>
@@ -170,15 +159,14 @@
                                             <div class="response-content" id="responseContent">
                                                 <div class="no-response">No commands executed yet</div>
                                             </div>
-                                        </div>
-                                    </div>
+                                        </div>                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </main>        <footer class="app-footer">
+        </main><footer class="app-footer">
             <div class="footer-content">
                 <span>WATCHOUT Assistant v<span id="appVersion">1.0.0</span></span>
                 <span class="separator">•</span>
