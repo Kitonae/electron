@@ -145,6 +145,34 @@ class WatchoutServerFinderApp {    constructor() {
         } catch (error) {
             console.error('Failed to load app version:', error);
         }
+    }
+
+    ensureFooterVisibility() {
+        const footer = document.querySelector('.app-footer');
+        if (footer) {
+            // Ensure footer is visible and properly styled
+            footer.style.display = 'flex';
+            footer.style.position = 'relative';
+            footer.style.zIndex = '1000';
+            footer.style.flexShrink = '0';
+            
+            // Ensure parent container doesn't overflow and hide footer
+            const appContainer = document.querySelector('.app-container');
+            if (appContainer) {
+                appContainer.style.height = '100vh';
+                appContainer.style.maxHeight = '100vh';
+                appContainer.style.overflow = 'hidden';
+            }
+            
+            // Ensure main content area respects footer space
+            const appMain = document.querySelector('.app-main');
+            if (appMain) {
+                appMain.style.maxHeight = 'calc(100vh - 80px)';
+                appMain.style.overflow = 'hidden';
+            }
+            
+            console.log('Footer visibility ensured');
+        }
     }updateScanButton() {
         const button = document.getElementById('scanButton');
         

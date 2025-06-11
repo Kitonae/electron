@@ -39,6 +39,6 @@
 
 - command response panel does not have any padding from the top
 
-- checkboxes in settings dont have the correct width
+✓ checkboxes in settings dont have the correct width
 
 ✓ change the sidebar divider to a line
