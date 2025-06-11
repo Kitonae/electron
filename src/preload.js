@@ -6,12 +6,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
   scanForWatchoutServers: () => ipcRenderer.invoke('scan-for-watchout-servers'),
   clearOfflineServers: () => ipcRenderer.invoke('clear-offline-servers'),
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
-  
-  // Settings API
+    // Settings API
   getAppSettings: () => ipcRenderer.invoke('get-app-settings'),
   saveAppSettings: (settings) => ipcRenderer.invoke('save-app-settings', settings),
   getWebServerStatus: () => ipcRenderer.invoke('get-web-server-status'),
   getCacheFileLocation: () => ipcRenderer.invoke('get-cache-file-location'),
+  
+  // Web Server Control
+  stopWebServer: () => ipcRenderer.invoke('stop-web-server'),
+  restartWebServer: () => ipcRenderer.invoke('restart-web-server'),
   
   // Watchout Commands API
   watchout: {
@@ -25,8 +28,20 @@ contextBridge.exposeInMainWorld('electronAPI', {
     jumpToTime: (serverIp, timelineId, time, state) => ipcRenderer.invoke('watchout-jump-to-time', serverIp, timelineId, time, state),
     jumpToCue: (serverIp, timelineId, cueId, state) => ipcRenderer.invoke('watchout-jump-to-cue', serverIp, timelineId, cueId, state),
     sendInputs: (serverIp, inputs) => ipcRenderer.invoke('watchout-send-inputs', serverIp, inputs),
-    getCommonCommands: (serverIp) => ipcRenderer.invoke('watchout-get-common-commands', serverIp),
+  getCommonCommands: (serverIp) => ipcRenderer.invoke('watchout-get-common-commands', serverIp),
     sendCustomRequest: (serverIp, endpoint, method, data) => ipcRenderer.invoke('watchout-send-custom-request', serverIp, endpoint, method, data)
+  },
+  
+  // Startup checks API
+  performStartupChecks: () => ipcRenderer.invoke('perform-startup-checks'),
+  dismissStartupWarning: (warningType) => ipcRenderer.invoke('dismiss-startup-warning', warningType),
+  
+  // Event listeners for main process messages
+  onStartupWarning: (callback) => {
+    ipcRenderer.on('startup-warning', (event, notification) => callback(notification));
+  },
+  onWebServerError: (callback) => {
+    ipcRenderer.on('web-server-error', (event, error) => callback(error));
   },
   
   // For development purposes

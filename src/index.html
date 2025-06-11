@@ -176,7 +176,6 @@
                 <span>WATCHOUT Assistant v<span id="appVersion">1.0.0</span></span>
                 <span class="separator">•</span>
                 <span>Built with Electron</span>
-                <button id="debugFooterBtn" style="background: orange; color: black; padding: 5px; margin: 0 10px; border: none; border-radius: 3px; cursor: pointer;">Debug Footer</button>
                 <button id="settingsButton" class="settings-button" title="Application Settings">
                     ⚙️ Settings
                 </button>
@@ -245,8 +244,7 @@
                         <small class="form-help">Save and load discovered servers between application sessions</small>
                     </div>
                 </div>
-                
-                <div class="settings-section">
+                  <div class="settings-section">
                     <h4>Web Server</h4>
                     <div class="form-group">
                         <label class="checkbox-label">
@@ -259,6 +257,19 @@
                     <div class="form-group" id="webServerStatusGroup">
                         <label>Web Server Status:</label>
                         <span id="webServerStatus" class="status-indicator-text">Unknown</span>
+                    </div>
+                    <div class="form-group">
+                        <div class="webserver-controls">
+                            <button class="btn-secondary webserver-btn" id="stopWebServerBtn">
+                                <span class="btn-icon">🛑</span>
+                                Stop Web Server
+                            </button>
+                            <button class="btn-primary webserver-btn" id="restartWebServerBtn">
+                                <span class="btn-icon">🔄</span>
+                                Restart Web Server
+                            </button>
+                        </div>
+                        <small class="form-help">Manual web server controls - useful for troubleshooting connection issues</small>
                     </div>
                 </div>
                 
@@ -277,6 +288,27 @@
             <div class="modal-footer">
                 <button class="btn-secondary" id="cancelSettings">Cancel</button>
                 <button class="btn-primary" id="saveSettings">Save Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Startup Warning Modal -->
+    <div id="startupWarningModal" class="modal" style="display: none;">
+        <div class="modal-overlay"></div>
+        <div class="modal-content startup-warning-modal">
+            <div class="modal-header">
+                <div class="warning-icon" id="startupWarningIcon">⚠️</div>
+                <h3 id="startupWarningTitle">Startup Warning</h3>
+            </div>
+            <div class="modal-body">
+                <div class="warning-message" id="startupWarningMessage">
+                    <!-- Warning message will be populated by JavaScript -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <div class="modal-actions" id="startupWarningActions">
+                    <!-- Action buttons will be populated by JavaScript -->
+                </div>
             </div>
         </div>
     </div>

@@ -134,8 +134,65 @@ class ApiAdapter {
         if (this.isElectron) {
             return window.electronAPI.getCacheFileLocation();
         } else {
-            // For web version, cache is server-side
-            return 'Server-side cache';
+            // For web version, this would come from the server
+            return 'Default cache location';
+        }
+    }
+
+    // Web Server Control Methods
+    async stopWebServer() {
+        if (this.isElectron) {
+            return window.electronAPI.stopWebServer();
+        } else {
+            // For web version, we can't actually stop the server we're running on
+            return this.webApiCall('/webserver/stop', { method: 'POST' });
+        }
+    }
+
+    async restartWebServer() {
+        if (this.isElectron) {
+            return window.electronAPI.restartWebServer();
+        } else {
+            // For web version, we can't actually restart the server we're running on
+            return this.webApiCall('/webserver/restart', { method: 'POST' });
+        }
+    }
+
+    // Startup Checks Methods
+    async performStartupChecks() {
+        if (this.isElectron) {
+            return window.electronAPI.performStartupChecks();
+        } else {
+            // For web version, perform basic checks
+            return {
+                success: true,
+                result: {
+                    success: true,
+                    warnings: [],
+                    errors: []
+                }
+            };
+        }
+    }
+
+    async dismissStartupWarning(warningType) {
+        if (this.isElectron) {
+            return window.electronAPI.dismissStartupWarning(warningType);
+        } else {
+            return { success: true };
+        }
+    }
+
+    // Event listener methods
+    onStartupWarning(callback) {
+        if (this.isElectron && window.electronAPI.onStartupWarning) {
+            window.electronAPI.onStartupWarning(callback);
+        }
+    }
+
+    onWebServerError(callback) {
+        if (this.isElectron && window.electronAPI.onWebServerError) {
+            window.electronAPI.onWebServerError(callback);
         }
     }
 

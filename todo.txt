@@ -18,19 +18,25 @@
     ✓ toggle loading cache from disk
     ✓ toggle webserver
 
-- sort the server list in the sidebar online first offline below add a divider
+✓ sort the server list in the sidebar online first offline below add a divider
 
-- add error handling on startup
-    - socket occupied
-    - detect Watchout being run by checking if any of these processes exist, if Watchout is running show modal window with refresh and message that Watchout needs to be closed first before running this app
-        -"runner"
-        -"process-manager"
-        -"Producer"
-        -"director"
-        -"operative"
+✓ add error handling on startup
+    ✓ socket occupied
+    ✓ detect Watchout being run by checking if any of these processes exist, if Watchout is running show a warning modal window with refresh button and message that Watchout needs to be closed first before running this app
+        ✓"runner"
+        ✓"process-manager"
+        ✓"Producer"
+        ✓"director"
+        ✓"operative"
 
 - create a header to replace default window title bar, hide menu bar
 
 - replace get show info with a save show that saves the json from response to disk
 
 - add a upload show button that takes .watch file or .json file and uses a correct way to upload it.
+
+- command response panel does not have any padding from the top
+
+- checkboxes in settings dont have the correct width
+
+✓ change the sidebar divider to a line

@@ -3,9 +3,11 @@ const path = require('path');
 const { findWatchoutServers, clearOfflineServers } = require('./src/network-scanner');
 const WatchoutCommands = require('./src/watchout-commands');
 const WebServer = require('./src/web-server');
+const StartupChecker = require('./src/startup-checker');
 
 let mainWindow;
 let webServer;
+let startupChecker;
 const watchoutCommands = new WatchoutCommands();
 
 function createWindow() {  // Create the browser window
@@ -39,8 +41,26 @@ function createWindow() {  // Create the browser window
 }
 
 // This method will be called when Electron has finished initialization
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  // Initialize startup checker
+  startupChecker = new StartupChecker();
+  
   createWindow();
+  
+  // Perform startup checks
+  try {
+    const checkResult = await startupChecker.performStartupChecks(3080);
+    const notification = startupChecker.createStartupNotification(checkResult);
+    
+    if (notification) {
+      // Send startup notification to renderer when window is ready
+      mainWindow.webContents.once('did-finish-load', () => {
+        mainWindow.webContents.send('startup-warning', notification);
+      });
+    }
+  } catch (error) {
+    console.warn('Startup checks failed:', error);
+  }
   
   // Start web server for browser access
   webServer = new WebServer();
@@ -48,6 +68,14 @@ app.whenReady().then(() => {
     console.log('Web server started successfully');
   }).catch(error => {
     console.error('Failed to start web server:', error);
+    
+    // Send web server error to renderer
+    if (mainWindow && mainWindow.webContents) {
+      mainWindow.webContents.send('web-server-error', {
+        type: 'start-failed',
+        message: error.message
+      });
+    }
   });
 });
 
@@ -247,11 +275,79 @@ ipcMain.handle('get-cache-file-location', async () => {
   try {
     // This would ideally come from the network scanner instance
     // For now, return a placeholder
-    const userDataPath = app.getPath('userData');
-    return path.join(userDataPath, 'watchout-servers-cache.json');
+    const os = require('os');
+    const path = require('path');
+    return path.join(os.homedir(), 'AppData', 'Roaming', 'watchout-assistant', 'watchout-assistant-cache.json');
   } catch (error) {
     console.error('Error getting cache file location:', error);
-    return 'Unknown';
+    return 'Unknown location';
+  }
+});
+
+// Web Server Control IPC handlers
+ipcMain.handle('stop-web-server', async () => {
+  try {
+    if (webServer && webServer.isRunning()) {
+      await webServer.stop();
+      console.log('Web server stopped manually');
+      return { success: true };
+    } else {
+      return { success: false, error: 'Web server is not running' };
+    }
+  } catch (error) {
+    console.error('Error stopping web server:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('restart-web-server', async () => {
+  try {
+    if (webServer) {
+      // Stop if running
+      if (webServer.isRunning()) {
+        await webServer.stop();
+        console.log('Web server stopped for restart');
+      }
+      
+      // Start again
+      await webServer.start();
+      console.log('Web server restarted manually');
+      return { success: true };
+    } else {
+      // Create new instance if needed
+      webServer = new WebServer();
+      await webServer.start();
+      console.log('Web server started manually');
+      return { success: true };
+    }
+  } catch (error) {
+    console.error('Error restarting web server:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Startup check IPC handlers
+ipcMain.handle('perform-startup-checks', async () => {
+  try {
+    if (!startupChecker) {
+      startupChecker = new StartupChecker();
+    }
+    const checkResult = await startupChecker.performStartupChecks(3080);
+    return { success: true, result: checkResult };
+  } catch (error) {
+    console.error('Error performing startup checks:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('dismiss-startup-warning', async (event, warningType) => {
+  try {
+    // Log that warning was dismissed
+    console.log('Startup warning dismissed:', warningType);
+    return { success: true };
+  } catch (error) {
+    console.error('Error dismissing startup warning:', error);
+    return { success: false, error: error.message };
   }
 });
 

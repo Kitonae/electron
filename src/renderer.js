@@ -18,6 +18,9 @@ class WatchoutServerFinderApp {    constructor() {
         this.bindEvents();
         await this.loadAppVersion();
         
+        // Initialize startup warning listeners
+        this.initializeStartupWarnings();
+        
         // Ensure footer visibility after DOM is loaded
         setTimeout(() => {
             this.ensureFooterVisibility();
@@ -35,10 +38,6 @@ class WatchoutServerFinderApp {    constructor() {
         // Settings button event
         const settingsButton = document.getElementById('settingsButton');
         settingsButton.addEventListener('click', () => this.showSettingsDialog());
-        
-        // Debug footer button event
-        const debugFooterBtn = document.getElementById('debugFooterBtn');
-        debugFooterBtn.addEventListener('click', () => this.ensureFooterVisibility());
         
         // Command button events (no more tab events needed)
         this.bindCommandEvents();
@@ -212,7 +211,7 @@ class WatchoutServerFinderApp {    constructor() {
             this.updateScanStatus('Error clearing offline servers');
             console.error('Error clearing offline servers:', error);
         }
-    }renderSidebar() {
+    }    renderSidebar() {
         const serverList = document.getElementById('serverList');
         const noServersSidebar = document.getElementById('noServersSidebar');
 
@@ -224,31 +223,52 @@ class WatchoutServerFinderApp {    constructor() {
             const existingItems = serverList.querySelectorAll('.server-item');
             existingItems.forEach(item => item.remove());
             return;
-        }        noServersSidebar.style.display = 'none';
+        }
+
+        noServersSidebar.style.display = 'none';
+        
+        // Sort servers: online first, offline below
+        const onlineServers = this.servers.filter(server => server.status === 'online');
+        const offlineServers = this.servers.filter(server => server.status === 'offline');
         
         // Auto-select first server if none selected or selected server no longer exists
+        // Prioritize online servers, fallback to offline servers
         let autoSelected = false;
         if (!this.selectedServerId || !this.servers.some(s => this.getServerId(s) === this.selectedServerId)) {
-            this.selectedServerId = this.getServerId(this.servers[0]);
-            this.selectedServerIp = this.servers[0].ip;
-            autoSelected = true;
+            const firstServer = onlineServers.length > 0 ? onlineServers[0] : offlineServers[0];
+            if (firstServer) {
+                this.selectedServerId = this.getServerId(firstServer);
+                this.selectedServerIp = firstServer.ip;
+                autoSelected = true;
+            }
         }
         
         // Remove existing server items
-        const existingItems = serverList.querySelectorAll('.server-item');
+        const existingItems = serverList.querySelectorAll('.server-item, .server-divider');
         existingItems.forEach(item => item.remove());
 
-        // Create new server items
-        this.servers.forEach(server => {
+        // Create online server items
+        onlineServers.forEach(server => {
+            const serverItem = this.createServerItem(server);
+            serverList.appendChild(serverItem);
+        });        // Add divider if there are both online and offline servers
+        if (onlineServers.length > 0 && offlineServers.length > 0) {
+            const divider = document.createElement('div');
+            divider.className = 'server-divider';
+            serverList.appendChild(divider);
+        }
+
+        // Create offline server items
+        offlineServers.forEach(server => {
             const serverItem = this.createServerItem(server);
             serverList.appendChild(serverItem);
         });
         
-        // Test API connection for auto-selected server
-        if (autoSelected && this.selectedServerIp && this.servers[0]?.status === 'online') {
+        // Test API connection for auto-selected server (prefer online servers)
+        if (autoSelected && this.selectedServerIp && onlineServers.length > 0) {
             setTimeout(() => this.testApiConnection(), 100);
         }
-    }    renderMainContent() {
+    }renderMainContent() {
         const container = document.getElementById('serversContainer');
         const noServers = document.getElementById('noServers');
         const noSelection = document.getElementById('noSelection');
@@ -1293,13 +1313,28 @@ class WatchoutServerFinderApp {    constructor() {
             await this.saveSettings();
             closeModal();
         };
-        
-        // Update web server status when checkbox changes
+          // Update web server status when checkbox changes
         const enableWebServer = document.getElementById('enableWebServer');
         if (enableWebServer) {
             enableWebServer.onchange = () => {
                 // Update status immediately to show expected state
                 this.updateWebServerStatus();
+            };
+        }
+        
+        // Web server control buttons
+        const stopWebServerBtn = document.getElementById('stopWebServerBtn');
+        const restartWebServerBtn = document.getElementById('restartWebServerBtn');
+        
+        if (stopWebServerBtn) {
+            stopWebServerBtn.onclick = async () => {
+                await this.stopWebServer();
+            };
+        }
+        
+        if (restartWebServerBtn) {
+            restartWebServerBtn.onclick = async () => {
+                await this.restartWebServer();
             };
         }
     }
@@ -1322,75 +1357,196 @@ class WatchoutServerFinderApp {    constructor() {
                 this.updateWebServerStatus();
             }, 500);
             
-            console.log('Settings saved:', settings);
+            console.log('Settings saved successfully');
+        } catch (error) {
+            console.error('Error saving settings:', error);
+        }
+    }    // Web Server Control Methods
+    async stopWebServer() {
+        try {
+            const stopBtn = document.getElementById('stopWebServerBtn');
+            const restartBtn = document.getElementById('restartWebServerBtn');
+            
+            // Disable buttons during operation
+            if (stopBtn) stopBtn.disabled = true;
+            if (restartBtn) restartBtn.disabled = true;
+            
+            console.log('Stopping web server...');
+            await this.api.stopWebServer();
+            
+            // Update status after stopping
+            setTimeout(() => {
+                this.updateWebServerStatus();
+                if (stopBtn) stopBtn.disabled = false;
+                if (restartBtn) restartBtn.disabled = false;
+            }, 1000);
             
         } catch (error) {
-            console.error('Failed to save settings:', error);
-            // Could show an error message to the user here
+            console.error('Error stopping web server:', error);
+            // Re-enable buttons on error
+            const stopBtn = document.getElementById('stopWebServerBtn');
+            const restartBtn = document.getElementById('restartWebServerBtn');
+            if (stopBtn) stopBtn.disabled = false;
+            if (restartBtn) restartBtn.disabled = false;
         }
-    }    // Add method to ensure footer is visible
-    ensureFooterVisibility() {
-        console.log('--- Footer Visibility Debug ---');
-        const footer = document.querySelector('.app-footer');
-        const appContainer = document.querySelector('.app-container');
-        const appMain = document.querySelector('.app-main');
-        
-        console.log('Footer element:', footer);
-        console.log('App container:', appContainer);
-        console.log('App main:', appMain);
-        
-        if (footer) {
-            // Log current styles
-            const computedStyles = window.getComputedStyle(footer);
-            console.log('Footer current styles:', {
-                display: computedStyles.display,
-                position: computedStyles.position,
-                height: computedStyles.height,
-                minHeight: computedStyles.minHeight,
-                flexShrink: computedStyles.flexShrink,
-                zIndex: computedStyles.zIndex,
-                bottom: computedStyles.bottom,
-                visibility: computedStyles.visibility
+    }
+
+    async restartWebServer() {
+        try {
+            const stopBtn = document.getElementById('stopWebServerBtn');
+            const restartBtn = document.getElementById('restartWebServerBtn');
+            
+            // Disable buttons during operation
+            if (stopBtn) stopBtn.disabled = true;
+            if (restartBtn) restartBtn.disabled = true;
+            
+            console.log('Restarting web server...');
+            await this.api.restartWebServer();
+            
+            // Update status after restarting
+            setTimeout(() => {
+                this.updateWebServerStatus();
+                if (stopBtn) stopBtn.disabled = false;
+                if (restartBtn) restartBtn.disabled = false;
+            }, 2000);
+            
+        } catch (error) {
+            console.error('Error restarting web server:', error);
+            // Re-enable buttons on error
+            const stopBtn = document.getElementById('stopWebServerBtn');
+            const restartBtn = document.getElementById('restartWebServerBtn');
+            if (stopBtn) stopBtn.disabled = false;
+            if (restartBtn) restartBtn.disabled = false;
+        }
+    }
+
+    initializeStartupWarnings() {
+        // Listen for startup warnings from main process
+        if (this.api.onStartupWarning) {
+            this.api.onStartupWarning((notification) => {
+                this.showStartupWarning(notification);
             });
-            
-            // Check if footer is in viewport
-            const rect = footer.getBoundingClientRect();
-            console.log('Footer position:', rect);
-            console.log('Viewport height:', window.innerHeight);
-            console.log('Footer visible in viewport:', rect.top < window.innerHeight);
-            
-            // Force footer to be visible
-            footer.style.display = 'flex';
-            footer.style.position = 'relative';
-            footer.style.zIndex = '1000';
-            footer.style.minHeight = '60px';
-            footer.style.flexShrink = '0';
-            footer.style.visibility = 'visible';
-            
-            console.log('Footer element found and styles applied:', footer);
-            
-            // Check again after applying styles
-            const newRect = footer.getBoundingClientRect();
-            console.log('Footer position after fix:', newRect);
-            
-        } else {
-            console.error('Footer element not found!');
-            console.log('Available elements with footer-related classes:', 
-                document.querySelectorAll('[class*="footer"]'));
         }
-        
-        // Also log app layout info
-        if (appContainer) {
-            const containerRect = appContainer.getBoundingClientRect();
-            console.log('App container position:', containerRect);
+
+        // Listen for web server errors
+        if (this.api.onWebServerError) {
+            this.api.onWebServerError((error) => {
+                console.warn('Web server error:', error);
+                // Could show a non-blocking notification here
+            });
         }
-        
-        if (appMain) {
-            const mainRect = appMain.getBoundingClientRect();
-            console.log('App main position:', mainRect);
+    }
+
+    // Startup Warning Methods
+    showStartupWarning(notification) {
+        const modal = document.getElementById('startupWarningModal');
+        const icon = document.getElementById('startupWarningIcon');
+        const title = document.getElementById('startupWarningTitle');
+        const message = document.getElementById('startupWarningMessage');
+        const actions = document.getElementById('startupWarningActions');
+
+        // Set icon and colors based on severity
+        if (notification.icon) {
+            icon.textContent = notification.icon;
         }
+
+        // Set title and message
+        title.textContent = notification.title;
+        message.textContent = notification.message;
+
+        // Clear existing actions
+        actions.innerHTML = '';
+
+        // Create action buttons
+        if (notification.actions) {
+            notification.actions.forEach(action => {
+                const button = document.createElement('button');
+                button.className = `warning-action-btn ${action.primary ? 'primary' : 'secondary'}`;
+                button.textContent = action.label;
+                button.onclick = () => this.handleStartupWarningAction(action.id, notification.type);
+                actions.appendChild(button);
+            });
+        }
+
+        // Show modal
+        modal.style.display = 'flex';
+    }
+
+    async handleStartupWarningAction(actionId, warningType) {
+        const modal = document.getElementById('startupWarningModal');
         
-        console.log('--- End Footer Debug ---');
+        switch (actionId) {
+            case 'refresh':
+                // Perform startup checks again
+                try {
+                    const result = await this.api.performStartupChecks();
+                    if (result.success && result.result) {
+                        // Check if issues are resolved
+                        if (result.result.warnings.length === 0) {
+                            this.hideStartupWarning();
+                        } else {
+                            // Show updated warning
+                            const notification = this.createNotificationFromCheckResult(result.result);
+                            if (notification) {
+                                this.showStartupWarning(notification);
+                            } else {
+                                this.hideStartupWarning();
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error('Failed to refresh startup checks:', error);
+                }
+                break;
+                
+            case 'retry':
+                // Retry the failed operation
+                this.hideStartupWarning();
+                break;
+                
+            case 'continue':
+            case 'ok':
+            default:
+                // Dismiss the warning
+                this.hideStartupWarning();
+                break;
+        }
+
+        // Dismiss the warning in the main process
+        try {
+            await this.api.dismissStartupWarning(warningType);
+        } catch (error) {
+            console.error('Failed to dismiss startup warning:', error);
+        }
+    }
+
+    hideStartupWarning() {
+        const modal = document.getElementById('startupWarningModal');
+        modal.style.display = 'none';
+    }
+
+    createNotificationFromCheckResult(checkResult) {
+        // Helper method to convert check results to notification format
+        if (checkResult.warnings.length === 0) {
+            return null;
+        }
+
+        const warning = checkResult.warnings[0];
+        return {
+            type: warning.type,
+            title: warning.title,
+            message: warning.message,
+            icon: warning.type === 'watchout-running' ? '⚠️' : '🔌',
+            actions: warning.type === 'watchout-running' 
+                ? [
+                    { id: 'refresh', label: 'Refresh Check', primary: true },
+                    { id: 'continue', label: 'Continue Anyway', secondary: true }
+                ]
+                : [
+                    { id: 'ok', label: 'OK', primary: true }
+                ],
+            severity: warning.severity || 'warning'
+        };
     }
 }
 
