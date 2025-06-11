@@ -165,13 +165,13 @@ class WatchoutServerFinder {
   sendWatchoutDiscoveryQuery(socket) {
     try {
       // Send the official Watchout 7 discovery message
-      const discoveryMessage = Buffer.from('wo7_ping', 'ascii');
+      const discoveryMessage = Buffer.from('discovery_ping', 'ascii');
       
       socket.send(discoveryMessage, WATCHOUT_QUERY_PORT, WATCHOUT_MULTICAST_IP, (error) => {
         if (error) {
           console.warn('Failed to send Watchout discovery query:', error.message);
         } else {
-          console.log(`Sent Watchout discovery query 'wo7_ping' to ${WATCHOUT_MULTICAST_IP}:${WATCHOUT_QUERY_PORT}`);
+          console.log(`Sent Watchout discovery query 'discovery_ping' to ${WATCHOUT_MULTICAST_IP}:${WATCHOUT_QUERY_PORT}`);
         }
       });
     } catch (error) {

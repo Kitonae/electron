@@ -2,6 +2,9 @@ class WatchoutServerFinderApp {
     constructor() {
         this.servers = [];
         this.isScanning = false;
+        this.scanInterval = null;
+        this.backgroundScanEnabled = true;
+        this.scanIntervalMs = 30000; // 30 seconds
         this.initializeApp();
     }
 
@@ -9,46 +12,99 @@ class WatchoutServerFinderApp {
         this.bindEvents();
         await this.loadAppVersion();
         this.updateUI();
-    }
+        this.startBackgroundScanning();
+        }
 
     bindEvents() {
         const scanButton = document.getElementById('scanButton');
-        scanButton.addEventListener('click', () => this.startScan());
+        scanButton.addEventListener('click', () => this.startManualScan());
     }
 
-    async loadAppVersion() {
-        try {
-            const version = await window.electronAPI.getAppVersion();
-            document.getElementById('appVersion').textContent = version;
-        } catch (error) {
-            console.error('Failed to load app version:', error);
+    startBackgroundScanning() {
+        console.log('Starting background scanning every', this.scanIntervalMs / 1000, 'seconds');
+        
+        // Perform initial scan
+        this.performBackgroundScan();
+        
+        // Set up interval for background scanning
+        this.scanInterval = setInterval(() => {
+            if (this.backgroundScanEnabled && !this.isScanning) {
+                this.performBackgroundScan();
+            }
+        }, this.scanIntervalMs);
+    }
+
+    stopBackgroundScanning() {
+        if (this.scanInterval) {
+            clearInterval(this.scanInterval);
+            this.scanInterval = null;
+            console.log('Background scanning stopped');
         }
     }
 
-    async startScan() {
+    async performBackgroundScan() {
         if (this.isScanning) return;
+
+        console.log('Performing background scan...');
+        
+        try {
+            const result = await window.electronAPI.scanForWatchoutServers();
+            
+            if (result.success) {
+                const previousCount = this.servers.length;
+                this.servers = result.servers;
+                
+                // Only update status if servers were found or count changed
+                if (this.servers.length !== previousCount) {
+                    this.updateScanStatus(`Background scan: Found ${this.servers.length} server(s).`);
+                    console.log(`Background scan found ${this.servers.length} servers`);
+                }
+                
+                this.updateUI();
+            } else {
+                console.warn('Background scan failed:', result.error);
+            }
+        } catch (error) {
+            console.error('Background scan error:', error);
+        }
+    }
+
+    async startManualScan() {
+        if (this.isScanning) return;
+
+        // Temporarily disable background scanning during manual scan
+        const wasBackgroundEnabled = this.backgroundScanEnabled;
+        this.backgroundScanEnabled = false;
 
         this.isScanning = true;
         this.updateScanButton();
-        this.updateScanStatus('Scanning network for Watchout servers...');
+        this.updateScanStatus('Manual scan: Scanning network for Watchout servers...');
         
         try {
             const result = await window.electronAPI.scanForWatchoutServers();
             
             if (result.success) {
                 this.servers = result.servers;
-                this.updateScanStatus(`Scan completed. Found ${this.servers.length} server(s).`);
+                this.updateScanStatus(`Manual scan completed. Found ${this.servers.length} server(s).`);
             } else {
-                this.updateScanStatus(`Scan failed: ${result.error}`);
-                console.error('Scan error:', result.error);
+                this.updateScanStatus(`Manual scan failed: ${result.error}`);
+                console.error('Manual scan error:', result.error);
             }
         } catch (error) {
-            this.updateScanStatus('Scan failed: Network error');
-            console.error('Network scan error:', error);
+            this.updateScanStatus('Manual scan failed: Network error');
+            console.error('Manual scan network error:', error);
         } finally {
             this.isScanning = false;
+            this.backgroundScanEnabled = wasBackgroundEnabled;
             this.updateScanButton();
             this.updateUI();
+        }
+    }    async loadAppVersion() {
+        try {
+            const version = await window.electronAPI.getAppVersion();
+            document.getElementById('appVersion').textContent = version;
+        } catch (error) {
+            console.error('Failed to load app version:', error);
         }
     }
 
@@ -61,12 +117,11 @@ class WatchoutServerFinderApp {
             button.textContent = '';
             button.appendChild(buttonIcon);
             button.appendChild(document.createTextNode('Scanning...'));
-            button.classList.add('scanning');
-        } else {
+            button.classList.add('scanning');        } else {
             button.disabled = false;
             button.textContent = '';
             button.appendChild(buttonIcon);
-            button.appendChild(document.createTextNode('Start Network Scan'));
+            button.appendChild(document.createTextNode('Manual Scan'));
             button.classList.remove('scanning');
         }
     }
@@ -291,15 +346,23 @@ class WatchoutServerFinderApp {
     escapeHtml(unsafe) {
         if (typeof unsafe !== 'string') return unsafe;
         return unsafe
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
+            .replace(/&/g, "&amp;")            .replace(/</g, "&lt;")
             .replace(/>/g, "&gt;")
             .replace(/"/g, "&quot;")
             .replace(/'/g, "&#039;");
+    }
+
+    cleanup() {
+        this.stopBackgroundScanning();
     }
 }
 
 // Initialize the app when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    new WatchoutServerFinderApp();
+    const app = new WatchoutServerFinderApp();
+    
+    // Cleanup when window is closing
+    window.addEventListener('beforeunload', () => {
+        app.cleanup();
+    });
 });
