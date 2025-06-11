@@ -13,8 +13,8 @@ const watchoutCommands = new WatchoutCommands();
 function createWindow() {  // Create the browser window
   mainWindow = new BrowserWindow({
     width: 1600,
-    height: 800,
-    minWidth: 1600,
+    height: 1000,
+    minWidth: 1500,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,

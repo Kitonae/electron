@@ -6,7 +6,6 @@
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: #333;
     height: 100vh;
     overflow: hidden;
@@ -129,7 +128,7 @@ body {
 }
 
 .clear-offline-button-sidebar {
-    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
     border: none;
     padding: 0.4rem;
@@ -141,13 +140,12 @@ body {
     align-items: center;
     justify-content: center;
     transition: all 0.3s ease;
-    box-shadow: 0 2px 8px rgba(220, 53, 69, 0.4);
-    font-size: 14px;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
 }
 
 .clear-offline-button-sidebar:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.6);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.6);
 }
 
 .clear-offline-button-sidebar:active {
@@ -290,7 +288,7 @@ body {
     margin: 0.5rem 1rem;
     padding: 0;
     border: none;
-    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    border-top: 1px solid rgba(0, 0, 0, 0.2);
     height: 1px;
     background: none;
 }
@@ -586,10 +584,12 @@ body {
 }
 
 .watchout-details-separator {
-    grid-column: 1 / -1;
+    margin: 0.5rem 1rem;
+    padding: 0;
+    border: none;
+    border-top: 1px solid rgba(0, 0, 0, 0.2);
     height: 1px;
-    background: linear-gradient(90deg, #667eea, transparent);
-    margin: 0.8rem 0;
+    background: none;
 }
 
 .machine-id {
@@ -660,7 +660,7 @@ body {
     min-height: 60px; /* Minimum height */
     max-height: 60px; /* Maximum height */
     background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px); 
     border-top: 1px solid rgba(255, 255, 255, 0.2);
     padding: 1rem 2rem;
     flex-shrink: 0 !important; /* Prevent footer from shrinking */
@@ -676,8 +676,7 @@ body {
     align-items: center;
     gap: 1rem;
     font-size: 0.9rem;
-    color: rgba(255, 255, 255, 0.8);
-    font-weight: 500;
+    color: #999;
     width: 100%;
 }
 
@@ -687,7 +686,7 @@ body {
 
 .settings-button {
     background: rgba(255, 255, 255, 0.2);
-    color: rgba(255, 255, 255, 0.9);
+    color: rgba(0, 0, 0, 0.9);
     border: 1px solid rgba(255, 255, 255, 0.3);
     padding: 0.4rem 0.8rem;
     border-radius: 15px;
@@ -697,6 +696,7 @@ body {
     transition: all 0.2s ease;
     margin-left: auto;
     backdrop-filter: blur(10px);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
 }
 
 .settings-button:hover {
@@ -894,15 +894,14 @@ body {
 .timeline-selector-group {
     display: flex;
     align-items: center;
-    gap: 1rem;
-    margin-bottom: 0.75rem;
+    gap: 0.8rem;
+    margin-bottom: 0.5rem;
 }
 
 .timeline-selector-group label {
     font-weight: 500;
     color: #333;
-    white-space: nowrap;
-    min-width: fit-content;
+    min-width: 100px;
 }
 
 .timeline-selector {
@@ -912,87 +911,44 @@ body {
     border-radius: 6px;
     background: white;
     font-size: 0.9rem;
+    color: #333;
     transition: all 0.2s ease;
-    min-width: 0; /* Allow shrinking */
 }
 
 .timeline-selector:focus {
     outline: none;
     border-color: #667eea;
-    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
 .timeline-selector:disabled {
-    background: #f8f9fa;
-    color: #6c757d;
+    background: #f5f5f5;
+    color: #999;
     cursor: not-allowed;
 }
 
+.timeline-selector option {
+    padding: 0.5rem;
+}
+
+
 .refresh-btn {
-    padding: 0.5rem 0.8rem;
-    font-size: 0.85rem;
-    min-width: fit-content;
-    white-space: nowrap;
+    min-width: 80px !important;
+    padding: 0.5rem 0.8rem !important;
+    height: 40 !important;
+    min-height: auto !important;
 }
 
 .timeline-info {
-    background: white;
-    border-radius: 6px;
-    padding: 0.75rem;
-    border: 1px solid #e3e6ea;
-}
-
-.timeline-list-header {
-    font-size: 0.85rem;
-    font-weight: 500;
-    color: #495057;
-    margin-bottom: 0.5rem;
-}
-
-.timeline-list {
     display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-}
-
-.timeline-list-item {
-    padding: 0.5rem 0.75rem;
-    background: #f8f9fa;
-    border-radius: 4px;
-    font-size: 0.85rem;
-    color: #495057;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    border: 1px solid transparent;
-}
-
-.timeline-list-item:hover {
-    background: #e9ecef;
-    color: #333;
-}
-
-.timeline-list-item.selected {
-    background: #667eea;
-    color: white;
-    border-color: #5a67d8;
-}
-
-.timeline-list-item.no-timelines {
-    cursor: default;
-    font-style: italic;
-    color: #6c757d;
-}
-
-.timeline-list-item.no-timelines:hover {
-    background: #f8f9fa;
-    color: #6c757d;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0;
 }
 
 .timeline-status {
-    font-size: 0.9rem;
-    color: #6c757d;
-    padding: 0.5rem;
-    text-align: center;
+    font-size: 0.85rem;
+    color: #666;
     font-style: italic;
 }
 
@@ -1005,6 +961,62 @@ body {
 .timeline-status.selected::before {
     content: "📋 ";
     margin-right: 0.3rem;
+}
+
+/* Timeline List Styles */
+.timeline-list-header {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 0.5rem;
+}
+
+.timeline-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    max-height: 120px;
+    overflow-y: auto;
+}
+
+.timeline-list-item {
+    font-size: 0.8rem;
+    padding: 0.4rem 0.6rem;
+    background: #fff;
+    border: 1px solid #e9ecef;
+    border-radius: 4px;
+    color: #666;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.timeline-list-item:hover {
+    background: #f8f9fa;
+    border-color: #dee2e6;
+}
+
+.timeline-list-item.selected {
+    background: #667eea;
+    color: white;
+    border-color: #667eea;
+    font-weight: 500;
+}
+
+.timeline-list-item.selected::before {
+    content: "▶ ";
+    margin-right: 0.3rem;
+}
+
+.timeline-list-item.no-timelines {
+    color: #999;
+    font-style: italic;
+    cursor: default;
+    border-style: dashed;
+}
+
+.timeline-list-item.no-timelines:hover {
+    background: #fff;
+    border-color: #e9ecef;
 }
 
 /* Command Response */

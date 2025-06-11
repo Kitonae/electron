@@ -454,9 +454,8 @@ class WatchoutAssistant {
         const currentMissedCount = this.missedScans.get(key) || 0;
         const newMissedCount = currentMissedCount + 1;
         this.missedScans.set(key, newMissedCount);
-        
-        if (newMissedCount >= 3) {
-          // Mark as offline only after 3 consecutive missed scans
+          if (newMissedCount >= 10) {
+          // Mark as offline only after 10 consecutive missed scans
           const offlineServer = {
             ...cachedServer,
             status: 'offline',
@@ -479,7 +478,7 @@ class WatchoutAssistant {
           
           // Add server to current results (still online)
           this.servers.set(key, onlineServer);
-          console.log(`Server missed ${newMissedCount}/3 scans, keeping online:`, onlineServer.hostRef || onlineServer.ip);
+          console.log(`Server missed ${newMissedCount}/10 scans, keeping online:`, onlineServer.hostRef || onlineServer.ip);
         }
       }
     }

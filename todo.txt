@@ -29,6 +29,8 @@
         ✓"director"
         ✓"operative"
 
+✓ increase the number of missed scans for the server to be marked offline to 10
+
 - create a header to replace default window title bar, hide menu bar
 
 - replace get show info with a save show that saves the json from response to disk
