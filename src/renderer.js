@@ -6,6 +6,8 @@ class WatchoutServerFinderApp {
         this.backgroundScanEnabled = true;
         this.scanIntervalMs = 30000; // 30 seconds
         this.selectedServerId = null; // Track selected server
+        this.selectedServerIp = null; // Track selected server IP for commands
+        this.apiConnectionStatus = false; // Track API connection status
         this.initializeApp();
     }
 
@@ -14,11 +16,31 @@ class WatchoutServerFinderApp {
         await this.loadAppVersion();
         this.updateUI();
         this.startBackgroundScanning();
-        }
-
-    bindEvents() {
+        }    bindEvents() {
         const scanButton = document.getElementById('scanButton');
         scanButton.addEventListener('click', () => this.startManualScan());
+        
+        // Command button events
+        this.bindCommandEvents();
+    }
+
+    bindCommandEvents() {
+        // Timeline control commands
+        document.getElementById('playBtn')?.addEventListener('click', () => this.executeCommand('play'));
+        document.getElementById('pauseBtn')?.addEventListener('click', () => this.executeCommand('pause'));
+        document.getElementById('stopBtn')?.addEventListener('click', () => this.executeCommand('stop'));
+        
+        // Information commands
+        document.getElementById('statusBtn')?.addEventListener('click', () => this.executeCommand('status'));
+        document.getElementById('timelinesBtn')?.addEventListener('click', () => this.executeCommand('timelines'));
+        document.getElementById('showBtn')?.addEventListener('click', () => this.executeCommand('show'));
+        
+        // Advanced commands
+        document.getElementById('testConnectionBtn')?.addEventListener('click', () => this.executeCommand('testConnection'));
+        document.getElementById('customCommandBtn')?.addEventListener('click', () => this.showCustomCommandDialog());
+        
+        // Response area
+        document.getElementById('clearResponseBtn')?.addEventListener('click', () => this.clearCommandResponse());
     }
 
     startBackgroundScanning() {
@@ -117,12 +139,10 @@ class WatchoutServerFinderApp {
             button.disabled = true;
             button.textContent = '';
             button.appendChild(buttonIcon);
-            button.appendChild(document.createTextNode('Scanning...'));
             button.classList.add('scanning');        } else {
             button.disabled = false;
             button.textContent = '';
             button.appendChild(buttonIcon);
-            button.appendChild(document.createTextNode('Manual Scan'));
             button.classList.remove('scanning');
         }
     }
@@ -157,13 +177,14 @@ class WatchoutServerFinderApp {
             const existingItems = serverList.querySelectorAll('.server-item');
             existingItems.forEach(item => item.remove());
             return;
-        }
-
-        noServersSidebar.style.display = 'none';
+        }        noServersSidebar.style.display = 'none';
         
         // Auto-select first server if none selected or selected server no longer exists
+        let autoSelected = false;
         if (!this.selectedServerId || !this.servers.some(s => this.getServerId(s) === this.selectedServerId)) {
             this.selectedServerId = this.getServerId(this.servers[0]);
+            this.selectedServerIp = this.servers[0].ip;
+            autoSelected = true;
         }
         
         // Remove existing server items
@@ -175,9 +196,12 @@ class WatchoutServerFinderApp {
             const serverItem = this.createServerItem(server);
             serverList.appendChild(serverItem);
         });
-    }
-
-    renderMainContent() {
+        
+        // Test API connection for auto-selected server
+        if (autoSelected && this.selectedServerIp && this.servers[0]?.status === 'online') {
+            setTimeout(() => this.testApiConnection(), 100);
+        }
+    }    renderMainContent() {
         const container = document.getElementById('serversContainer');
         const noServers = document.getElementById('noServers');
         const noSelection = document.getElementById('noSelection');
@@ -189,6 +213,7 @@ class WatchoutServerFinderApp {
         if (this.servers.length === 0) {
             noServers.style.display = 'flex';
             noSelection.style.display = 'none';
+            this.updateCommandsVisibility();
             return;
         }
 
@@ -196,6 +221,7 @@ class WatchoutServerFinderApp {
 
         if (!this.selectedServerId) {
             noSelection.style.display = 'flex';
+            this.updateCommandsVisibility();
             return;
         }
 
@@ -207,6 +233,9 @@ class WatchoutServerFinderApp {
             const serverCard = this.createServerCard(selectedServer);
             container.appendChild(serverCard);
         }
+        
+        // Update commands visibility
+        this.updateCommandsVisibility();
     }createServerCard(server) {
         const card = document.createElement('div');
         card.className = 'server-card';
@@ -486,12 +515,14 @@ class WatchoutServerFinderApp {
         if (server.type.includes('Asset Manager')) return 'Asset Manager';
         if (server.type.includes('Watchout')) return 'Watchout Server';
         return 'Server';
-    }
-
-    selectServer(serverId) {
+    }    selectServer(serverId) {
         // Update selected server
         const previouslySelected = this.selectedServerId;
         this.selectedServerId = serverId;
+        
+        // Find the selected server to get its IP
+        const selectedServer = this.servers.find(server => this.getServerId(server) === serverId);
+        this.selectedServerIp = selectedServer ? selectedServer.ip : null;
         
         // Update sidebar selection visual state
         const serverItems = document.querySelectorAll('.server-item');
@@ -503,10 +534,320 @@ class WatchoutServerFinderApp {
             }
         });
         
+        // Show/hide commands section
+        this.updateCommandsVisibility();
+        
         // Re-render main content to show selected server
         this.renderMainContent();
         
-        console.log('Selected server:', serverId);
+        // Test API connection for the selected server
+        if (this.selectedServerIp && selectedServer?.status === 'online') {
+            this.testApiConnection();
+        }
+        
+        console.log('Selected server:', serverId, 'IP:', this.selectedServerIp);
+    }
+
+    updateCommandsVisibility() {
+        const commandsSection = document.getElementById('commandsSection');
+        if (this.selectedServerId && this.selectedServerIp) {
+            commandsSection.style.display = 'flex';
+        } else {
+            commandsSection.style.display = 'none';
+        }
+    }
+
+    async testApiConnection() {
+        if (!this.selectedServerIp) return;
+        
+        try {
+            const result = await window.electronAPI.watchout.testConnection(this.selectedServerIp);
+            this.updateConnectionStatus(result.connected, result.message);
+        } catch (error) {
+            this.updateConnectionStatus(false, 'Connection test failed');
+        }
+    }
+
+    updateConnectionStatus(connected, message) {
+        const connectionStatus = document.getElementById('connectionStatus');
+        const statusIndicator = document.getElementById('apiStatusIndicator');
+        const statusText = document.getElementById('apiStatusText');
+        
+        this.apiConnectionStatus = connected;
+        
+        if (connected) {
+            connectionStatus.className = 'connection-status connected';
+            statusText.textContent = 'API Connected';
+        } else {
+            connectionStatus.className = 'connection-status error';
+            statusText.textContent = message || 'API Not Available';
+        }
+        
+        // Enable/disable command buttons based on connection
+        this.updateCommandButtonStates();
+    }
+
+    updateCommandButtonStates() {
+        const commandButtons = document.querySelectorAll('.command-btn');
+        commandButtons.forEach(button => {
+            if (button.id === 'testConnectionBtn') {
+                // Test connection button is always enabled when server is selected
+                button.disabled = !this.selectedServerIp;
+            } else {
+                // Other command buttons require API connection
+                button.disabled = !this.apiConnectionStatus;
+            }
+        });
+    }
+
+    async executeCommand(commandType) {
+        if (!this.selectedServerIp) {
+            this.addCommandResponse('error', commandType, 'No server selected');
+            return;
+        }
+
+        const timestamp = new Date().toLocaleTimeString();
+        let result;
+
+        try {
+            this.setCommandButtonLoading(commandType, true);
+
+            switch (commandType) {
+                case 'play':
+                    result = await window.electronAPI.watchout.playTimeline(this.selectedServerIp, 0);
+                    break;
+                case 'pause':
+                    result = await window.electronAPI.watchout.pauseTimeline(this.selectedServerIp, 0);
+                    break;
+                case 'stop':
+                    result = await window.electronAPI.watchout.stopTimeline(this.selectedServerIp, 0);
+                    break;
+                case 'status':
+                    result = await window.electronAPI.watchout.getStatus(this.selectedServerIp);
+                    break;
+                case 'timelines':
+                    result = await window.electronAPI.watchout.getTimelines(this.selectedServerIp);
+                    break;
+                case 'show':
+                    result = await window.electronAPI.watchout.getShow(this.selectedServerIp);
+                    break;
+                case 'testConnection':
+                    result = await window.electronAPI.watchout.testConnection(this.selectedServerIp);
+                    this.updateConnectionStatus(result.connected, result.message);
+                    break;
+                default:
+                    throw new Error(`Unknown command: ${commandType}`);
+            }
+
+            this.addCommandResponse(result.success ? 'success' : 'error', commandType, result);
+
+        } catch (error) {
+            this.addCommandResponse('error', commandType, { error: error.message });
+        } finally {
+            this.setCommandButtonLoading(commandType, false);
+        }
+    }
+
+    setCommandButtonLoading(commandType, loading) {
+        const buttonMap = {
+            'play': 'playBtn',
+            'pause': 'pauseBtn',
+            'stop': 'stopBtn',
+            'status': 'statusBtn',
+            'timelines': 'timelinesBtn',
+            'show': 'showBtn',
+            'testConnection': 'testConnectionBtn'
+        };
+
+        const buttonId = buttonMap[commandType];
+        const button = document.getElementById(buttonId);
+        
+        if (button) {
+            button.disabled = loading;
+            const icon = button.querySelector('.cmd-icon');
+            if (loading) {
+                button.dataset.originalIcon = icon.textContent;
+                icon.textContent = '⏳';
+            } else {
+                if (button.dataset.originalIcon) {
+                    icon.textContent = button.dataset.originalIcon;
+                    delete button.dataset.originalIcon;
+                }
+            }
+        }
+    }
+
+    addCommandResponse(type, command, result) {
+        const responseContent = document.getElementById('responseContent');
+        const noResponse = responseContent.querySelector('.no-response');
+        
+        if (noResponse) {
+            noResponse.remove();
+        }
+
+        const responseItem = document.createElement('div');
+        responseItem.className = `response-item ${type}`;
+        
+        const timestamp = new Date().toLocaleTimeString();
+        const commandName = this.getCommandDisplayName(command);
+        
+        let resultText;
+        if (typeof result === 'object') {
+            resultText = JSON.stringify(result, null, 2);
+        } else {
+            resultText = result.toString();
+        }
+
+        responseItem.innerHTML = `
+            <div class="response-timestamp">${timestamp}</div>
+            <div class="response-command">${commandName}</div>
+            <div class="response-data">${this.escapeHtml(resultText)}</div>
+        `;
+
+        responseContent.insertBefore(responseItem, responseContent.firstChild);
+        
+        // Limit to last 10 responses
+        const responses = responseContent.querySelectorAll('.response-item');
+        if (responses.length > 10) {
+            responses[responses.length - 1].remove();
+        }
+    }
+
+    getCommandDisplayName(command) {
+        const commandNames = {
+            'play': '▶️ Play Timeline',
+            'pause': '⏸️ Pause Timeline',
+            'stop': '⏹️ Stop Timeline',
+            'status': '📊 Get Status',
+            'timelines': '📑 Get Timelines',
+            'show': '🎭 Get Show Info',
+            'testConnection': '🔗 Test Connection'
+        };
+        return commandNames[command] || command;
+    }
+
+    clearCommandResponse() {
+        const responseContent = document.getElementById('responseContent');
+        responseContent.innerHTML = '<div class="no-response">No commands executed yet</div>';
+    }    showCustomCommandDialog() {
+        const modal = document.getElementById('customCommandModal');
+        modal.style.display = 'flex';
+        
+        // Bind modal events
+        this.bindCustomCommandModal();
+        
+        // Clear previous values
+        document.getElementById('customEndpoint').value = '';
+        document.getElementById('customMethod').value = 'GET';
+        document.getElementById('customData').value = '';
+        
+        // Focus on endpoint input
+        setTimeout(() => {
+            document.getElementById('customEndpoint').focus();
+        }, 100);
+    }    bindCustomCommandModal() {
+        const modal = document.getElementById('customCommandModal');
+        const closeBtn = document.getElementById('closeCustomModal');
+        const cancelBtn = document.getElementById('cancelCustomCommand');
+        const executeBtn = document.getElementById('executeCustomCommand');
+        const examplesSelect = document.getElementById('endpointExamples');
+        const endpointInput = document.getElementById('customEndpoint');
+        const methodSelect = document.getElementById('customMethod');
+        
+        // Handle example selection
+        examplesSelect.onchange = () => {
+            const selectedEndpoint = examplesSelect.value;
+            if (selectedEndpoint) {
+                endpointInput.value = selectedEndpoint;
+                // Set appropriate method based on endpoint
+                if (selectedEndpoint.includes('/play/') || 
+                    selectedEndpoint.includes('/pause/') || 
+                    selectedEndpoint.includes('/stop/') ||
+                    selectedEndpoint.includes('/jump-to-')) {
+                    methodSelect.value = 'POST';
+                } else {
+                    methodSelect.value = 'GET';
+                }
+                examplesSelect.value = ''; // Reset dropdown
+            }
+        };
+        
+        // Close modal handlers
+        const closeModal = () => {
+            modal.style.display = 'none';
+        };
+        
+        closeBtn.onclick = closeModal;
+        cancelBtn.onclick = closeModal;
+        
+        // Close on overlay click
+        modal.onclick = (e) => {
+            if (e.target === modal) {
+                closeModal();
+            }
+        };
+        
+        // Execute custom command
+        executeBtn.onclick = () => {
+            this.executeCustomCommand();
+            closeModal();
+        };
+        
+        // Execute on Enter key in endpoint field
+        endpointInput.onkeydown = (e) => {
+            if (e.key === 'Enter') {
+                this.executeCustomCommand();
+                closeModal();
+            }
+        };
+    }
+
+    async executeCustomCommand() {
+        if (!this.selectedServerIp) {
+            this.addCommandResponse('error', 'custom', 'No server selected');
+            return;
+        }
+
+        const endpoint = document.getElementById('customEndpoint').value.trim();
+        const method = document.getElementById('customMethod').value;
+        const dataText = document.getElementById('customData').value.trim();
+        
+        if (!endpoint) {
+            this.addCommandResponse('error', 'custom', 'Endpoint is required');
+            return;
+        }
+        
+        let requestData = null;
+        if (dataText && method !== 'GET') {
+            try {
+                requestData = JSON.parse(dataText);
+            } catch (error) {
+                this.addCommandResponse('error', 'custom', 'Invalid JSON data: ' + error.message);
+                return;
+            }
+        }
+
+        try {
+            // Create a custom request using the WatchoutCommands sendRequest method
+            const result = await this.sendCustomWatchoutRequest(endpoint, method, requestData);
+            this.addCommandResponse(result.success ? 'success' : 'error', 'custom', result);
+        } catch (error) {
+            this.addCommandResponse('error', 'custom', { error: error.message });
+        }
+    }    async sendCustomWatchoutRequest(endpoint, method, data) {
+        try {
+            return await window.electronAPI.watchout.sendCustomRequest(
+                this.selectedServerIp, 
+                endpoint, 
+                method, 
+                data
+            );
+        } catch (error) {
+            return {
+                success: false,
+                error: error.message
+            };
+        }
     }
 }
 

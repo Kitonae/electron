@@ -1,8 +1,10 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const { findWatchoutServers } = require('./src/network-scanner');
+const WatchoutCommands = require('./src/watchout-commands');
 
 let mainWindow;
+const watchoutCommands = new WatchoutCommands();
 
 function createWindow() {
   // Create the browser window
@@ -63,4 +65,101 @@ ipcMain.handle('scan-for-watchout-servers', async () => {
 
 ipcMain.handle('get-app-version', () => {
   return app.getVersion();
+});
+
+// Watchout Commands IPC handlers
+ipcMain.handle('watchout-test-connection', async (event, serverIp) => {
+  try {
+    return await watchoutCommands.testConnection(serverIp);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('watchout-get-status', async (event, serverIp) => {
+  try {
+    return await watchoutCommands.getPlaybackStatus(serverIp);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('watchout-get-show', async (event, serverIp) => {
+  try {
+    return await watchoutCommands.getCurrentShow(serverIp);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('watchout-get-timelines', async (event, serverIp) => {
+  try {
+    return await watchoutCommands.getTimelines(serverIp);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('watchout-play-timeline', async (event, serverIp, timelineId = 0) => {
+  try {
+    return await watchoutCommands.playTimeline(serverIp, timelineId);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('watchout-pause-timeline', async (event, serverIp, timelineId = 0) => {
+  try {
+    return await watchoutCommands.pauseTimeline(serverIp, timelineId);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('watchout-stop-timeline', async (event, serverIp, timelineId = 0) => {
+  try {
+    return await watchoutCommands.stopTimeline(serverIp, timelineId);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('watchout-jump-to-time', async (event, serverIp, timelineId, time, state = 'pause') => {
+  try {
+    return await watchoutCommands.jumpToTime(serverIp, timelineId, time, state);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('watchout-jump-to-cue', async (event, serverIp, timelineId, cueId, state = 'pause') => {
+  try {
+    return await watchoutCommands.jumpToCue(serverIp, timelineId, cueId, state);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('watchout-send-inputs', async (event, serverIp, inputs) => {
+  try {
+    return await watchoutCommands.sendInputs(serverIp, inputs);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('watchout-get-common-commands', async (event, serverIp) => {
+  try {
+    return { success: true, commands: watchoutCommands.getCommonCommands(serverIp) };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('watchout-send-custom-request', async (event, serverIp, endpoint, method, data) => {
+  try {
+    return await watchoutCommands.sendCustomRequest(serverIp, endpoint, method, data);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
 });

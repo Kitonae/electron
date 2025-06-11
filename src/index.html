@@ -6,23 +6,21 @@
     <title>Watchout Server Finder</title>
     <link rel="stylesheet" href="styles.css">
 </head>
-<body>
-    <div class="app-container">
-        <header class="app-header">
-            <div class="header-content">
-                <h1>
-                    <span class="icon">🔍</span>
-                    Watchout Server Finder
-                </h1>
-                <p class="subtitle">Discover Watchout 7 servers on your network</p>
-            </div>
-        </header>        <main class="app-main">
-            <div class="main-content">
-                <!-- Left Sidebar -->
+<body>    <div class="app-container">
+        <main class="app-main">
+            <div class="main-content">                <!-- Left Sidebar -->
                 <aside class="sidebar">
                     <div class="sidebar-header">
-                        <h3>Servers</h3>
-                        <div class="server-count-sidebar" id="serverCountSidebar">0</div>
+                        <div class="sidebar-title-group">
+                            <h3>Servers</h3>
+                            <div class="server-count-sidebar" id="serverCountSidebar">0</div>
+                        </div>
+                        <button id="scanButton" class="scan-button-sidebar">
+                            <span class="button-icon">🔄</span>
+                        </button>
+                    </div>
+                    <div class="sidebar-scan-status">
+                        <div class="scan-status" id="scanStatus">Background scanning every 30 seconds...</div>
                     </div>
                     <div class="sidebar-content">
                         <div class="server-list" id="serverList">
@@ -36,29 +34,103 @@
 
                 <!-- Main Content Area -->
                 <div class="content-area">
-                    <div class="control-panel">
-                        <button id="scanButton" class="scan-button">
-                            <span class="button-icon">🔄</span>
-                            Manual Scan
-                        </button>
-                        <div class="scan-status" id="scanStatus">Background scanning every 30 seconds...</div>
-                    </div>
-
-                    <div class="results-section">
-                        <div class="results-header">
-                            <h2>Server Details</h2>
-                            <div class="server-count" id="serverCount">0 servers found</div>
-                        </div>
-                        
-                        <div class="servers-container" id="serversContainer">
-                            <div class="no-servers" id="noServers">
-                                <div class="no-servers-icon">📡</div>
-                                <p>No Watchout servers discovered yet</p>
-                                <p class="hint">Click "Manual Scan" to begin discovery</p>
+                    <div class="main-sections">
+                        <!-- Server Details Section -->
+                        <div class="results-section">
+                            <div class="results-header">
+                                <h2>Server Details</h2>
+                                <div class="server-count" id="serverCount">0 servers found</div>
                             </div>
-                            <div class="no-selection" id="noSelection" style="display: none;">
-                                <div class="no-selection-icon">👈</div>
-                                <p>Select a server from the sidebar to view details</p>
+                            
+                            <div class="servers-container" id="serversContainer">
+                                <div class="no-servers" id="noServers">
+                                    <div class="no-servers-icon">📡</div>
+                                    <p>No Watchout servers discovered yet</p>
+                                    <p class="hint">Click "Manual Scan" to begin discovery</p>
+                                </div>
+                                <div class="no-selection" id="noSelection" style="display: none;">
+                                    <div class="no-selection-icon">👈</div>
+                                    <p>Select a server from the sidebar to view details</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Commands Section -->
+                        <div class="commands-section" id="commandsSection" style="display: none;">
+                            <div class="commands-header">
+                                <h2>Server Commands</h2>
+                                <div class="connection-status" id="connectionStatus">
+                                    <span class="status-indicator" id="apiStatusIndicator"></span>
+                                    <span id="apiStatusText">Not connected</span>
+                                </div>
+                            </div>
+                            
+                            <div class="commands-container" id="commandsContainer">
+                                <div class="command-categories">
+                                    <!-- Timeline Control Commands -->
+                                    <div class="command-category">
+                                        <h3>Timeline Control</h3>
+                                        <div class="command-buttons">
+                                            <button class="command-btn play-btn" id="playBtn">
+                                                <span class="cmd-icon">▶️</span>
+                                                <span>Play</span>
+                                            </button>
+                                            <button class="command-btn pause-btn" id="pauseBtn">
+                                                <span class="cmd-icon">⏸️</span>
+                                                <span>Pause</span>
+                                            </button>
+                                            <button class="command-btn stop-btn" id="stopBtn">
+                                                <span class="cmd-icon">⏹️</span>
+                                                <span>Stop</span>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Information Commands -->
+                                    <div class="command-category">
+                                        <h3>Information</h3>
+                                        <div class="command-buttons">
+                                            <button class="command-btn info-btn" id="statusBtn">
+                                                <span class="cmd-icon">📊</span>
+                                                <span>Get Status</span>
+                                            </button>
+                                            <button class="command-btn info-btn" id="timelinesBtn">
+                                                <span class="cmd-icon">📑</span>
+                                                <span>Get Timelines</span>
+                                            </button>
+                                            <button class="command-btn info-btn" id="showBtn">
+                                                <span class="cmd-icon">🎭</span>
+                                                <span>Get Show Info</span>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Advanced Commands -->
+                                    <div class="command-category">
+                                        <h3>Advanced</h3>
+                                        <div class="command-buttons">
+                                            <button class="command-btn advanced-btn" id="testConnectionBtn">
+                                                <span class="cmd-icon">🔗</span>
+                                                <span>Test Connection</span>
+                                            </button>
+                                            <button class="command-btn advanced-btn" id="customCommandBtn">
+                                                <span class="cmd-icon">⚙️</span>
+                                                <span>Custom Command</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Command Response Area -->
+                                <div class="command-response" id="commandResponse">
+                                    <div class="response-header">
+                                        <h4>Command Response</h4>
+                                        <button class="clear-response-btn" id="clearResponseBtn">Clear</button>
+                                    </div>
+                                    <div class="response-content" id="responseContent">
+                                        <div class="no-response">No commands executed yet</div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -73,6 +145,51 @@
                 <span>Built with Electron</span>
             </div>
         </footer>
+    </div>
+
+    <!-- Custom Command Modal -->
+    <div class="modal-overlay" id="customCommandModal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Custom Watchout Command</h3>
+                <button class="modal-close" id="closeCustomModal">×</button>
+            </div>            <div class="modal-body">
+                <div class="form-group">
+                    <label for="customEndpoint">API Endpoint:</label>
+                    <div class="endpoint-input-group">
+                        <input type="text" id="customEndpoint" placeholder="e.g., /v0/state or /v0/play/0" />
+                        <select id="endpointExamples" class="endpoint-examples">
+                            <option value="">-- Common Examples --</option>
+                            <option value="/v0/state">Get Current Status</option>
+                            <option value="/v0/timelines">Get Timelines</option>
+                            <option value="/v0/play/0">Play Timeline 0</option>
+                            <option value="/v0/pause/0">Pause Timeline 0</option>
+                            <option value="/v0/stop/0">Stop Timeline 0</option>
+                            <option value="/v0/jump-to-time/0?time=5000&state=play">Jump to 5 seconds</option>
+                            <option value="/v0/cues/0">Get Timeline 0 Cues</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="customMethod">HTTP Method:</label>
+                    <select id="customMethod">
+                        <option value="GET">GET</option>
+                        <option value="POST">POST</option>
+                        <option value="PUT">PUT</option>
+                        <option value="DELETE">DELETE</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="customData">Request Data (JSON):</label>
+                    <textarea id="customData" placeholder='{"key": "value"}' rows="4"></textarea>
+                    <small class="form-help">Leave empty for GET requests. Use JSON format for POST/PUT requests.</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" id="cancelCustomCommand">Cancel</button>
+                <button class="btn-primary" id="executeCustomCommand">Execute</button>
+            </div>
+        </div>
     </div>
 
     <script src="renderer.js"></script>

@@ -20,34 +20,6 @@ body {
     backdrop-filter: blur(10px);
 }
 
-.app-header {
-    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-    color: white;
-    padding: 2rem;
-    text-align: center;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-}
-
-.header-content h1 {
-    font-size: 2.5rem;
-    font-weight: 300;
-    margin-bottom: 0.5rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 1rem;
-}
-
-.icon {
-    font-size: 2rem;
-}
-
-.subtitle {
-    font-size: 1.1rem;
-    opacity: 0.9;
-    font-weight: 300;
-}
-
 .app-main {
     flex: 1;
     padding: 2rem;
@@ -80,6 +52,12 @@ body {
     border-bottom: 1px solid #e9ecef;
 }
 
+.sidebar-title-group {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
 .sidebar-header h3 {
     font-size: 1.3rem;
     font-weight: 600;
@@ -95,6 +73,72 @@ body {
     font-size: 0.9rem;
     font-weight: 500;
     min-width: 2rem;
+    text-align: center;
+}
+
+.scan-button-sidebar {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 0.6rem;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+}
+
+.scan-button-sidebar:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.6);
+}
+
+.scan-button-sidebar:active {
+    transform: translateY(0);
+}
+
+.scan-button-sidebar:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.scan-button-sidebar .button-icon {
+    font-size: 1.1rem;
+}
+
+.scanning .button-icon {
+    animation: spin-reverse 1s linear infinite;
+}
+
+@keyframes spin-reverse {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(-360deg); }
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.sidebar-scan-status {
+    padding: 0.5rem 1.5rem;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.sidebar-scan-status .scan-status {
+    padding: 0.3rem 0.8rem;
+    background: rgba(102, 126, 234, 0.1);
+    border-radius: 15px;
+    font-size: 0.8rem;
+    color: #667eea;
+    border: 1px solid rgba(102, 126, 234, 0.2);
     text-align: center;
 }
 
@@ -221,59 +265,7 @@ body {
     overflow: hidden;
 }
 
-.control-panel {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-    flex-shrink: 0;
-}
-
-.scan-button {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border: none;
-    padding: 1rem 2rem;
-    border-radius: 50px;
-    font-size: 1.1rem;
-    font-weight: 500;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-}
-
-.scan-button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
-}
-
-.scan-button:active {
-    transform: translateY(0);
-}
-
-.scan-button:disabled {
-    background: #ccc;
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
-}
-
-.button-icon {
-    font-size: 1.2rem;
-}
-
-.scanning .button-icon {
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-}
+/* Control panel styles removed - scan button moved to sidebar */
 
 .scan-status {
     padding: 0.5rem 1rem;
@@ -556,6 +548,422 @@ body {
     opacity: 0.5;
 }
 
+/* Main Sections Layout */
+.main-sections {
+    display: flex;
+    flex: 1;
+    gap: 1.5rem;
+    overflow: hidden;
+}
+
+.results-section {
+    flex: 1;
+}
+
+/* Commands Section */
+.commands-section {
+    flex: 1;
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.commands-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem 2rem;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+    flex-shrink: 0;
+}
+
+.commands-header h2 {
+    font-size: 1.5rem;
+    font-weight: 500;
+    color: #333;
+}
+
+.connection-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    padding: 0.3rem 0.8rem;
+    border-radius: 15px;
+    background: rgba(108, 117, 125, 0.1);
+}
+
+.connection-status .status-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #6c757d;
+}
+
+.connection-status.connected .status-indicator {
+    background: #28a745;
+}
+
+.connection-status.error .status-indicator {
+    background: #dc3545;
+}
+
+.commands-container {
+    flex: 1;
+    padding: 1.5rem;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.command-categories {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.command-category {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 1rem;
+}
+
+.command-category h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 0.8rem;
+    border-bottom: 2px solid #e9ecef;
+    padding-bottom: 0.5rem;
+}
+
+.command-buttons {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 0.8rem;
+}
+
+.command-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 1rem 0.8rem;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    background: white;
+    color: #333;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-height: 70px;
+}
+
+.command-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.command-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.command-btn .cmd-icon {
+    font-size: 1.5rem;
+}
+
+/* Command button types */
+.play-btn:hover {
+    border-color: #28a745;
+    background: rgba(40, 167, 69, 0.1);
+}
+
+.pause-btn:hover {
+    border-color: #ffc107;
+    background: rgba(255, 193, 7, 0.1);
+}
+
+.stop-btn:hover {
+    border-color: #dc3545;
+    background: rgba(220, 53, 69, 0.1);
+}
+
+.info-btn:hover {
+    border-color: #17a2b8;
+    background: rgba(23, 162, 184, 0.1);
+}
+
+.advanced-btn:hover {
+    border-color: #6f42c1;
+    background: rgba(111, 66, 193, 0.1);
+}
+
+/* Command Response */
+.command-response {
+    background: #f8f9fa;
+    border-radius: 10px;
+    overflow: hidden;
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+}
+
+.response-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.2rem;
+    background: #e9ecef;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.response-header h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #333;
+    margin: 0;
+}
+
+.clear-response-btn {
+    padding: 0.3rem 0.8rem;
+    border: 1px solid #6c757d;
+    border-radius: 5px;
+    background: white;
+    color: #6c757d;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.clear-response-btn:hover {
+    background: #6c757d;
+    color: white;
+}
+
+.response-content {
+    flex: 1;
+    padding: 1rem 1.2rem;
+    font-family: 'Courier New', monospace;
+    font-size: 0.85rem;
+    line-height: 1.4;
+    overflow-y: auto;
+    max-height: 300px;
+}
+
+.no-response {
+    color: #6c757d;
+    font-style: italic;
+    text-align: center;
+    padding: 2rem;
+}
+
+.response-item {
+    margin-bottom: 1rem;
+    padding: 0.8rem;
+    border-radius: 5px;
+    border-left: 4px solid #17a2b8;
+    background: white;
+}
+
+.response-item.success {
+    border-left-color: #28a745;
+}
+
+.response-item.error {
+    border-left-color: #dc3545;
+}
+
+.response-timestamp {
+    font-size: 0.75rem;
+    color: #6c757d;
+    margin-bottom: 0.3rem;
+}
+
+.response-command {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 0.5rem;
+}
+
+.response-data {
+    color: #333;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+/* Modal Styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    backdrop-filter: blur(4px);
+}
+
+.modal-content {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    overflow: hidden;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem 2rem;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #333;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: #6c757d;
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.modal-close:hover {
+    background: #e9ecef;
+    color: #333;
+}
+
+.modal-body {
+    padding: 2rem;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 500;
+    color: #333;
+    margin-bottom: 0.5rem;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 0.8rem;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    transition: border-color 0.2s ease;
+    font-family: inherit;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.form-group textarea {
+    resize: vertical;
+    font-family: 'Courier New', monospace;
+}
+
+.endpoint-input-group {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.endpoint-input-group input {
+    flex: 2;
+}
+
+.endpoint-examples {
+    flex: 1;
+    min-width: 180px;
+}
+
+.form-help {
+    display: block;
+    font-size: 0.8rem;
+    color: #6c757d;
+    margin-top: 0.3rem;
+    font-style: italic;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    padding: 1.5rem 2rem;
+    background: #f8f9fa;
+    border-top: 1px solid #e9ecef;
+}
+
+.btn-primary,
+.btn-secondary {
+    padding: 0.8rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-primary {
+    background: #667eea;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #5a6fd8;
+    transform: translateY(-1px);
+}
+
+.btn-secondary {
+    background: #e9ecef;
+    color: #6c757d;
+}
+
+.btn-secondary:hover {
+    background: #dee2e6;
+    color: #495057;
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
     .app-header {
@@ -598,6 +1006,14 @@ body {
         order: 1;
     }
     
+    .main-sections {
+        flex-direction: column;
+    }
+    
+    .commands-section {
+        order: 2;
+    }
+    
     .sidebar-content {
         padding: 0.3rem;
     }
@@ -613,6 +1029,15 @@ body {
     .server-item-details {
         font-size: 0.8rem;
     }
+    
+    .command-buttons {
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    }
+    
+    .command-btn {
+        min-height: 60px;
+        padding: 0.8rem 0.6rem;
+    }
 }
 
 @media (max-width: 1024px) {
@@ -620,8 +1045,11 @@ body {
         width: 250px;
     }
     
-    .scan-button {
-        padding: 0.8rem 1.5rem;
-        font-size: 1rem;
+    .main-sections {
+        gap: 1rem;
+    }
+    
+    .command-buttons {
+        grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
     }
 }
