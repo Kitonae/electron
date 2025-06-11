@@ -1,5 +1,7 @@
 const nmap = require('node-nmap');
 const dgram = require('dgram');
+const fs = require('fs').promises;
+const path = require('path');
 
 // Try to load bonjour-service, fall back gracefully if not available
 let bonjour;
@@ -22,12 +24,91 @@ const WATCHOUT_QUERY_PORT = 3011; // Watchout discovery query port
 const WATCHOUT_RESPONSE_PORT = 3012; // Watchout discovery response port
 const TIMEOUT_MS = 5000;
 
+// Cache configuration
+const CACHE_FILE_NAME = 'watchout-server-cache.json';
+const CACHE_EXPIRY_HOURS = 24; // Cache servers for 24 hours
+
 class WatchoutServerFinder {
   constructor() {
     this.servers = new Map();
     this.serverCache = new Map(); // Cache to track all discovered servers
     this.lastScanTime = null;
-  }  async findWatchoutServers() {
+    this.cacheFilePath = null;
+    this.initializeCachePath();
+  }
+
+  async initializeCachePath() {
+    try {
+      // Use userData directory for cache file
+      const { app } = require('electron');
+      const userDataPath = app.getPath('userData');
+      this.cacheFilePath = path.join(userDataPath, CACHE_FILE_NAME);
+      console.log('Cache file path:', this.cacheFilePath);
+      
+      // Load existing cache on startup
+      await this.loadCacheFromFile();
+    } catch (error) {
+      console.error('Error initializing cache path:', error);
+      // Fallback to local directory
+      this.cacheFilePath = path.join(__dirname, CACHE_FILE_NAME);
+    }
+  }
+
+  async loadCacheFromFile() {
+    try {
+      if (!this.cacheFilePath) return;
+      
+      const cacheData = await fs.readFile(this.cacheFilePath, 'utf8');
+      const parsedCache = JSON.parse(cacheData);
+      
+      // Validate and load cache entries
+      if (parsedCache && parsedCache.servers && Array.isArray(parsedCache.servers)) {
+        const now = new Date();
+        let loadedCount = 0;
+        
+        for (const serverData of parsedCache.servers) {
+          // Check if cache entry is not expired
+          const lastSeen = new Date(serverData.lastSeenAt);
+          const hoursSinceLastSeen = (now - lastSeen) / (1000 * 60 * 60);
+          
+          if (hoursSinceLastSeen < CACHE_EXPIRY_HOURS) {
+            const serverId = this.getServerId(serverData);
+            serverData.status = 'offline'; // Mark cached servers as offline initially
+            this.serverCache.set(serverId, serverData);
+            loadedCount++;
+          }
+        }
+        
+        console.log(`Loaded ${loadedCount} servers from cache`);
+      }
+    } catch (error) {
+      if (error.code !== 'ENOENT') {
+        console.error('Error loading cache from file:', error);
+      }
+    }
+  }
+
+  async saveCacheToFile() {
+    try {
+      if (!this.cacheFilePath) return;
+      
+      const cacheData = {
+        lastUpdated: new Date().toISOString(),
+        servers: Array.from(this.serverCache.values())
+      };
+      
+      await fs.writeFile(this.cacheFilePath, JSON.stringify(cacheData, null, 2), 'utf8');
+      console.log(`Saved ${cacheData.servers.length} servers to cache file`);
+    } catch (error) {
+      console.error('Error saving cache to file:', error);    }
+  }
+
+  getServerId(server) {
+    // Create a unique identifier for the server
+    return `${server.ip}:${server.ports.join(',')}`;
+  }
+
+  async findWatchoutServers() {
     console.log('Starting Watchout server discovery...');
     
     // Clear current scan results but keep cache
@@ -38,15 +119,21 @@ class WatchoutServerFinder {
       this.scanNetworkPorts(),
       this.listenForMulticast(),
       this.bonjourDiscovery()
-    ];
-
-    try {
+    ];    try {
       await Promise.allSettled(discoveryMethods);
-      
-      // Process cached servers and mark offline ones
+        // Process cached servers and mark offline ones
       this.processCachedServers();
       
-      return Array.from(this.servers.values());
+      // Save updated cache to file
+      await this.saveCacheToFile();
+      
+      const totalServers = Array.from(this.servers.values());
+      const onlineServers = totalServers.filter(s => s.status === 'online');
+      const offlineServers = totalServers.filter(s => s.status === 'offline');
+      
+      console.log(`Discovery complete: ${onlineServers.length} online, ${offlineServers.length} offline (cached)`);
+      
+      return totalServers;
     } catch (error) {
       console.error('Error during server discovery:', error);
       throw error;

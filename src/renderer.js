@@ -8,6 +8,7 @@ class WatchoutServerFinderApp {
         this.selectedServerId = null; // Track selected server
         this.selectedServerIp = null; // Track selected server IP for commands
         this.apiConnectionStatus = false; // Track API connection status
+        this.serverCommandStates = new Map(); // Track command state per server
         this.initializeApp();
     }
 
@@ -20,8 +21,45 @@ class WatchoutServerFinderApp {
         const scanButton = document.getElementById('scanButton');
         scanButton.addEventListener('click', () => this.startManualScan());
         
+        // Tab switching events
+        this.bindTabEvents();
+        
         // Command button events
         this.bindCommandEvents();
+    }
+
+    bindTabEvents() {
+        const detailsTab = document.getElementById('detailsTab');
+        const commandsTab = document.getElementById('commandsTab');
+        
+        detailsTab.addEventListener('click', () => this.switchTab('details'));
+        commandsTab.addEventListener('click', () => this.switchTab('commands'));
+    }    switchTab(tabName) {
+        // Don't switch to commands tab if disabled
+        if (tabName === 'commands') {
+            const commandsTab = document.getElementById('commandsTab');
+            if (commandsTab.classList.contains('disabled')) {
+                return;
+            }
+        }
+        
+        // Update tab buttons
+        const tabs = document.querySelectorAll('.tab-btn');
+        const panels = document.querySelectorAll('.tab-panel');
+        const indicator = document.querySelector('.tab-indicator');
+        
+        tabs.forEach(tab => tab.classList.remove('active'));
+        panels.forEach(panel => panel.classList.remove('active'));
+        
+        if (tabName === 'details') {
+            document.getElementById('detailsTab').classList.add('active');
+            document.getElementById('detailsPanel').classList.add('active');
+            indicator.classList.remove('commands');
+        } else if (tabName === 'commands') {
+            document.getElementById('commandsTab').classList.add('active');
+            document.getElementById('commandsPanel').classList.add('active');
+            indicator.classList.add('commands');
+        }
     }
 
     bindCommandEvents() {
@@ -129,20 +167,14 @@ class WatchoutServerFinderApp {
         } catch (error) {
             console.error('Failed to load app version:', error);
         }
-    }
-
-    updateScanButton() {
+    }    updateScanButton() {
         const button = document.getElementById('scanButton');
-        const buttonIcon = button.querySelector('.button-icon');
         
         if (this.isScanning) {
             button.disabled = true;
-            button.textContent = '';
-            button.appendChild(buttonIcon);
-            button.classList.add('scanning');        } else {
+            button.classList.add('scanning');
+        } else {
             button.disabled = false;
-            button.textContent = '';
-            button.appendChild(buttonIcon);
             button.classList.remove('scanning');
         }
     }
@@ -513,9 +545,59 @@ class WatchoutServerFinderApp {
         if (server.type.includes('Director')) return 'Director';
         if (server.type.includes('Display')) return 'Display';
         if (server.type.includes('Asset Manager')) return 'Asset Manager';
-        if (server.type.includes('Watchout')) return 'Watchout Server';
-        return 'Server';
-    }    selectServer(serverId) {
+        if (server.type.includes('Watchout')) return 'Watchout Server';        return 'Server';
+    }
+
+    // Server-specific command state management
+    getServerCommandState(serverId) {
+        if (!this.serverCommandStates.has(serverId)) {
+            this.serverCommandStates.set(serverId, {
+                connectionStatus: false,
+                connectionMessage: 'Not connected',
+                commandHistory: [],
+                lastConnectionTest: null
+            });
+        }
+        return this.serverCommandStates.get(serverId);
+    }
+
+    updateServerCommandState(serverId, updates) {
+        const state = this.getServerCommandState(serverId);
+        Object.assign(state, updates);
+        this.serverCommandStates.set(serverId, state);
+    }
+
+    addCommandToServerHistory(serverId, type, command, result) {
+        const state = this.getServerCommandState(serverId);
+        const timestamp = new Date().toLocaleTimeString();
+        const commandName = this.getCommandDisplayName(command);
+        
+        let resultText;
+        if (typeof result === 'object') {
+            resultText = JSON.stringify(result, null, 2);
+        } else {
+            resultText = result.toString();
+        }
+
+        const responseItem = {
+            type,
+            command,
+            commandName,
+            result: resultText,
+            timestamp
+        };
+
+        state.commandHistory.unshift(responseItem);
+        
+        // Limit to last 10 responses per server
+        if (state.commandHistory.length > 10) {
+            state.commandHistory.pop();
+        }
+        
+        this.updateServerCommandState(serverId, state);
+    }
+
+    selectServer(serverId) {
         // Update selected server
         const previouslySelected = this.selectedServerId;
         this.selectedServerId = serverId;
@@ -532,10 +614,18 @@ class WatchoutServerFinderApp {
             } else {
                 item.classList.remove('selected');
             }
-        });
-        
-        // Show/hide commands section
+        });        // Show/hide commands area in the commands tab
         this.updateCommandsVisibility();
+        
+        // Load server-specific command state
+        if (this.selectedServerId && this.selectedServerIp) {
+            this.loadServerCommandsUI(this.selectedServerId);
+        }
+        
+        // If a server was just selected, auto-switch to commands tab for better UX
+        if (this.selectedServerId && this.selectedServerIp && !previouslySelected) {
+            setTimeout(() => this.switchTab('commands'), 300);
+        }
         
         // Re-render main content to show selected server
         this.renderMainContent();
@@ -546,15 +636,73 @@ class WatchoutServerFinderApp {
         }
         
         console.log('Selected server:', serverId, 'IP:', this.selectedServerIp);
+    }    updateCommandsVisibility() {
+        const noServerSelected = document.getElementById('noServerSelected');
+        const commandsArea = document.getElementById('commandsArea');
+        const commandsTab = document.getElementById('commandsTab');
+        
+        if (this.selectedServerId && this.selectedServerIp) {
+            noServerSelected.style.display = 'none';
+            commandsArea.style.display = 'block';
+            commandsTab.classList.remove('disabled');
+            commandsTab.title = 'Send commands to selected server';
+        } else {
+            noServerSelected.style.display = 'flex';
+            commandsArea.style.display = 'none';
+            commandsTab.classList.add('disabled');
+            commandsTab.title = 'Select a server first to enable commands';        }
     }
 
-    updateCommandsVisibility() {
-        const commandsSection = document.getElementById('commandsSection');
-        if (this.selectedServerId && this.selectedServerIp) {
-            commandsSection.style.display = 'flex';
-        } else {
-            commandsSection.style.display = 'none';
+    loadServerCommandsUI(serverId) {
+        const commandState = this.getServerCommandState(serverId);
+        
+        // Update connection status
+        this.updateConnectionStatus(commandState.connectionStatus, commandState.connectionMessage);
+        
+        // Update command history
+        this.renderCommandHistory(commandState.commandHistory);
+        
+        // Update panel header to show server name
+        this.updateCommandsPanelHeader(serverId);
+    }
+
+    updateCommandsPanelHeader(serverId) {
+        const selectedServer = this.servers.find(server => this.getServerId(server) === serverId);
+        const serverName = selectedServer ? (selectedServer.hostRef || selectedServer.hostname || selectedServer.ip) : 'Unknown Server';
+        
+        const panelHeader = document.querySelector('#commandsPanel .panel-header h2');
+        if (panelHeader) {
+            panelHeader.textContent = `Commands - ${serverName}`;
         }
+    }
+
+    renderCommandHistory(history) {
+        const responseContent = document.getElementById('responseContent');
+        
+        // Clear existing content
+        responseContent.innerHTML = '';
+        
+        if (history.length === 0) {
+            const noResponse = document.createElement('div');
+            noResponse.className = 'no-response';
+            noResponse.textContent = 'No commands executed yet';
+            responseContent.appendChild(noResponse);
+            return;
+        }
+        
+        // Add each response item
+        history.forEach(item => {
+            const responseItem = document.createElement('div');
+            responseItem.className = `response-item ${item.type}`;
+            
+            responseItem.innerHTML = `
+                <div class="response-timestamp">${item.timestamp}</div>
+                <div class="response-command">${item.commandName}</div>
+                <div class="response-data">${this.escapeHtml(item.result)}</div>
+            `;
+            
+            responseContent.appendChild(responseItem);
+        });
     }
 
     async testApiConnection() {
@@ -566,14 +714,21 @@ class WatchoutServerFinderApp {
         } catch (error) {
             this.updateConnectionStatus(false, 'Connection test failed');
         }
-    }
-
-    updateConnectionStatus(connected, message) {
+    }    updateConnectionStatus(connected, message) {
         const connectionStatus = document.getElementById('connectionStatus');
         const statusIndicator = document.getElementById('apiStatusIndicator');
         const statusText = document.getElementById('apiStatusText');
         
         this.apiConnectionStatus = connected;
+        
+        // Update server-specific state
+        if (this.selectedServerId) {
+            this.updateServerCommandState(this.selectedServerId, {
+                connectionStatus: connected,
+                connectionMessage: message || (connected ? 'API Connected' : 'API Not Available'),
+                lastConnectionTest: new Date().toISOString()
+            });
+        }
         
         if (connected) {
             connectionStatus.className = 'connection-status connected';
@@ -675,45 +830,16 @@ class WatchoutServerFinderApp {
                 }
             }
         }
-    }
-
-    addCommandResponse(type, command, result) {
-        const responseContent = document.getElementById('responseContent');
-        const noResponse = responseContent.querySelector('.no-response');
-        
-        if (noResponse) {
-            noResponse.remove();
+    }    addCommandResponse(type, command, result) {
+        // Add to server-specific command history
+        if (this.selectedServerId) {
+            this.addCommandToServerHistory(this.selectedServerId, type, command, result);
+            
+            // Re-render the command history for the current server
+            const commandState = this.getServerCommandState(this.selectedServerId);
+            this.renderCommandHistory(commandState.commandHistory);
         }
-
-        const responseItem = document.createElement('div');
-        responseItem.className = `response-item ${type}`;
-        
-        const timestamp = new Date().toLocaleTimeString();
-        const commandName = this.getCommandDisplayName(command);
-        
-        let resultText;
-        if (typeof result === 'object') {
-            resultText = JSON.stringify(result, null, 2);
-        } else {
-            resultText = result.toString();
-        }
-
-        responseItem.innerHTML = `
-            <div class="response-timestamp">${timestamp}</div>
-            <div class="response-command">${commandName}</div>
-            <div class="response-data">${this.escapeHtml(resultText)}</div>
-        `;
-
-        responseContent.insertBefore(responseItem, responseContent.firstChild);
-        
-        // Limit to last 10 responses
-        const responses = responseContent.querySelectorAll('.response-item');
-        if (responses.length > 10) {
-            responses[responses.length - 1].remove();
-        }
-    }
-
-    getCommandDisplayName(command) {
+    }    getCommandDisplayName(command) {
         const commandNames = {
             'play': '▶️ Play Timeline',
             'pause': '⏸️ Pause Timeline',
@@ -721,15 +847,21 @@ class WatchoutServerFinderApp {
             'status': '📊 Get Status',
             'timelines': '📑 Get Timelines',
             'show': '🎭 Get Show Info',
-            'testConnection': '🔗 Test Connection'
+            'testConnection': '🔗 Test Connection',
+            'custom': '⚙️ Custom Command'
         };
         return commandNames[command] || command;
-    }
-
-    clearCommandResponse() {
-        const responseContent = document.getElementById('responseContent');
-        responseContent.innerHTML = '<div class="no-response">No commands executed yet</div>';
-    }    showCustomCommandDialog() {
+    }clearCommandResponse() {
+        // Clear server-specific command history
+        if (this.selectedServerId) {
+            this.updateServerCommandState(this.selectedServerId, {
+                commandHistory: []
+            });
+            
+            // Re-render the empty command history
+            this.renderCommandHistory([]);
+        }
+    }showCustomCommandDialog() {
         const modal = document.getElementById('customCommandModal');
         modal.style.display = 'flex';
         

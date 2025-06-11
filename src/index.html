@@ -14,9 +14,8 @@
                         <div class="sidebar-title-group">
                             <h3>Servers</h3>
                             <div class="server-count-sidebar" id="serverCountSidebar">0</div>
-                        </div>
-                        <button id="scanButton" class="scan-button-sidebar">
-                            <span class="button-icon">🔄</span>
+                        </div>                        <button id="scanButton" class="scan-button-sidebar">
+                            <img src="../assets/refresh.svg" class="button-icon" alt="Refresh">
                         </button>
                     </div>
                     <div class="sidebar-scan-status">
@@ -30,105 +29,128 @@
                             </div>
                         </div>
                     </div>
-                </aside>
-
-                <!-- Main Content Area -->
+                </aside>                <!-- Main Content Area -->
                 <div class="content-area">
-                    <div class="main-sections">
-                        <!-- Server Details Section -->
-                        <div class="results-section">
-                            <div class="results-header">
-                                <h2>Server Details</h2>
-                                <div class="server-count" id="serverCount">0 servers found</div>
-                            </div>
-                            
-                            <div class="servers-container" id="serversContainer">
-                                <div class="no-servers" id="noServers">
-                                    <div class="no-servers-icon">📡</div>
-                                    <p>No Watchout servers discovered yet</p>
-                                    <p class="hint">Click "Manual Scan" to begin discovery</p>
-                                </div>
-                                <div class="no-selection" id="noSelection" style="display: none;">
-                                    <div class="no-selection-icon">👈</div>
-                                    <p>Select a server from the sidebar to view details</p>
-                                </div>
-                            </div>
+                    <!-- Tabbed Panel -->
+                    <div class="tabbed-panel">
+                        <!-- Tab Navigation -->
+                        <div class="tab-nav">
+                            <button class="tab-btn active" id="detailsTab" data-tab="details">
+                                <span class="tab-icon">📋</span>
+                                <span>Server Details</span>
+                            </button>
+                            <button class="tab-btn" id="commandsTab" data-tab="commands">
+                                <span class="tab-icon">⚡</span>
+                                <span>Commands</span>
+                            </button>
+                            <div class="tab-indicator"></div>
                         </div>
 
-                        <!-- Commands Section -->
-                        <div class="commands-section" id="commandsSection" style="display: none;">
-                            <div class="commands-header">
-                                <h2>Server Commands</h2>
-                                <div class="connection-status" id="connectionStatus">
-                                    <span class="status-indicator" id="apiStatusIndicator"></span>
-                                    <span id="apiStatusText">Not connected</span>
+                        <!-- Tab Content -->
+                        <div class="tab-content">
+                            <!-- Server Details Tab -->
+                            <div class="tab-panel active" id="detailsPanel">
+                                <div class="panel-header">
+                                    <h2>Server Details</h2>
+                                    <div class="server-count" id="serverCount">0 servers found</div>
+                                </div>
+                                
+                                <div class="panel-content" id="serversContainer">
+                                    <div class="no-servers" id="noServers">
+                                        <div class="no-servers-icon">📡</div>
+                                        <p>No Watchout servers discovered yet</p>
+                                        <p class="hint">Click "Manual Scan" to begin discovery</p>
+                                    </div>
+                                    <div class="no-selection" id="noSelection" style="display: none;">
+                                        <div class="no-selection-icon">👈</div>
+                                        <p>Select a server from the sidebar to view details</p>
+                                    </div>
                                 </div>
                             </div>
-                            
-                            <div class="commands-container" id="commandsContainer">
-                                <div class="command-categories">
-                                    <!-- Timeline Control Commands -->
-                                    <div class="command-category">
-                                        <h3>Timeline Control</h3>
-                                        <div class="command-buttons">
-                                            <button class="command-btn play-btn" id="playBtn">
-                                                <span class="cmd-icon">▶️</span>
-                                                <span>Play</span>
-                                            </button>
-                                            <button class="command-btn pause-btn" id="pauseBtn">
-                                                <span class="cmd-icon">⏸️</span>
-                                                <span>Pause</span>
-                                            </button>
-                                            <button class="command-btn stop-btn" id="stopBtn">
-                                                <span class="cmd-icon">⏹️</span>
-                                                <span>Stop</span>
-                                            </button>
-                                        </div>
-                                    </div>
 
-                                    <!-- Information Commands -->
-                                    <div class="command-category">
-                                        <h3>Information</h3>
-                                        <div class="command-buttons">
-                                            <button class="command-btn info-btn" id="statusBtn">
-                                                <span class="cmd-icon">📊</span>
-                                                <span>Get Status</span>
-                                            </button>
-                                            <button class="command-btn info-btn" id="timelinesBtn">
-                                                <span class="cmd-icon">📑</span>
-                                                <span>Get Timelines</span>
-                                            </button>
-                                            <button class="command-btn info-btn" id="showBtn">
-                                                <span class="cmd-icon">🎭</span>
-                                                <span>Get Show Info</span>
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <!-- Advanced Commands -->
-                                    <div class="command-category">
-                                        <h3>Advanced</h3>
-                                        <div class="command-buttons">
-                                            <button class="command-btn advanced-btn" id="testConnectionBtn">
-                                                <span class="cmd-icon">🔗</span>
-                                                <span>Test Connection</span>
-                                            </button>
-                                            <button class="command-btn advanced-btn" id="customCommandBtn">
-                                                <span class="cmd-icon">⚙️</span>
-                                                <span>Custom Command</span>
-                                            </button>
-                                        </div>
+                            <!-- Commands Tab -->
+                            <div class="tab-panel" id="commandsPanel">
+                                <div class="panel-header">
+                                    <h2>Server Commands</h2>
+                                    <div class="connection-status" id="connectionStatus">
+                                        <span class="status-indicator" id="apiStatusIndicator"></span>
+                                        <span id="apiStatusText">Not connected</span>
                                     </div>
                                 </div>
-
-                                <!-- Command Response Area -->
-                                <div class="command-response" id="commandResponse">
-                                    <div class="response-header">
-                                        <h4>Command Response</h4>
-                                        <button class="clear-response-btn" id="clearResponseBtn">Clear</button>
+                                
+                                <div class="panel-content" id="commandsContainer">
+                                    <div class="no-server-selected" id="noServerSelected">
+                                        <div class="no-server-icon">🖥️</div>
+                                        <p>Select a server to send commands</p>
+                                        <p class="hint">Choose a server from the sidebar first</p>
                                     </div>
-                                    <div class="response-content" id="responseContent">
-                                        <div class="no-response">No commands executed yet</div>
+
+                                    <div class="commands-area" id="commandsArea" style="display: none;">
+                                        <div class="command-categories">
+                                            <!-- Timeline Control Commands -->
+                                            <div class="command-category">
+                                                <h3>Timeline Control</h3>
+                                                <div class="command-buttons">
+                                                    <button class="command-btn play-btn" id="playBtn">
+                                                        <span class="cmd-icon">▶️</span>
+                                                        <span>Play</span>
+                                                    </button>
+                                                    <button class="command-btn pause-btn" id="pauseBtn">
+                                                        <span class="cmd-icon">⏸️</span>
+                                                        <span>Pause</span>
+                                                    </button>
+                                                    <button class="command-btn stop-btn" id="stopBtn">
+                                                        <span class="cmd-icon">⏹️</span>
+                                                        <span>Stop</span>
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <!-- Information Commands -->
+                                            <div class="command-category">
+                                                <h3>Information</h3>
+                                                <div class="command-buttons">
+                                                    <button class="command-btn info-btn" id="statusBtn">
+                                                        <span class="cmd-icon">📊</span>
+                                                        <span>Get Status</span>
+                                                    </button>
+                                                    <button class="command-btn info-btn" id="timelinesBtn">
+                                                        <span class="cmd-icon">📑</span>
+                                                        <span>Get Timelines</span>
+                                                    </button>
+                                                    <button class="command-btn info-btn" id="showBtn">
+                                                        <span class="cmd-icon">🎭</span>
+                                                        <span>Get Show Info</span>
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <!-- Advanced Commands -->
+                                            <div class="command-category">
+                                                <h3>Advanced</h3>
+                                                <div class="command-buttons">
+                                                    <button class="command-btn advanced-btn" id="testConnectionBtn">
+                                                        <span class="cmd-icon">🔗</span>
+                                                        <span>Test Connection</span>
+                                                    </button>
+                                                    <button class="command-btn advanced-btn" id="customCommandBtn">
+                                                        <span class="cmd-icon">⚙️</span>
+                                                        <span>Custom Command</span>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Command Response Area -->
+                                        <div class="command-response" id="commandResponse">
+                                            <div class="response-header">
+                                                <h4>Command Response</h4>
+                                                <button class="clear-response-btn" id="clearResponseBtn">Clear</button>
+                                            </div>
+                                            <div class="response-content" id="responseContent">
+                                                <div class="no-response">No commands executed yet</div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

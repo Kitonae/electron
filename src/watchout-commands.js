@@ -61,21 +61,17 @@ class WatchoutCommands {
                         });
                     }
                 });
-            });
-
-            req.on('error', (error) => {
+            });            req.on('error', (error) => {
                 reject({
                     success: false,
-                    error: error.message,
+                    error: this.formatConnectionError(error, serverIp),
                     code: error.code
                 });
-            });
-
-            req.on('timeout', () => {
+            });            req.on('timeout', () => {
                 req.destroy();
                 reject({
                     success: false,
-                    error: 'Request timeout',
+                    error: `Connection to server ${serverIp} timed out`,
                     code: 'TIMEOUT'
                 });
             });
@@ -226,6 +222,29 @@ class WatchoutCommands {
 
     // ==================== HELPER METHODS ====================
     
+    // Format connection error messages to be more user-friendly
+    formatConnectionError(error, serverIp) {
+        const message = error.message || error.toString();
+        const code = error.code;
+        
+        if (code === 'ECONNREFUSED') {
+            return `Cannot connect to server}'`;
+        } else if (code === 'ENOTFOUND') {
+            return `Cannot reach server - host not found`;
+        } else if (code === 'EHOSTUNREACH') {
+            return `Cannot reach server - host unreachable`;
+        } else if (code === 'ENETUNREACH') {
+            return `Cannot reach server - network unreachable`;
+        } else if (code === 'ECONNRESET') {
+            return `Connection to server was reset`;
+        } else if (code === 'TIMEOUT') {
+            return `Connection to server timed out`;
+        } else {
+            // For other errors, return a generic message but preserve some detail
+            return `Connection to server ${serverIp} failed: ${message.split(' ').slice(-1)[0] || 'Unknown error'}`;
+        }
+    }
+    
     // Quick test to see if the server is responding to HTTP API calls
     async testConnection(serverIp) {
         try {
@@ -233,13 +252,14 @@ class WatchoutCommands {
             return {
                 success: result.success,
                 connected: result.success && result.statusCode === 200,
-                message: result.success ? 'Connected' : result.error
+                message: result.success ? 'API Connected' : result.error
             };
         } catch (error) {
+            const formattedError = this.formatConnectionError(error, serverIp);
             return {
                 success: false,
                 connected: false,
-                message: error.error || 'Connection failed'
+                message: formattedError
             };
         }
     }

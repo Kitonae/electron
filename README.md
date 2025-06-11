@@ -44,6 +44,9 @@ This application integrates with the [Watchout 7 External Protocol](https://docs
 - Custom endpoint execution
 - JSON request data support
 - Real-time response viewing
+- **Server-specific command history** - Each server maintains its own command history and connection status
+- **Persistent command states** - Command history and connection status are preserved when switching between servers
+- **Per-server API connection tracking** - Each server's API connection status is independently tracked and maintained
 
 ## Installation & Usage
 
@@ -67,10 +70,13 @@ npm start
 
 ### Usage
 1. **Discovery**: The app automatically scans for Watchout servers every 30 seconds
-2. **Manual Scan**: Click "Manual Scan" for immediate discovery
-3. **Server Selection**: Click any server in the sidebar to view details
-4. **Command Execution**: Use the commands panel to control selected servers
-5. **Custom Commands**: Click "Custom Command" to execute any Watchout API endpoint
+2. **Manual Scan**: Click the refresh icon for immediate discovery
+3. **Server Selection**: Click any server in the sidebar to view details and switch to commands
+4. **Tabbed Interface**: Switch between "Server Details" and "Commands" tabs
+5. **Command Execution**: Use the commands panel to control selected servers
+6. **Server-Specific History**: Each server maintains its own command history and connection status
+7. **Custom Commands**: Click "Custom Command" to execute any Watchout API endpoint
+8. **Persistent Cache**: Server information persists across app sessions with 24-hour expiry
 
 ## Network Requirements
 
