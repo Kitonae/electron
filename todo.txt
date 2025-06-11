@@ -31,14 +31,22 @@
 
 ✓ increase the number of missed scans for the server to be marked offline to 10
 
-- create a header to replace default window title bar, hide menu bar
+✓ create a header to replace default window title bar, hide menu bar
 
-- replace get show info with a save show that saves the json from response to disk
+✓ replace get show info with a save show that saves the json from response to disk
 
-- add a upload show button that takes .watch file or .json file and uses a correct way to upload it.
+✓ add a upload show button that takes .watch file or .json file and uses a correct way to upload it.
 
-- command response panel does not have any padding from the top
+✓ command response panel does not have any padding from the top and touches the component above it
+
+✓ deal with electron content security policy warning
+
+✓ footer is getting clipped on the bottom if panels have any content, but is rendered correctly if they dont
+
+✓ change checkboxes to toggle buttons
 
 ✓ checkboxes in settings dont have the correct width
 
 ✓ change the sidebar divider to a line
+
+- remove settings from web version

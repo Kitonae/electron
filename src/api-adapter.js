@@ -46,13 +46,91 @@ class ApiAdapter {
         } else {
             return this.webApiCall(`/watchout/${serverIp}/status`);
         }
-    }
-
-    async watchoutGetShow(serverIp) {
+    }    async watchoutGetShow(serverIp) {
         if (this.isElectron) {
             return window.electronAPI.watchout.getShow(serverIp);
         } else {
             return this.webApiCall(`/watchout/${serverIp}/show`);
+        }
+    }    async watchoutSaveShow(serverIp) {
+        if (this.isElectron) {
+            return window.electronAPI.watchout.saveShow(serverIp);
+        } else {
+            // For web version, we can't show file dialogs, so we'll download the file
+            try {
+                const showData = await this.webApiCall(`/watchout/${serverIp}/show`);
+                if (showData.success) {
+                    // Create a downloadable JSON file
+                    const jsonContent = JSON.stringify(showData.data, null, 2);
+                    const blob = new Blob([jsonContent], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `watchout-show-${serverIp}-${new Date().toISOString().split('T')[0]}.json`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    
+                    return { 
+                        success: true, 
+                        message: `Show data downloaded as ${a.download}`,
+                        data: showData.data
+                    };
+                }
+                return showData;
+            } catch (error) {
+                return { success: false, error: error.message };
+            }
+        }
+    }
+
+    async watchoutUploadShow(serverIp, showName) {
+        if (this.isElectron) {
+            return window.electronAPI.watchout.uploadShow(serverIp, showName);
+        } else {
+            // For web version, we need to handle file upload differently
+            return new Promise((resolve) => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.watch,.json';
+                input.style.display = 'none';
+                
+                input.onchange = async (event) => {
+                    const file = event.target.files[0];
+                    if (!file) {
+                        resolve({ success: false, error: 'No file selected' });
+                        return;
+                    }
+                    
+                    try {
+                        const formData = new FormData();
+                        formData.append('showFile', file);
+                        if (showName) {
+                            formData.append('showName', showName);
+                        }
+                        
+                        const response = await fetch(`${window.location.origin}/api/watchout/${serverIp}/upload-show`, {
+                            method: 'POST',
+                            body: formData
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                        }
+                        
+                        const result = await response.json();
+                        resolve(result);
+                    } catch (error) {
+                        resolve({ success: false, error: error.message });
+                    } finally {
+                        document.body.removeChild(input);
+                    }
+                };
+                
+                document.body.appendChild(input);
+                input.click();
+            });
         }
     }
 

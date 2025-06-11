@@ -1,5 +1,6 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
+const fs = require('fs').promises;
 const { findWatchoutServers, clearOfflineServers } = require('./src/network-scanner');
 const WatchoutCommands = require('./src/watchout-commands');
 const WebServer = require('./src/web-server');
@@ -22,16 +23,28 @@ function createWindow() {  // Create the browser window
       preload: path.join(__dirname, 'src', 'preload.js')
     },
     icon: path.join(__dirname, 'assets', 'icon.png'),
-    titleBarStyle: 'default',
+    frame: false,
+    titleBarStyle: 'hidden',
     show: false
   });
 
+  // Hide menu bar
+  mainWindow.setMenuBarVisibility(false);
+
   // Load the app
   mainWindow.loadFile('src/index.html');
-
   // Show window when ready to prevent visual flash
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
+  });
+
+  // Listen for window state changes to update maximize button
+  mainWindow.on('maximize', () => {
+    mainWindow.webContents.send('window-state-changed', { maximized: true });
+  });
+
+  mainWindow.on('unmaximize', () => {
+    mainWindow.webContents.send('window-state-changed', { maximized: false });
   });
 
   // Open DevTools in development
@@ -141,6 +154,86 @@ ipcMain.handle('watchout-get-status', async (event, serverIp) => {
 ipcMain.handle('watchout-get-show', async (event, serverIp) => {
   try {
     return await watchoutCommands.getCurrentShow(serverIp);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('watchout-save-show', async (event, serverIp) => {
+  try {
+    // Get the show data first
+    const showData = await watchoutCommands.getCurrentShow(serverIp);
+    
+    if (!showData.success) {
+      return showData; // Return the error from the API call
+    }
+    
+    // Show save dialog
+    const result = await dialog.showSaveDialog(mainWindow, {
+      title: 'Save Show Information',
+      defaultPath: `watchout-show-${serverIp}-${new Date().toISOString().split('T')[0]}.json`,
+      filters: [
+        { name: 'JSON Files', extensions: ['json'] },
+        { name: 'All Files', extensions: ['*'] }
+      ]
+    });
+    
+    if (result.canceled) {
+      return { success: false, error: 'Save operation was cancelled' };
+    }
+    
+    // Save the JSON data to the selected file
+    const jsonContent = JSON.stringify(showData.data, null, 2);
+    await fs.writeFile(result.filePath, jsonContent, 'utf8');
+    
+    return { 
+      success: true, 
+      filePath: result.filePath,
+      message: `Show data saved to ${path.basename(result.filePath)}`,
+      data: showData.data
+    };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('watchout-upload-show', async (event, serverIp, showName) => {
+  try {
+    // Show open dialog
+    const result = await dialog.showOpenDialog(mainWindow, {
+      title: 'Select Show File to Upload',
+      filters: [
+        { name: 'Watchout Files', extensions: ['watch'] },
+        { name: 'JSON Files', extensions: ['json'] },
+        { name: 'All Files', extensions: ['*'] }
+      ],
+      properties: ['openFile']
+    });
+    
+    if (result.canceled || !result.filePaths || result.filePaths.length === 0) {
+      return { success: false, error: 'Upload operation was cancelled' };
+    }
+    
+    const filePath = result.filePaths[0];
+    const fileName = path.basename(filePath);
+    
+    // Use filename without extension as default show name
+    const finalShowName = showName || path.parse(fileName).name;
+    
+    // Upload the file to the server
+    const uploadResult = await watchoutCommands.uploadShowFromFile(serverIp, filePath, finalShowName);
+    
+    if (uploadResult.success) {
+      return {
+        success: true,
+        message: `Show "${finalShowName}" uploaded successfully from ${fileName}`,
+        fileName: fileName,
+        showName: finalShowName,
+        data: uploadResult.data
+      };
+    } else {
+      return uploadResult;
+    }
   } catch (error) {
     return { success: false, error: error.message };
   }
@@ -356,4 +449,31 @@ ipcMain.handle('open-dev-tools', () => {
   if (mainWindow) {
     mainWindow.webContents.openDevTools();
   }
+});
+
+// Window control handlers
+ipcMain.handle('window-minimize', () => {
+  if (mainWindow) {
+    mainWindow.minimize();
+  }
+});
+
+ipcMain.handle('window-maximize', () => {
+  if (mainWindow) {
+    if (mainWindow.isMaximized()) {
+      mainWindow.unmaximize();
+    } else {
+      mainWindow.maximize();
+    }
+  }
+});
+
+ipcMain.handle('window-close', () => {
+  if (mainWindow) {
+    mainWindow.close();
+  }
+});
+
+ipcMain.handle('window-is-maximized', () => {
+  return mainWindow ? mainWindow.isMaximized() : false;
 });

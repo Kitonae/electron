@@ -37,11 +37,11 @@ class WatchoutServerFinderWebApp {
         document.getElementById('playBtn')?.addEventListener('click', () => this.executeCommand('play'));
         document.getElementById('pauseBtn')?.addEventListener('click', () => this.executeCommand('pause'));
         document.getElementById('stopBtn')?.addEventListener('click', () => this.executeCommand('stop'));
-        
-        // Information commands
+          // Information commands
         document.getElementById('statusBtn')?.addEventListener('click', () => this.executeCommand('status'));
         document.getElementById('timelinesBtn')?.addEventListener('click', () => this.executeCommand('timelines'));
         document.getElementById('showBtn')?.addEventListener('click', () => this.executeCommand('show'));
+        document.getElementById('uploadShowBtn')?.addEventListener('click', () => this.executeCommand('uploadShow'));
         
         // Advanced commands
         document.getElementById('testConnectionBtn')?.addEventListener('click', () => this.executeCommand('testConnection'));
@@ -96,10 +96,115 @@ class WatchoutServerFinderWebApp {
 
     async watchoutGetStatus(serverIp) {
         return this.apiCall(`/watchout/${serverIp}/status`);
+    }    async watchoutGetShow(serverIp) {
+        return this.apiCall(`/watchout/${serverIp}/show`);
+    }    async watchoutSaveShow(serverIp) {
+        try {
+            // Get show data first
+            const showData = await this.apiCall(`/watchout/${serverIp}/show`);
+            if (showData.success) {
+                // Create a downloadable JSON file
+                const jsonContent = JSON.stringify(showData.data, null, 2);
+                const blob = new Blob([jsonContent], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `watchout-show-${serverIp}-${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                return { 
+                    success: true, 
+                    message: `Show data downloaded as ${a.download}`,
+                    data: showData.data
+                };
+            }
+            return showData;
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
     }
 
-    async watchoutGetShow(serverIp) {
-        return this.apiCall(`/watchout/${serverIp}/show`);
+    async watchoutUploadShow(serverIp) {
+        try {
+            const fileInput = document.getElementById('uploadShowFile');
+            if (!fileInput.files.length) {
+                alert('Please select a file to upload');
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const fileName = file.name;
+            const fileExtension = fileName.substring(fileName.lastIndexOf('.')).toLowerCase();
+
+            if (!fileExtension.match(/\.(watch|json)$/)) {
+                alert('Please select a .watch or .json file');
+                return;
+            }
+
+            const showName = prompt('Enter show name (or leave empty to use filename):') || 
+                            fileName.substring(0, fileName.lastIndexOf('.'));
+
+            setCommandButtonLoading('uploadShow', true);
+
+            if (fileExtension === '.json') {
+                // Handle JSON files with /v0/show endpoint
+                const fileContent = await file.text();
+                let jsonData;
+                try {
+                    jsonData = JSON.parse(fileContent);
+                } catch (error) {
+                    throw new Error(`Invalid JSON file: ${error.message}`);
+                }
+
+                const response = await fetch(`http://${serverIp}:3040/v0/show`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: showName,
+                        data: jsonData
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text().catch(() => response.statusText);
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+
+                const result = await response.text();
+                updateCommandResponse(`JSON show "${showName}" uploaded successfully`);
+            } else {
+                // Handle .watch files with /v0/showfile endpoint
+                const fileData = await file.arrayBuffer();
+
+                const response = await fetch(`http://${serverIp}:3040/v0/showfile`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/octet-stream'
+                    },
+                    body: fileData
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text().catch(() => response.statusText);
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+
+                const result = await response.text();
+                updateCommandResponse(`Watch show "${showName}" uploaded successfully`);
+            }
+
+            fileInput.value = '';
+        } catch (error) {
+            console.error('Upload show error:', error);
+            updateCommandResponse(`Upload failed: ${error.message}`);
+        } finally {
+            setCommandButtonLoading('uploadShow', false);
+        }
     }
 
     async watchoutGetTimelines(serverIp) {
@@ -307,9 +412,11 @@ class WatchoutServerFinderWebApp {
                     if (result.success && result.data) {
                         this.populateTimelineSelector(result.data);
                     }
+                    break;                case 'show':
+                    result = await this.watchoutSaveShow(this.selectedServerIp);
                     break;
-                case 'show':
-                    result = await this.watchoutGetShow(this.selectedServerIp);
+                case 'uploadShow':
+                    result = await this.watchoutUploadShow(this.selectedServerIp);
                     break;
                 case 'testConnection':
                     result = await this.watchoutTestConnection(this.selectedServerIp);
@@ -348,11 +455,36 @@ class WatchoutServerFinderWebApp {
     addCommandResponse(type, command, result) {
         // TODO: Copy implementation from renderer.js
         console.log('addCommandResponse:', type, command, result);
-    }
+    }    setCommandButtonLoading(commandType, loading) {
+        const buttonMap = {
+            'play': 'playBtn',
+            'pause': 'pauseBtn',
+            'stop': 'stopBtn',
+            'status': 'statusBtn',
+            'timelines': 'timelinesBtn',
+            'show': 'showBtn',
+            'uploadShow': 'uploadShowBtn',
+            'testConnection': 'testConnectionBtn'
+        };
 
-    setCommandButtonLoading(commandType, loading) {
-        // TODO: Copy implementation from renderer.js
-        console.log('setCommandButtonLoading:', commandType, loading);
+        const buttonId = buttonMap[commandType];
+        const button = document.getElementById(buttonId);
+        
+        if (button) {
+            button.disabled = loading;
+            
+            if (loading) {
+                // Store original text and replace with loading indicator
+                button.dataset.originalText = button.textContent;
+                button.textContent = '⏳ Processing...';
+            } else {
+                // Restore original content
+                if (button.dataset.originalText) {
+                    button.textContent = button.dataset.originalText;
+                    delete button.dataset.originalText;
+                }
+            }
+        }
     }
 
     populateTimelineSelector(data) {

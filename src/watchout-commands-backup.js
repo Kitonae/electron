@@ -63,17 +63,13 @@ class WatchoutCommands {
                         });
                     }
                 });
-            });
-
-            req.on('error', (error) => {
+            });            req.on('error', (error) => {
                 reject({
                     success: false,
                     error: this.formatConnectionError(error, serverIp),
                     code: error.code
                 });
-            });
-
-            req.on('timeout', () => {
+            });            req.on('timeout', () => {
                 req.destroy();
                 reject({
                     success: false,
@@ -104,6 +100,7 @@ class WatchoutCommands {
         try {
             return await this.sendRequest(serverIp, '/v0/show');
         } catch (error) {
+         
             return error;
         }
     }
@@ -177,17 +174,11 @@ class WatchoutCommands {
         } catch (error) {
             return error;
         }
-    }
+    }    // ==================== SHOW MANAGEMENT ====================
 
-    // ==================== SHOW MANAGEMENT ====================
-    
     async loadShowFromFile(serverIp, showName, fileData) {
         try {
-            const endpoint = showName ? 
-                `/v0/showfile?showName=${encodeURIComponent(showName)}` : 
-                '/v0/showfile';
-            
-            return await this.sendRequest(serverIp, endpoint, 'POST', fileData);
+            return await this.sendRequest(serverIp, `/v0/showfile?showName=${encodeURIComponent(showName)}`, 'POST', fileData);
         } catch (error) {
             return error;
         }
@@ -203,7 +194,7 @@ class WatchoutCommands {
             
             if (fileExtension === '.json') {
                 // JSON files: use /v0/show endpoint
-                const fileContent = fs.readFileSync(filePath, 'utf8');
+                const fileContent = require('fs').readFileSync(filePath, 'utf8');
                 try {
                     const jsonData = JSON.parse(fileContent);
                     return await this.uploadJsonShow(serverIp, jsonData, baseShowName);
@@ -212,7 +203,7 @@ class WatchoutCommands {
                 }
             } else if (fileExtension === '.watch') {
                 // .watch files: use /v0/showfile endpoint
-                const fileData = fs.readFileSync(filePath);
+                const fileData = require('fs').readFileSync(filePath);
                 return await this.uploadWatchShow(serverIp, fileData, baseShowName);
             } else {
                 console.error('Unsupported file extension:', fileExtension);
@@ -223,9 +214,7 @@ class WatchoutCommands {
             console.error('Error in uploadShowFromFile:', error);
             throw new Error(`Failed to load show from file: ${error.message}`);
         }
-    }
-
-    async uploadJsonShow(serverIp, jsonData, showName) {
+    }    async uploadJsonShow(serverIp, jsonData, showName) {
         try {
             console.log(`Uploading JSON show "${showName}" to ${serverIp}`);
             const response = await fetch(`http://${serverIp}:3040/v0/show`, {
@@ -282,6 +271,15 @@ class WatchoutCommands {
             };
         } catch (error) {
             console.error('.watch upload error:', error);
+            throw new Error(`Failed to upload .watch show: ${error.message}`);
+        }
+    }
+            return {
+                success: true,
+                message: `Watch show "${showName}" uploaded successfully`,
+                data: result
+            };
+        } catch (error) {
             throw new Error(`Failed to upload .watch show: ${error.message}`);
         }
     }

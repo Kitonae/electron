@@ -15,12 +15,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Web Server Control
   stopWebServer: () => ipcRenderer.invoke('stop-web-server'),
   restartWebServer: () => ipcRenderer.invoke('restart-web-server'),
-  
   // Watchout Commands API
   watchout: {
     testConnection: (serverIp) => ipcRenderer.invoke('watchout-test-connection', serverIp),
     getStatus: (serverIp) => ipcRenderer.invoke('watchout-get-status', serverIp),
     getShow: (serverIp) => ipcRenderer.invoke('watchout-get-show', serverIp),
+    saveShow: (serverIp) => ipcRenderer.invoke('watchout-save-show', serverIp),
+    uploadShow: (serverIp, showName) => ipcRenderer.invoke('watchout-upload-show', serverIp, showName),
     getTimelines: (serverIp) => ipcRenderer.invoke('watchout-get-timelines', serverIp),
     playTimeline: (serverIp, timelineId) => ipcRenderer.invoke('watchout-play-timeline', serverIp, timelineId),
     pauseTimeline: (serverIp, timelineId) => ipcRenderer.invoke('watchout-pause-timeline', serverIp, timelineId),
@@ -35,13 +36,22 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Startup checks API
   performStartupChecks: () => ipcRenderer.invoke('perform-startup-checks'),
   dismissStartupWarning: (warningType) => ipcRenderer.invoke('dismiss-startup-warning', warningType),
-  
-  // Event listeners for main process messages
+    // Event listeners for main process messages
   onStartupWarning: (callback) => {
     ipcRenderer.on('startup-warning', (event, notification) => callback(notification));
-  },
-  onWebServerError: (callback) => {
+  },  onWebServerError: (callback) => {
     ipcRenderer.on('web-server-error', (event, error) => callback(error));
+  },
+  onWindowStateChanged: (callback) => {
+    ipcRenderer.on('window-state-changed', (event, state) => callback(state));
+  },
+  
+  // Window controls API
+  windowControls: {
+    minimize: () => ipcRenderer.invoke('window-minimize'),
+    maximize: () => ipcRenderer.invoke('window-maximize'),
+    close: () => ipcRenderer.invoke('window-close'),
+    isMaximized: () => ipcRenderer.invoke('window-is-maximized')
   },
   
   // For development purposes

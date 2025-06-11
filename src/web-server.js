@@ -1,22 +1,52 @@
 const express = require('express');
 const path = require('path');
+const multer = require('multer');
 const { findWatchoutServers, clearOfflineServers } = require('./network-scanner');
 const WatchoutCommands = require('./watchout-commands');
 
-class WebServer {
-  constructor() {
+class WebServer {  constructor() {
     this.app = express();
     this.server = null;
     this.port = 3080; // Default port for web server
     this.watchoutCommands = new WatchoutCommands();
+    
+    // Configure multer for file uploads
+    this.upload = multer({
+      storage: multer.memoryStorage(),
+      limits: {
+        fileSize: 100 * 1024 * 1024 // 100MB limit
+      },
+      fileFilter: (req, file, cb) => {
+        const allowedExtensions = ['.watch', '.json'];
+        const fileExt = path.extname(file.originalname).toLowerCase();
+        if (allowedExtensions.includes(fileExt)) {
+          cb(null, true);
+        } else {
+          cb(new Error('Only .watch and .json files are allowed'), false);
+        }
+      }
+    });
+    
     this.setupMiddleware();
     this.setupRoutes();
   }
-
   setupMiddleware() {
     // Serve static files from src directory
     this.app.use(express.static(path.join(__dirname)));
     this.app.use(express.json());
+    
+    // Security headers including CSP
+    this.app.use((req, res, next) => {
+      // Content Security Policy
+      res.header('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' http://localhost:* http://192.168.*:* http://10.*:* ws://localhost:*; font-src 'self';");
+      
+      // Other security headers
+      res.header('X-Content-Type-Options', 'nosniff');
+      res.header('X-Frame-Options', 'DENY');
+      res.header('X-XSS-Protection', '1; mode=block');
+      
+      next();
+    });
     
     // CORS middleware for cross-origin requests
     this.app.use((req, res, next) => {
@@ -81,12 +111,53 @@ class WebServer {
       } catch (error) {
         res.status(500).json({ success: false, error: error.message });
       }
-    });
-
-    this.app.get('/api/watchout/:serverIp/show', async (req, res) => {
+    });    this.app.get('/api/watchout/:serverIp/show', async (req, res) => {
       try {
         const result = await this.watchoutCommands.getCurrentShow(req.params.serverIp);
         res.json(result);
+      } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+      }
+    });
+
+    this.app.post('/api/watchout/:serverIp/upload-show', this.upload.single('showFile'), async (req, res) => {
+      try {
+        if (!req.file) {
+          return res.status(400).json({ success: false, error: 'No file uploaded' });
+        }
+
+        const file = req.file;
+        const fileExt = path.extname(file.originalname).toLowerCase();
+        const showName = req.body.showName || path.parse(file.originalname).name;
+
+        let fileData;
+        if (fileExt === '.json') {
+          try {
+            // Verify JSON is valid
+            const jsonContent = file.buffer.toString('utf8');
+            JSON.parse(jsonContent); // This will throw if invalid
+            fileData = jsonContent;
+          } catch (parseError) {
+            return res.status(400).json({ success: false, error: `Invalid JSON file: ${parseError.message}` });
+          }
+        } else {
+          // For .watch files, use raw buffer
+          fileData = file.buffer;
+        }
+
+        const result = await this.watchoutCommands.loadShowFromFile(req.params.serverIp, showName, fileData);
+        
+        if (result.success) {
+          res.json({
+            success: true,
+            message: `Show "${showName}" uploaded successfully from ${file.originalname}`,
+            fileName: file.originalname,
+            showName: showName,
+            data: result.data
+          });
+        } else {
+          res.status(500).json(result);
+        }
       } catch (error) {
         res.status(500).json({ success: false, error: error.message });
       }

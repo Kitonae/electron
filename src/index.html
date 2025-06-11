@@ -3,10 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' http://localhost:* http://192.168.*:* http://10.*:* ws://localhost:*; font-src 'self';">
     <title>WATCHOUT Assistant</title>
     <link rel="stylesheet" href="styles.css">
 </head>
-<body>    <div class="app-container">
+<body>
+    <!-- Custom Title Bar -->
+    <div class="title-bar">
+        <div class="title-bar-drag-region">
+            <div class="title-bar-left">
+                <img src="../assets/icon.png" alt="App Icon" class="title-bar-icon">
+                <span class="title-bar-title">WATCHOUT Assistant</span>
+            </div>
+            <div class="title-bar-right">                <button class="title-bar-button minimize-button" id="minimizeBtn" title="Minimize">
+                    <svg width="12" height="12" viewBox="0 0 12 12">
+                        <rect x="0" y="5" width="12" height="2" fill="currentColor"/>
+                    </svg>
+                </button>                <button class="title-bar-button maximize-button" id="maximizeBtn" title="Maximize">
+                    <svg width="12" height="12" viewBox="0 0 12 12" class="maximize-icon">
+                        <rect x="1" y="1" width="10" height="10" fill="none" stroke="currentColor" stroke-width="1"/>
+                    </svg>
+                    <svg width="12" height="12" viewBox="0 0 12 12" class="restore-icon">
+                        <rect x="1" y="3" width="8" height="8" fill="none" stroke="currentColor" stroke-width="1"/>
+                        <rect x="3" y="1" width="8" height="8" fill="none" stroke="currentColor" stroke-width="1"/>
+                    </svg>
+                </button>
+                <button class="title-bar-button close-button" id="closeBtn" title="Close">
+                    <svg width="12" height="12" viewBox="0 0 12 12">
+                        <path d="M1 1 L11 11 M11 1 L1 11" stroke="currentColor" stroke-width="1.5"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="app-container">
         <main class="app-main">
             <div class="main-content">                <!-- Left Sidebar -->
                 <aside class="sidebar">                    <div class="sidebar-header">
@@ -122,19 +153,20 @@
                                                         <span>Stop</span>
                                                     </button>
                                                 </div>
-                                            </div>
-
-                                            <!-- Information Commands -->
+                                            </div>                                            <!-- Information Commands -->
                                             <div class="command-category">
                                                 <h3>Information</h3>
                                                 <div class="command-buttons">
                                                     <button class="command-btn info-btn" id="statusBtn">
                                                         <span class="cmd-icon">📊</span>
                                                         <span>Get Status</span>
+                                                    </button>                                                    <button class="command-btn info-btn" id="showBtn">
+                                                        <span class="cmd-icon">💾</span>
+                                                        <span>Save Show</span>
                                                     </button>
-                                                    <button class="command-btn info-btn" id="showBtn">
-                                                        <span class="cmd-icon">🎭</span>
-                                                        <span>Get Show Info</span>
+                                                    <button class="command-btn info-btn" id="uploadShowBtn">
+                                                        <span class="cmd-icon">📤</span>
+                                                        <span>Upload Show</span>
                                                     </button>
                                                 </div>
                                             </div>
@@ -234,26 +266,28 @@
             </div>
             <div class="modal-body">
                 <div class="settings-section">
-                    <h4>Server Discovery</h4>
-                    <div class="form-group">
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="enableCacheFromDisk" checked>
-                            <span class="checkmark"></span>
-                            Load server cache from disk
+                    <h4>Server Discovery</h4>                    <div class="form-group">
+                        <label class="toggle-label">
+                            <span class="toggle-text">Load server cache from disk</span>
+                            <div class="toggle-switch">
+                                <input type="checkbox" id="enableCacheFromDisk" checked>
+                                <span class="toggle-slider"></span>
+                            </div>
                         </label>
                         <small class="form-help">Save and load discovered servers between application sessions</small>
                     </div>
                 </div>
                   <div class="settings-section">
-                    <h4>Web Server</h4>
-                    <div class="form-group">
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="enableWebServer" checked>
-                            <span class="checkmark"></span>
-                            Enable web server (Port 3080)
+                    <h4>Web Server</h4>                    <div class="form-group">
+                        <label class="toggle-label">
+                            <span class="toggle-text">Enable web server (Port 3080)</span>
+                            <div class="toggle-switch">
+                                <input type="checkbox" id="enableWebServer" checked>
+                                <span class="toggle-slider"></span>
+                            </div>
                         </label>
                         <small class="form-help">Allow browser access to WATCHOUT Assistant at http://localhost:3080</small>
-                    </div>                    <div class="form-group" id="webServerStatusGroup">
+                    </div><div class="form-group" id="webServerStatusGroup">
                         <label style="display: inline-block;">Web Server Status:</label>
                         <span id="webServerStatus" class="status-indicator-text">Unknown</span>
                     </div>

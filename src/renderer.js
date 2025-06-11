@@ -14,7 +14,7 @@ class WatchoutServerFinderApp {    constructor() {
         this.api = new ApiAdapter();
         
         this.initializeApp();
-    }async initializeApp() {
+    }    async initializeApp() {
         this.bindEvents();
         await this.loadAppVersion();
         
@@ -26,16 +26,20 @@ class WatchoutServerFinderApp {    constructor() {
             this.ensureFooterVisibility();
         }, 100);
         
+        // Bind window controls after DOM is ready
+        setTimeout(() => {
+            this.bindWindowControls();
+        }, 200);
+        
         this.updateUI();
         this.startBackgroundScanning();
-    }    bindEvents() {
+    }bindEvents() {
         const scanButton = document.getElementById('scanButton');
         scanButton.addEventListener('click', () => this.startManualScan());
         
         const clearOfflineButton = document.getElementById('clearOfflineButton');
         clearOfflineButton.addEventListener('click', () => this.clearOfflineServers());
-        
-        // Settings button event
+          // Settings button event
         const settingsButton = document.getElementById('settingsButton');
         settingsButton.addEventListener('click', () => this.showSettingsDialog());
         
@@ -46,11 +50,11 @@ class WatchoutServerFinderApp {    constructor() {
         document.getElementById('playBtn')?.addEventListener('click', () => this.executeCommand('play'));
         document.getElementById('pauseBtn')?.addEventListener('click', () => this.executeCommand('pause'));
         document.getElementById('stopBtn')?.addEventListener('click', () => this.executeCommand('stop'));
-        
-        // Information commands
+          // Information commands
         document.getElementById('statusBtn')?.addEventListener('click', () => this.executeCommand('status'));
         document.getElementById('timelinesBtn')?.addEventListener('click', () => this.executeCommand('timelines'));
         document.getElementById('showBtn')?.addEventListener('click', () => this.executeCommand('show'));
+        document.getElementById('uploadShowBtn')?.addEventListener('click', () => this.executeCommand('uploadShow'));
         
         // Advanced commands
         document.getElementById('testConnectionBtn')?.addEventListener('click', () => this.executeCommand('testConnection'));
@@ -58,9 +62,76 @@ class WatchoutServerFinderApp {    constructor() {
         
         // Timeline selector change event
         document.getElementById('timelineSelector')?.addEventListener('change', () => this.onTimelineSelectionChange());
-        
-        // Response area
+          // Response area
         document.getElementById('clearResponseBtn')?.addEventListener('click', () => this.clearCommandResponse());
+    }
+
+    bindWindowControls() {
+        // Only bind if running in Electron (not web browser)
+        if (window.electronAPI && window.electronAPI.windowControls) {
+            console.log('Binding window controls...');
+            const minimizeBtn = document.getElementById('minimizeBtn');
+            const maximizeBtn = document.getElementById('maximizeBtn');
+            const closeBtn = document.getElementById('closeBtn');
+
+            if (minimizeBtn) {
+                minimizeBtn.addEventListener('click', () => {
+                    console.log('Minimize button clicked');
+                    window.electronAPI.windowControls.minimize();
+                });
+            }
+
+            if (maximizeBtn) {
+                maximizeBtn.addEventListener('click', async () => {
+                    console.log('Maximize button clicked');
+                    await window.electronAPI.windowControls.maximize();
+                    // Update maximize button appearance
+                    this.updateMaximizeButton();
+                });
+            }
+
+            if (closeBtn) {
+                closeBtn.addEventListener('click', () => {
+                    console.log('Close button clicked');
+                    window.electronAPI.windowControls.close();
+                });
+            }
+
+            // Update maximize button state on load
+            this.updateMaximizeButton();
+
+            // Listen for window resize to update maximize button
+            window.addEventListener('resize', () => {
+                this.updateMaximizeButton();
+            });
+        } else {
+            console.warn('Window controls API not available - running in browser mode?');
+        }
+    }    async updateMaximizeButton() {
+        if (window.electronAPI && window.electronAPI.windowControls) {
+            const maximizeBtn = document.getElementById('maximizeBtn');
+            if (maximizeBtn) {
+                try {
+                    const isMaximized = await window.electronAPI.windowControls.isMaximized();
+                    this.updateMaximizeButtonState(isMaximized);
+                } catch (error) {
+                    console.warn('Could not check window maximized state:', error);
+                }
+            }
+        }
+    }
+
+    updateMaximizeButtonState(isMaximized) {
+        const maximizeBtn = document.getElementById('maximizeBtn');
+        if (maximizeBtn) {
+            if (isMaximized) {
+                maximizeBtn.classList.add('maximized');
+                maximizeBtn.title = 'Restore';
+            } else {
+                maximizeBtn.classList.remove('maximized');
+                maximizeBtn.title = 'Maximize';
+            }
+        }
     }
 
     startBackgroundScanning() {
@@ -861,10 +932,11 @@ class WatchoutServerFinderApp {    constructor() {
                     // Populate timeline selector with the results
                     if (result.success && result.data) {
                         this.populateTimelineSelector(result.data);
-                    }
+                    }                    break;                case 'show':
+                    result = await this.api.watchoutSaveShow(this.selectedServerIp);
                     break;
-                case 'show':
-                    result = await this.api.watchoutGetShow(this.selectedServerIp);
+                case 'uploadShow':
+                    result = await this.api.watchoutUploadShow(this.selectedServerIp);
                     break;
                 case 'testConnection':
                     result = await this.api.watchoutTestConnection(this.selectedServerIp);
@@ -889,6 +961,7 @@ class WatchoutServerFinderApp {    constructor() {
             'status': 'statusBtn',
             'timelines': 'timelinesBtn',
             'show': 'showBtn',
+            'uploadShow': 'uploadShowBtn',
             'testConnection': 'testConnectionBtn'
         };
 
@@ -941,7 +1014,7 @@ class WatchoutServerFinderApp {    constructor() {
             'stop': '⏹️ Stop Timeline',
             'status': '📊 Get Status',
             'timelines': '📑 Get Timelines',
-            'show': '🎭 Get Show Info',
+            'show': '💾 Save Show',
             'testConnection': '🔗 Test Connection',
             'custom': '⚙️ Custom Command'
         };
@@ -1446,9 +1519,7 @@ class WatchoutServerFinderApp {    constructor() {
             if (stopBtn) stopBtn.disabled = false;
             if (restartBtn) restartBtn.disabled = false;
         }
-    }
-
-    initializeStartupWarnings() {
+    }    initializeStartupWarnings() {
         // Listen for startup warnings from main process
         if (this.api.onStartupWarning) {
             this.api.onStartupWarning((notification) => {
@@ -1461,6 +1532,14 @@ class WatchoutServerFinderApp {    constructor() {
             this.api.onWebServerError((error) => {
                 console.warn('Web server error:', error);
                 // Could show a non-blocking notification here
+            });
+        }
+
+        // Listen for window state changes to update maximize button
+        if (this.api.onWindowStateChanged) {
+            this.api.onWindowStateChanged((state) => {
+                console.log('Window state changed:', state);
+                this.updateMaximizeButtonState(state.maximized);
             });
         }
     }
