@@ -1,159 +1,218 @@
 class WatchoutServerFinderApp {
   constructor() {
-    this.servers = [];
-    this.isScanning = false;
-    this.scanInterval = null;
-    this.backgroundScanEnabled = true;
-    this.scanIntervalMs = 30000; // 30 seconds
-    this.selectedServerId = null; // Track selected server
-    this.selectedServerIp = null; // Track selected server IP for commands
-    this.apiConnectionStatus = false; // Track API connection status
-    this.serverCommandStates = new Map(); // Track command state per server
-    this.availableTimelines = []; // Store available timelines for current server
+    try {
+      this.servers = [];
+      this.isScanning = false;
+      this.scanInterval = null;
+      this.backgroundScanEnabled = true;
+      this.scanIntervalMs = 30000; // 30 seconds
+      this.selectedServerId = null; // Track selected server
+      this.selectedServerIp = null; // Track selected server IP for commands
+      this.apiConnectionStatus = false; // Track API connection status
+      this.serverCommandStates = new Map(); // Track command state per server
+      this.availableTimelines = []; // Store available timelines for current server
 
-    // Initialize API adapter for cross-platform compatibility
-    this.api = new ApiAdapter();
+      // Initialize API adapter for cross-platform compatibility with error handling
+      try {
+        this.api = new ApiAdapter();
+      } catch (error) {
+        console.error('Failed to initialize API adapter:', error);
+        this.api = null;
+      }
 
-    this.initializeApp();
+      // Initialize app with error handling
+      this.initializeApp().catch(error => {
+        console.error('App initialization failed:', error);
+        this.handleInitializationError(error);
+      });
+    } catch (error) {
+      console.error('Constructor failed:', error);
+      this.handleInitializationError(error);
+    }
   }
-
   async initializeApp() {
-    this.bindEvents();
-    await this.loadAppVersion();
+    try {
+      console.log('Starting app initialization...');
+      
+      // Step 1: Bind basic events first
+      this.bindEvents();
+      console.log('Events bound successfully');
 
-    // Initialize startup warning listeners
-    this.initializeStartupWarnings();
+      // Step 2: Load app version (with timeout)
+      try {
+        await Promise.race([
+          this.loadAppVersion(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000))
+        ]);
+        console.log('App version loaded');
+      } catch (error) {
+        console.warn('Failed to load app version:', error);
+      }
 
-    // Ensure footer visibility after DOM is loaded
-    setTimeout(() => {
-      this.ensureFooterVisibility();
-    }, 100);
+      // Step 3: Initialize startup warnings
+      this.initializeStartupWarnings();
 
-    // Bind window controls after DOM is ready
-    setTimeout(() => {
-      this.bindWindowControls();
-    }, 200);
-    this.updateUI();
-    this.startBackgroundScanning();
+      // Step 4: Ensure UI elements are ready
+      await this.waitForDOMElements();
+
+      // Step 5: Setup UI with delays
+      setTimeout(() => {
+        this.ensureFooterVisibility();
+      }, 100);
+
+      setTimeout(() => {
+        this.bindWindowControls();
+        // Update maximize button state after binding
+        this.updateMaximizeButton();
+      }, 200);
+
+      // Step 6: Update UI and start scanning
+      this.updateUI();
+      
+      // Step 7: Start background scanning (with delay)
+      setTimeout(() => {
+        this.startBackgroundScanning();
+      }, 500);
+
+      console.log('App initialization completed successfully');
+    } catch (error) {
+      console.error('App initialization failed:', error);
+      throw error;
+    }
   }
-
   bindEvents() {
-    const scanButton = document.getElementById("scanButton");
-    scanButton.addEventListener("click", () => this.startManualScan());
+    try {
+      const scanButton = document.getElementById("scanButton");
+      if (scanButton) {
+        scanButton.addEventListener("click", () => this.startManualScan());
+      } else {
+        console.warn('Scan button not found during binding');
+      }
 
-    const clearOfflineButton = document.getElementById("clearOfflineButton");
-    clearOfflineButton.addEventListener("click", () =>
-      this.clearOfflineServers()
-    );
+      const clearOfflineButton = document.getElementById("clearOfflineButton");
+      if (clearOfflineButton) {
+        clearOfflineButton.addEventListener("click", () => this.clearOfflineServers());
+      }
 
-    const addServerButton = document.getElementById("addServerButton");
-    addServerButton.addEventListener("click", () => this.showAddServerDialog());
+      const addServerButton = document.getElementById("addServerButton");
+      if (addServerButton) {
+        addServerButton.addEventListener("click", () => this.showAddServerDialog());
+      }
 
-    // Settings button event
-    const settingsButton = document.getElementById("settingsButton");
-    settingsButton.addEventListener("click", () => this.showSettingsDialog());
-    // Command button events (no more tab events needed)
-    this.bindCommandEvents();
+      const settingsButton = document.getElementById("settingsButton");
+      if (settingsButton) {
+        settingsButton.addEventListener("click", () => this.showSettingsDialog());
+      }
+
+      // Bind command events safely
+      this.bindCommandEvents();
+      
+      console.log('Events bound successfully');
+    } catch (error) {
+      console.error('Error binding events:', error);
+      throw error;
+    }
   }
-
   bindCommandEvents() {
-    // Timeline control commands
-    document.getElementById("playBtn")?.addEventListener("click", (e) => {
-      this.addRippleEffect(e.currentTarget);
-      this.executeCommand("play");
-    });
-    document.getElementById("pauseBtn")?.addEventListener("click", (e) => {
-      this.addRippleEffect(e.currentTarget);
-      this.executeCommand("pause");
-    });
-    document.getElementById("stopBtn")?.addEventListener("click", (e) => {
-      this.addRippleEffect(e.currentTarget);
-      this.executeCommand("stop");
-    });
-    // Information commands
-    document.getElementById("statusBtn")?.addEventListener("click", (e) => {
-      this.addRippleEffect(e.currentTarget);
-      this.executeCommand("status");
-    });
-    document.getElementById("timelinesBtn")?.addEventListener("click", (e) => {
-      this.addRippleEffect(e.currentTarget);
-      this.executeCommand("timelines");
-    });
-    document.getElementById("showBtn")?.addEventListener("click", (e) => {
-      this.addRippleEffect(e.currentTarget);
-      this.executeCommand("show");
-    });
-    document.getElementById("uploadShowBtn")?.addEventListener("click", (e) => {
-      this.addRippleEffect(e.currentTarget);
-      this.executeCommand("uploadShow");
-    });
+    try {
+      // Timeline selector change event
+      const timelineSelector = document.getElementById("timelineSelector");
+      if (timelineSelector) {
+        timelineSelector.addEventListener("change", () => this.onTimelineSelectionChange());
+      }
 
-    // Advanced commands
-    document
-      .getElementById("testConnectionBtn")
-      ?.addEventListener("click", (e) => {
-        this.addRippleEffect(e.currentTarget);
-        this.executeCommand("testConnection");
-      });
-    document
-      .getElementById("customCommandBtn")
-      ?.addEventListener("click", (e) => {
-        this.addRippleEffect(e.currentTarget);
-        this.showCustomCommandDialog();
+      // Command buttons
+      const commandButtons = [
+        { id: "playBtn", command: "play" },
+        { id: "pauseBtn", command: "pause" },
+        { id: "stopBtn", command: "stop" },
+        { id: "statusBtn", command: "status" },
+        { id: "timelinesBtn", command: "timelines" },
+        { id: "showBtn", command: "show" },
+        { id: "uploadShowBtn", command: "uploadShow" },
+        { id: "testConnectionBtn", command: "testConnection" },
+        { id: "customCommandBtn", command: "custom" }
+      ];
+
+      commandButtons.forEach(({ id, command }) => {
+        const button = document.getElementById(id);
+        if (button) {
+          if (command === "custom") {
+            button.addEventListener("click", (e) => {
+              this.addRippleEffect(e.currentTarget);
+              this.showCustomCommandDialog();
+            });
+          } else {
+            button.addEventListener("click", (e) => {
+              this.addRippleEffect(e.currentTarget);
+              this.executeCommand(command);
+            });
+          }
+        }
       });
 
-    // Timeline selector change event
-    document
-      .getElementById("timelineSelector")
-      ?.addEventListener("change", () => this.onTimelineSelectionChange());
-    // Response area
-    document
-      .getElementById("clearResponseBtn")
-      ?.addEventListener("click", () => this.clearCommandResponse());
+      // Clear response button
+      const clearResponseBtn = document.getElementById("clearResponseBtn");
+      if (clearResponseBtn) {
+        clearResponseBtn.addEventListener("click", () => this.clearCommandResponse());
+      }
+
+      console.log('Command events bound successfully');
+    } catch (error) {
+      console.error('Error binding command events:', error);
+    }
   }
-
   bindWindowControls() {
-    // Only bind if running in Electron (not web browser)
-    if (window.electronAPI && window.electronAPI.windowControls) {
-      console.log("Binding window controls...");
+    try {
       const minimizeBtn = document.getElementById("minimizeBtn");
       const maximizeBtn = document.getElementById("maximizeBtn");
       const closeBtn = document.getElementById("closeBtn");
 
       if (minimizeBtn) {
         minimizeBtn.addEventListener("click", () => {
-          console.log("Minimize button clicked");
-          window.electronAPI.windowControls.minimize();
+          if (window.electronAPI && window.electronAPI.windowControls) {
+            window.electronAPI.windowControls.minimize();
+          }
         });
       }
 
       if (maximizeBtn) {
         maximizeBtn.addEventListener("click", async () => {
-          console.log("Maximize button clicked");
-          await window.electronAPI.windowControls.maximize();
-          // Update maximize button appearance
-          this.updateMaximizeButton();
+          if (window.electronAPI && window.electronAPI.windowControls) {
+            const isMaximized = await window.electronAPI.windowControls.isMaximized();
+            if (isMaximized) {
+              window.electronAPI.windowControls.unmaximize();
+            } else {
+              window.electronAPI.windowControls.maximize();
+            }
+            // Update button state
+            this.updateMaximizeButtonState(!isMaximized);
+          }
         });
       }
 
       if (closeBtn) {
         closeBtn.addEventListener("click", () => {
-          console.log("Close button clicked");
-          window.electronAPI.windowControls.close();
+          if (window.electronAPI && window.electronAPI.windowControls) {
+            window.electronAPI.windowControls.close();
+          }
         });
       }
 
-      // Update maximize button state on load
-      this.updateMaximizeButton();
+      // Listen for window state changes to update maximize button
+      if (window.electronAPI && window.electronAPI.windowControls) {
+        window.electronAPI.windowControls.onMaximized(() => {
+          this.updateMaximizeButtonState(true);
+        });
 
-      // Listen for window resize to update maximize button
-      window.addEventListener("resize", () => {
-        this.updateMaximizeButton();
-      });
-    } else {
-      console.warn(
-        "Window controls API not available - running in browser mode?"
-      );
+        window.electronAPI.windowControls.onUnmaximized(() => {
+          this.updateMaximizeButtonState(false);
+        });
+      }
+
+      console.log('Window controls bound successfully');
+    } catch (error) {
+      console.error('Error binding window controls:', error);
     }
   }
   async updateMaximizeButton() {
@@ -2120,11 +2179,115 @@ class WatchoutServerFinderApp {
     document.getElementById("serverType").value = server.type;
 
     this.showAddServerDialog();
-  }
-
-  initializeStartupWarnings() {
+  }  initializeStartupWarnings() {
     // Initialize any startup warning listeners here
     // This method can be expanded later for specific warning handling
     console.log("Startup warnings initialized");
   }
+
+  async waitForDOMElements() {
+    const requiredElements = [
+      'scanButton',
+      'serverList',
+      'serversContainer',
+      'settingsButton'
+    ];
+
+    const maxAttempts = 50; // 5 seconds total
+    let attempts = 0;
+
+    while (attempts < maxAttempts) {
+      const missingElements = requiredElements.filter(id => !document.getElementById(id));
+      
+      if (missingElements.length === 0) {
+        console.log('All required DOM elements found');
+        return;
+      }
+
+      console.log(`Waiting for DOM elements: ${missingElements.join(', ')}`);
+      await new Promise(resolve => setTimeout(resolve, 100));
+      attempts++;
+    }
+
+    throw new Error(`Required DOM elements not found: ${requiredElements.filter(id => !document.getElementById(id)).join(', ')}`);
+  }
+
+  handleInitializationError(error) {
+    // Show error message in UI
+    const container = document.getElementById('serversContainer');
+    if (container) {
+      container.innerHTML = `
+        <div style="text-align: center; padding: 40px; color: #ff4444;">
+          <h3>Application Startup Error</h3>
+          <p>The application failed to initialize properly.</p>
+          <p>Error: ${error.message}</p>
+          <button onclick="location.reload()" style="margin-top: 20px; padding: 10px 20px;">
+            Restart Application
+          </button>
+        </div>
+      `;
+    }
+  }
+
+  async performStartupDiagnostics() {
+    console.log('=== Startup Diagnostics ===');
+    console.log('Document ready state:', document.readyState);
+    console.log('Window loaded:', document.readyState === 'complete');
+    
+    // Check for required DOM elements
+    const requiredElements = [
+      'scanButton', 'serverList', 'serversContainer', 'settingsButton',
+      'minimizeBtn', 'maximizeBtn', 'closeBtn'
+    ];
+    
+    requiredElements.forEach(id => {
+      const element = document.getElementById(id);
+      console.log(`Element ${id}:`, element ? 'Found' : 'Missing');
+    });
+
+    // Check API availability
+    console.log('Window electronAPI:', typeof window.electronAPI);
+    console.log('ApiAdapter available:', typeof ApiAdapter !== 'undefined');
+    
+    // Check for JavaScript errors
+    window.addEventListener('error', (event) => {
+      console.error('JavaScript error during startup:', event.error);
+    });
+
+    console.log('=== End Diagnostics ===');
+  }
 }
+
+// Initialize the app when DOM is ready
+let app;
+
+document.addEventListener('DOMContentLoaded', () => {
+  try {
+    console.log('DOM loaded, initializing app...');
+    app = new WatchoutServerFinderApp();
+    console.log('WatchoutServerFinderApp initialized successfully');
+  } catch (error) {
+    console.error('Failed to initialize WatchoutServerFinderApp:', error);
+    // Show error message to user
+    const errorDiv = document.createElement('div');
+    errorDiv.style.cssText = 'position: fixed; top: 20px; left: 20px; background: #ff4444; color: white; padding: 10px; border-radius: 5px; z-index: 9999;';
+    errorDiv.textContent = 'Application failed to start. Please restart the application.';
+    document.body.appendChild(errorDiv);
+  }
+});
+
+// Handle app cleanup on window unload
+window.addEventListener('beforeunload', () => {
+  if (app && typeof app.cleanup === 'function') {
+    app.cleanup();
+  }
+});
+
+// Global error handler
+window.addEventListener('error', (event) => {
+  console.error('Global error:', event.error);
+});
+
+window.addEventListener('unhandledrejection', (event) => {
+  console.error('Unhandled promise rejection:', event.reason);
+});

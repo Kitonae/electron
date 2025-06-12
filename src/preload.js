@@ -52,8 +52,11 @@ contextBridge.exposeInMainWorld('electronAPI', {  scanForWatchoutServers: () => 
   windowControls: {
     minimize: () => ipcRenderer.invoke('window-minimize'),
     maximize: () => ipcRenderer.invoke('window-maximize'),
+    unmaximize: () => ipcRenderer.invoke('window-unmaximize'),
     close: () => ipcRenderer.invoke('window-close'),
-    isMaximized: () => ipcRenderer.invoke('window-is-maximized')
+    isMaximized: () => ipcRenderer.invoke('window-is-maximized'),
+    onMaximized: (callback) => ipcRenderer.on('window-maximized', callback),
+    onUnmaximized: (callback) => ipcRenderer.on('window-unmaximized', callback)
   },
   
   // For development purposes
