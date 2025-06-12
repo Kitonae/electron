@@ -59,6 +59,9 @@ contextBridge.exposeInMainWorld('electronAPI', {  scanForWatchoutServers: () => 
     onUnmaximized: (callback) => ipcRenderer.on('window-unmaximized', callback)
   },
   
+  // Test method for startup warnings (remove after testing)
+  testStartupWarning: () => ipcRenderer.invoke('test-startup-warning'),
+
   // For development purposes
   openDevTools: () => ipcRenderer.invoke('open-dev-tools')
 });

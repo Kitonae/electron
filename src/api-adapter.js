@@ -291,6 +291,17 @@ class ApiAdapter {
         }
     }
 
+    // Test method for startup warnings (remove after testing)
+    async testStartupWarning() {
+        if (this.isElectron) {
+            return window.electronAPI.testStartupWarning();
+        } else {
+            // For web version, just show a browser alert
+            alert('Test startup warning (web version)');
+            return { success: true };
+        }
+    }
+
     // Event listener methods
     onStartupWarning(callback) {
         if (this.isElectron && window.electronAPI.onStartupWarning) {

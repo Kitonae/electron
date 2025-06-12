@@ -9,29 +9,33 @@ class StartupChecker {
      * Perform comprehensive startup checks
      * @param {number} webServerPort - The port the web server will use
      * @returns {Promise<{success: boolean, warnings: Array, errors: Array}>}
-     */
-    async performStartupChecks(webServerPort = 3080) {
+     */    async performStartupChecks(webServerPort = 3080) {
+        console.log('StartupChecker: Performing startup checks...');
         const warnings = [];
         const errors = [];
 
         try {
             // Check for Watchout processes
-            const watchoutCheck = await this.processDetector.checkWatchoutProcesses();
+            console.log('StartupChecker: Checking for Watchout processes...');            const watchoutCheck = await this.processDetector.checkWatchoutProcesses();
+            console.log('StartupChecker: Watchout check result:', watchoutCheck);
             if (watchoutCheck.running) {
+                console.log('StartupChecker: Watchout processes detected!');
                 warnings.push({
                     type: 'watchout-running',
                     title: 'Watchout Software Detected',
-                    message: `The following Watchout processes are running: ${watchoutCheck.processes.join(', ')}. This may interfere with the WATCHOUT Assistant. Consider closing Watchout before continuing.`,
+                    message: `The following Watchout processes are running: ${watchoutCheck.processes.join(', ')}. This may interfere with server discovery. Consider closing Watchout before continuing.`,
                     processes: watchoutCheck.processes,
                     severity: 'warning'
                 });
             }
 
             // Check if web server port is occupied
-            const portInUse = await this.processDetector.isPortInUse(webServerPort);
+            console.log('StartupChecker: Checking web server port', webServerPort);            const portInUse = await this.processDetector.isPortInUse(webServerPort);
+            console.log('StartupChecker: Web server port check result:', portInUse);
             if (portInUse) {
                 const portInfo = await this.processDetector.getPortInfo(webServerPort);
                 const processInfo = portInfo ? ` (used by: ${portInfo})` : '';
+                console.log('StartupChecker: Web server port is in use!');
                 
                 warnings.push({
                     type: 'port-occupied',
@@ -44,10 +48,13 @@ class StartupChecker {
             }
 
             // Check multicast port (3012) - commonly used by Watchout
+            console.log('StartupChecker: Checking multicast port 3012...');
             const multicastPortInUse = await this.processDetector.isPortInUse(3012);
+            console.log('StartupChecker: Multicast port check result:', multicastPortInUse);
             if (multicastPortInUse) {
                 const portInfo = await this.processDetector.getPortInfo(3012);
                 const processInfo = portInfo ? ` (used by: ${portInfo})` : '';
+                console.log('StartupChecker: Multicast port is in use!');
                 
                 warnings.push({
                     type: 'multicast-port-occupied',
@@ -69,6 +76,7 @@ class StartupChecker {
             });
         }
 
+        console.log('StartupChecker: Checks completed. Warnings:', warnings.length, 'Errors:', errors.length);
         return {
             success: errors.length === 0,
             warnings,

@@ -15,7 +15,7 @@
     top: 0;
     left: 0;
     right: 0;
-    z-index: 1000;
+    z-index: 5000; /* Higher than content but lower than modals */
     -webkit-app-region: no-drag;
 }
 
@@ -812,7 +812,7 @@ body {
     border-top: 1px solid rgba(255, 255, 255, 0.2);
     padding: 1rem 2rem;
     flex-shrink: 0 !important; /* Prevent footer from shrinking */
-    z-index: 1000 !important; /* Higher z-index to ensure visibility */
+    z-index: 2000 !important; /* Higher than content but lower than title bar and modals */
     position: relative;
     display: flex !important;
     box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
@@ -1262,18 +1262,35 @@ body {
 }
 
 /* Modal Styles */
-.modal-overlay {
+.modal {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.6);
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1000;
+    z-index: 10000; /* Much higher than title bar */
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.modal.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
     backdrop-filter: blur(4px);
+    z-index: 1;
 }
 
 .modal-content {
@@ -1286,6 +1303,15 @@ body {
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    position: relative;
+    z-index: 2; /* Above the overlay */
+    margin: auto; /* Center horizontally */
+    transform: scale(0.9) translateY(-20px);
+    transition: transform 0.3s ease;
+}
+
+.modal.show .modal-content {
+    transform: scale(1) translateY(0);
 }
 
 .modal-header {
@@ -1468,6 +1494,7 @@ body {
 .startup-warning-modal {
     max-width: 500px;
     min-height: auto;
+    transform: translateY(-10%); /* Move up slightly from perfect center */
 }
 
 .startup-warning-modal .modal-header {

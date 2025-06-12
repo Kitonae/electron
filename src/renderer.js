@@ -108,6 +108,24 @@ class WatchoutServerFinderApp {
         settingsButton.addEventListener("click", () => this.showSettingsDialog());
       }
 
+      // Temporary test button for startup warnings
+      const testStartupWarningButton = document.getElementById("testStartupWarningButton");
+      if (testStartupWarningButton) {
+        testStartupWarningButton.addEventListener("click", async () => {
+          console.log('Test startup warning button clicked');
+          try {
+            if (this.api && this.api.testStartupWarning) {
+              const result = await this.api.testStartupWarning();
+              console.log('Test startup warning result:', result);
+            } else {
+              console.error('testStartupWarning method not available');
+            }
+          } catch (error) {
+            console.error('Error triggering test startup warning:', error);
+          }
+        });
+      }
+
       // Bind command events safely
       this.bindCommandEvents();
       
@@ -2205,9 +2223,225 @@ class WatchoutServerFinderApp {
 
     this.showAddServerDialog();
   }  initializeStartupWarnings() {
-    // Initialize any startup warning listeners here
-    // This method can be expanded later for specific warning handling
-    console.log("Startup warnings initialized");
+    try {
+      console.log("Renderer: Initializing startup warnings...");
+      // Set up startup warning listener if in Electron environment
+      if (this.api && this.api.onStartupWarning) {
+        console.log("Renderer: Setting up startup warning listener...");
+        this.api.onStartupWarning((notification) => {
+          console.log('Renderer: Received startup warning:', notification);
+          this.showStartupWarning(notification);
+        });
+        
+        console.log("Startup warning listeners initialized");
+      } else {
+        console.log("Startup warnings not available (probably in web mode)");
+      }
+    } catch (error) {
+      console.error('Error initializing startup warnings:', error);
+    }
+  }
+  showStartupWarning(notification) {
+    try {
+      const modal = document.getElementById('startupWarningModal');
+      const titleElement = document.getElementById('startupWarningTitle');
+      const iconElement = document.getElementById('startupWarningIcon');
+      const messageElement = document.getElementById('startupWarningMessage');
+      const actionsContainer = document.getElementById('startupWarningActions');
+
+      if (!modal || !titleElement || !iconElement || !messageElement || !actionsContainer) {
+        console.error('Startup warning modal elements not found');
+        return;
+      }
+
+      // Set modal content
+      titleElement.textContent = notification.title || 'Startup Warning';
+      iconElement.textContent = notification.icon || '⚠️';
+      messageElement.textContent = notification.message || 'An issue was detected during startup.';
+
+      // Clear existing actions
+      actionsContainer.innerHTML = '';
+
+      // Create action buttons
+      if (notification.actions && Array.isArray(notification.actions)) {
+        notification.actions.forEach(action => {
+          const button = document.createElement('button');
+          button.className = `warning-action-btn ${action.primary ? 'primary' : 'secondary'}`;
+          button.textContent = action.label;
+          button.onclick = () => this.handleStartupWarningAction(action.id, notification);
+          actionsContainer.appendChild(button);
+        });
+      } else {
+        // Default OK button
+        const okButton = document.createElement('button');
+        okButton.className = 'warning-action-btn primary';
+        okButton.textContent = 'OK';
+        okButton.onclick = () => this.hideStartupWarning();
+        actionsContainer.appendChild(okButton);
+      }
+
+      // Show the modal with animation
+      modal.style.display = 'flex';
+      // Force reflow before adding show class for animation
+      modal.offsetHeight;
+      modal.classList.add('show');
+
+      // Add event listener for overlay click to close
+      const overlay = modal.querySelector('.modal-overlay');
+      if (overlay) {
+        overlay.onclick = () => this.hideStartupWarning();
+      }
+
+      console.log('Startup warning modal displayed');
+    } catch (error) {
+      console.error('Error showing startup warning:', error);
+    }
+  }
+
+  async handleStartupWarningAction(actionId, notification) {
+    try {
+      console.log('Handling startup warning action:', actionId, notification.type);
+
+      switch (actionId) {
+        case 'refresh':
+          // Refresh the startup checks
+          this.hideStartupWarning();
+          await this.performStartupChecksManually();
+          break;
+          
+        case 'retry':
+          // Retry the operation (for port conflicts, etc.)
+          this.hideStartupWarning();
+          await this.performStartupChecksManually();
+          break;
+          
+        case 'continue':
+          // Continue anyway - just dismiss the warning
+          this.hideStartupWarning();
+          if (this.api && this.api.dismissStartupWarning) {
+            await this.api.dismissStartupWarning(notification.type);
+          }
+          break;
+          
+        case 'ok':
+        default:
+          // Default action - just dismiss
+          this.hideStartupWarning();
+          if (this.api && this.api.dismissStartupWarning) {
+            await this.api.dismissStartupWarning(notification.type);
+          }
+          break;
+      }
+    } catch (error) {
+      console.error('Error handling startup warning action:', error);
+      this.hideStartupWarning(); // Always hide on error
+    }
+  }
+
+  async performStartupChecksManually() {
+    try {
+      if (this.api && this.api.performStartupChecks) {
+        const result = await this.api.performStartupChecks();
+        if (result.success && result.result) {
+          // Check if there are still warnings
+          if (result.result.warnings && result.result.warnings.length > 0) {
+            // Show first warning again
+            const notification = this.createNotificationFromCheck(result.result);
+            if (notification) {
+              setTimeout(() => this.showStartupWarning(notification), 500);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error performing manual startup checks:', error);
+    }
+  }
+
+  createNotificationFromCheck(checkResult) {
+    // This mimics the backend logic for creating notifications
+    if (!checkResult.warnings || checkResult.warnings.length === 0) {
+      return null;
+    }
+
+    // Prioritize Watchout running warning
+    const watchoutWarning = checkResult.warnings.find(w => w.type === 'watchout-running');
+    if (watchoutWarning) {
+      return {
+        type: 'watchout-running',
+        title: watchoutWarning.title,
+        message: watchoutWarning.message,
+        icon: '⚠️',
+        actions: [
+          { id: 'refresh', label: 'Refresh Check', primary: true },
+          { id: 'continue', label: 'Continue Anyway', secondary: true }
+        ],
+        severity: 'warning'
+      };
+    }
+
+    // Handle port conflicts
+    const portWarning = checkResult.warnings.find(w => w.type === 'port-occupied');
+    if (portWarning) {
+      return {
+        type: 'port-occupied',
+        title: portWarning.title,
+        message: portWarning.message,
+        icon: '🔌',
+        actions: [
+          { id: 'retry', label: 'Retry', primary: true },
+          { id: 'continue', label: 'Continue', secondary: true }
+        ],
+        severity: 'warning'
+      };
+    }
+
+    // Handle multicast port warnings
+    const multicastWarning = checkResult.warnings.find(w => w.type === 'multicast-port-occupied');
+    if (multicastWarning) {
+      return {
+        type: 'multicast-port-occupied',
+        title: multicastWarning.title,
+        message: multicastWarning.message,
+        icon: '🔌',
+        actions: [
+          { id: 'ok', label: 'OK', primary: true }
+        ],
+        severity: 'info'
+      };
+    }
+
+    // Handle other warnings
+    if (checkResult.warnings.length > 0) {
+      const warning = checkResult.warnings[0];
+      return {
+        type: warning.type,
+        title: warning.title,
+        message: warning.message,
+        icon: '⚠️',
+        actions: [
+          { id: 'ok', label: 'OK', primary: true }
+        ],
+        severity: warning.severity || 'info'
+      };
+    }
+
+    return null;
+  }
+  hideStartupWarning() {
+    try {
+      const modal = document.getElementById('startupWarningModal');
+      if (modal) {
+        modal.classList.remove('show');
+        // Wait for animation to complete before hiding
+        setTimeout(() => {
+          modal.style.display = 'none';
+        }, 300);
+        console.log('Startup warning modal hidden');
+      }
+    } catch (error) {
+      console.error('Error hiding startup warning:', error);
+    }
   }
 
   async waitForDOMElements() {

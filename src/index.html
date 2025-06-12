@@ -43,8 +43,7 @@
                         <div class="sidebar-title-group">
                             <h3>Servers</h3>
                             <div class="server-count-sidebar" id="serverCountSidebar">0</div>
-                        </div>
-                        <div class="sidebar-buttons">
+                        </div>                        <div class="sidebar-buttons">
                             <button id="scanButton" class="scan-button-sidebar">
                                 <img src="../assets/refresh.svg" class="button-icon" alt="Refresh">
                             </button>
@@ -223,7 +222,8 @@
             </div>
         </footer>
     </div>    <!-- Custom Command Modal -->
-    <div class="modal-overlay" id="customCommandModal" style="display: none;">
+    <div id="customCommandModal" class="modal" style="display: none;">
+        <div class="modal-overlay"></div>
         <div class="modal-content">
             <div class="modal-header">
                 <h3>Custom Watchout Command</h3>
@@ -264,10 +264,9 @@
                 <button class="btn-secondary" id="cancelCustomCommand">Cancel</button>
                 <button class="btn-primary" id="executeCustomCommand">Execute</button>
             </div>
-        </div>    </div>
-
-    <!-- Settings Modal -->
-    <div class="modal-overlay" id="settingsModal" style="display: none;">
+        </div>    </div>    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal" style="display: none;">
+        <div class="modal-overlay"></div>
         <div class="modal-content">
             <div class="modal-header">
                 <h3>Settings</h3>
@@ -315,10 +314,9 @@
                 <button class="btn-primary" id="saveSettings">Save Settings</button>
             </div>
         </div>
-    </div>
-
-    <!-- Add Server Modal -->
-    <div class="modal-overlay" id="addServerModal" style="display: none;">
+    </div>    <!-- Add Server Modal -->
+    <div id="addServerModal" class="modal" style="display: none;">
+        <div class="modal-overlay"></div>
         <div class="modal-content">
             <div class="modal-header">
                 <h3>Add Server Manually</h3>
@@ -359,9 +357,7 @@
                 <button class="btn-primary" id="saveAddServer">Add Server</button>
             </div>
         </div>
-    </div>
-
-    <!-- Startup Warning Modal -->
+    </div>    <!-- Startup Warning Modal -->
     <div id="startupWarningModal" class="modal" style="display: none;">
         <div class="modal-overlay"></div>
         <div class="modal-content startup-warning-modal">

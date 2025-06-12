@@ -60,20 +60,28 @@ app.whenReady().then(async () => {
   
   createWindow();
   
-  // Perform startup checks
-  try {
-    const checkResult = await startupChecker.performStartupChecks(3080);
-    const notification = startupChecker.createStartupNotification(checkResult);
-    
-    if (notification) {
-      // Send startup notification to renderer when window is ready
-      mainWindow.webContents.once('did-finish-load', () => {
-        mainWindow.webContents.send('startup-warning', notification);
-      });
+  // Perform startup checks after window finishes loading
+  mainWindow.webContents.once('did-finish-load', async () => {
+    console.log('Main: Window loaded, performing startup checks...');
+    try {
+      const checkResult = await startupChecker.performStartupChecks(3080);
+      console.log('Main: Startup check result:', checkResult);
+      const notification = startupChecker.createStartupNotification(checkResult);
+      console.log('Main: Created notification:', notification);
+      
+      if (notification) {
+        console.log('Main: Sending startup warning to renderer...');
+        // Small delay to ensure renderer is ready
+        setTimeout(() => {
+          mainWindow.webContents.send('startup-warning', notification);
+        }, 500);
+      } else {
+        console.log('Main: No startup warnings to display');
+      }
+    } catch (error) {
+      console.warn('Startup checks failed:', error);
     }
-  } catch (error) {
-    console.warn('Startup checks failed:', error);
-  }
+  });
   
   // Start web server for browser access
   webServer = new WebServer();
@@ -506,6 +514,30 @@ ipcMain.handle('dismiss-startup-warning', async (event, warningType) => {
     return { success: true };
   } catch (error) {
     console.error('Error dismissing startup warning:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Test handler for startup warnings (remove after testing)
+ipcMain.handle('test-startup-warning', async () => {
+  try {
+    const testNotification = {
+      type: 'watchout-running',
+      title: 'TEST: Watchout Software Detected',
+      message: 'This is a test warning. The following Watchout processes are running: TestProcess1, TestProcess2. This may interfere with the WATCHOUT Assistant.',
+      icon: '⚠️',
+      actions: [
+        { id: 'refresh', label: 'Refresh Check', primary: true },
+        { id: 'continue', label: 'Continue Anyway', secondary: true }
+      ],
+      severity: 'warning'
+    };
+    
+    console.log('Sending test startup warning to renderer...');
+    mainWindow.webContents.send('startup-warning', testNotification);
+    return { success: true };
+  } catch (error) {
+    console.error('Error sending test startup warning:', error);
     return { success: false, error: error.message };
   }
 });
