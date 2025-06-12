@@ -6,11 +6,15 @@ class WatchoutServerFinderApp {
       this.scanInterval = null;
       this.backgroundScanEnabled = true;
       this.scanIntervalMs = 30000; // 30 seconds
-      this.selectedServerId = null; // Track selected server
-      this.selectedServerIp = null; // Track selected server IP for commands
+      this.selectedServerId = null; // Track selected server      this.selectedServerIp = null; // Track selected server IP for commands
       this.apiConnectionStatus = false; // Track API connection status
       this.serverCommandStates = new Map(); // Track command state per server
       this.availableTimelines = []; // Store available timelines for current server
+      this.connectionTestTimeout = 8000; // 8 second timeout for connection tests
+      this.connectionTestAbortController = null; // Track ongoing connection tests
+      this.lastServerSelectTime = null; // Track last server selection time for throttling
+      this.connectionTestTimeoutId = null; // Track scheduled connection tests
+      this.statusUpdateTimeout = null; // Track status update debouncing
 
       // Initialize API adapter for cross-platform compatibility with error handling
       try {
@@ -815,9 +819,29 @@ class WatchoutServerFinderApp {
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#039;");
   }
-
+  log(message) {
+    console.log(`[WatchoutApp] ${message}`);
+  }
   cleanup() {
     this.stopBackgroundScanning();
+    
+    // Cancel any ongoing connection tests
+    if (this.connectionTestAbortController) {
+      this.connectionTestAbortController.abort();
+      this.connectionTestAbortController = null;
+    }
+    
+    // Clear any scheduled connection test timeouts
+    if (this.connectionTestTimeoutId) {
+      clearTimeout(this.connectionTestTimeoutId);
+      this.connectionTestTimeoutId = null;
+    }
+    
+    // Clear any pending status updates
+    if (this.statusUpdateTimeout) {
+      clearTimeout(this.statusUpdateTimeout);
+      this.statusUpdateTimeout = null;
+    }
   }
 
   createServerItem(server) {
@@ -958,8 +982,14 @@ class WatchoutServerFinderApp {
     }
 
     this.updateServerCommandState(serverId, state);
-  }
-  selectServer(serverId) {
+  }  selectServer(serverId) {
+    // Prevent rapid-fire server selection
+    if (this.lastServerSelectTime && (Date.now() - this.lastServerSelectTime) < 500) {
+      console.log('Server selection throttled - please wait before selecting another server');
+      return;
+    }
+    this.lastServerSelectTime = Date.now();
+
     // Update selected server
     const previouslySelected = this.selectedServerId;
     this.selectedServerId = serverId;
@@ -992,11 +1022,18 @@ class WatchoutServerFinderApp {
     }
 
     // Re-render main content to show selected server
-    this.renderMainContent();
-
-    // Test API connection for the selected server
+    this.renderMainContent();    // Test API connection for the selected server with delay to prevent rapid requests
     if (this.selectedServerIp && selectedServer?.status === "online") {
-      this.testApiConnection();
+      // Cancel any pending connection test
+      if (this.connectionTestTimeoutId) {
+        clearTimeout(this.connectionTestTimeoutId);
+      }
+      
+      // Schedule connection test with delay
+      this.connectionTestTimeoutId = setTimeout(() => {
+        this.testApiConnection(selectedServer);
+        this.connectionTestTimeoutId = null;
+      }, 750); // 750ms delay to prevent rapid connection tests
     }
 
     console.log("Selected server:", serverId, "IP:", this.selectedServerIp);
@@ -1072,42 +1109,91 @@ class WatchoutServerFinderApp {
 
       responseContent.appendChild(responseItem);
     });
-  }
-  async testApiConnection() {
-    if (!this.selectedServerIp) return;
-
+  }  async testApiConnection(server) {
+    if (!server && !this.selectedServerIp) return false;
+    
+    const serverIp = server?.ip || this.selectedServerIp;
+    if (!serverIp) return false;
+    
     try {
-      const result = await this.api.watchoutTestConnection(
-        this.selectedServerIp
-      );
-      this.updateConnectionStatus(result.connected, result.message);
+      // Cancel any ongoing connection test
+      if (this.connectionTestAbortController) {
+        this.connectionTestAbortController.abort();
+      }
+      
+      // Create new abort controller for this test
+      this.connectionTestAbortController = new AbortController();
+      
+      // Create timeout promise
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Connection test timeout')), this.connectionTestTimeout);
+      });
+      
+      // Create API test promise
+      const apiTestPromise = this.api.watchoutTestConnection(serverIp);
+      
+      // Race between timeout and API test
+      const result = await Promise.race([apiTestPromise, timeoutPromise]);
+      
+      this.log(`API connection test for ${serverIp}: ${result.connected ? 'SUCCESS' : 'FAILED'}`);
+      
+      // Update connection status if this is for the currently selected server
+      if (serverIp === this.selectedServerIp) {
+        this.updateConnectionStatus(result.connected, result.message);
+      }
+      
+      return result.connected || false;
+      
     } catch (error) {
-      this.updateConnectionStatus(false, "Connection test failed");
+      if (error.name === 'AbortError') {
+        this.log(`Connection test aborted for ${serverIp}`);
+        return false;
+      }
+      this.log(`API connection test error for ${serverIp}: ${error.message}`);
+      
+      // Update connection status if this is for the currently selected server
+      if (serverIp === this.selectedServerIp) {
+        this.updateConnectionStatus(false, "Connection test failed");
+      }
+      
+      return false;
+    } finally {
+      this.connectionTestAbortController = null;
     }
-  }
-  updateConnectionStatus(connected, message) {
+  }  updateConnectionStatus(connected, message) {
     const connectionStatus = document.getElementById("connectionStatus");
     const statusIndicator = document.getElementById("apiStatusIndicator");
     const statusText = document.getElementById("apiStatusText");
 
     this.apiConnectionStatus = connected;
 
-    // Update server-specific state
+    // Update server-specific state with debouncing
     if (this.selectedServerId) {
-      this.updateServerCommandState(this.selectedServerId, {
-        connectionStatus: connected,
-        connectionMessage:
-          message || (connected ? "API Connected" : "API Not Available"),
-        lastConnectionTest: new Date().toISOString(),
-      });
+      // Cancel any pending status update
+      if (this.statusUpdateTimeout) {
+        clearTimeout(this.statusUpdateTimeout);
+      }
+      
+      // Schedule status update with slight delay to prevent rapid updates
+      this.statusUpdateTimeout = setTimeout(() => {
+        this.updateServerCommandState(this.selectedServerId, {
+          connectionStatus: connected,
+          connectionMessage: message || (connected ? "API Connected" : "API Not Available"),
+          lastConnectionTest: new Date().toISOString(),
+        });
+        this.statusUpdateTimeout = null;
+      }, 100);
     }
 
-    if (connected) {
-      connectionStatus.className = "connection-status connected";
-      statusText.textContent = "API Connected";
-    } else {
-      connectionStatus.className = "connection-status error";
-      statusText.textContent = message || "API Not Available";
+    // Update UI elements safely
+    if (connectionStatus) {
+      if (connected) {
+        connectionStatus.className = "connection-status connected";
+        if (statusText) statusText.textContent = "API Connected";
+      } else {
+        connectionStatus.className = "connection-status error";
+        if (statusText) statusText.textContent = message || "API Not Available";
+      }
     }
 
     // Enable/disable command buttons based on connection

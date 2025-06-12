@@ -69,3 +69,5 @@
 
 ✓ add animations to commands buttons to better visualise pressing
 
+- improve settings:
+    - 
