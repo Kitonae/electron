@@ -1131,6 +1131,7 @@ body {
     min-height: 200px;
     display: flex;
     flex-direction: column;
+    margin-top: 1.5rem; /* Add top margin to prevent touching component above */
 }
 
 .response-header {
@@ -1527,6 +1528,76 @@ body {
     display: block;
 }
 
+/* Toggle Switch Styles */
+.toggle-label {
+    display: flex !important;
+    align-items: center;
+    gap: 0.8rem;
+    cursor: pointer;
+    font-size: 0.95rem;
+    line-height: 1.4;
+    color: #333;
+    margin-bottom: 0.5rem;
+    position: relative;
+}
+
+.toggle-label input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+    height: 0;
+    width: 0;
+}
+
+.toggle-switch {
+    position: relative;
+    width: 50px !important;
+    height: 24px !important;
+    background-color: #ccc;
+    border-radius: 24px;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+    border: 2px solid transparent;
+    min-width: 50px;
+    max-width: 50px;
+    display: inline-block;
+}
+
+.toggle-switch:before {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 18px !important;
+    height: 18px !important;
+    border-radius: 50%;
+    background-color: white;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-label:hover .toggle-switch {
+    background-color: #b3b3b3;
+}
+
+.toggle-label input[type="checkbox"]:checked ~ .toggle-switch {
+    background-color: #667eea;
+}
+
+.toggle-label input[type="checkbox"]:checked ~ .toggle-switch:before {
+    transform: translateX(26px);
+}
+
+.toggle-label input[type="checkbox"]:focus ~ .toggle-switch {
+    outline: 2px solid rgba(102, 126, 234, 0.3);
+    outline-offset: 2px;
+}
+
+.toggle-label .toggle-text {
+    font-weight: 500;
+    user-select: none;
+}
+
 /* Status Indicator Text */
 .status-indicator-text {
     font-weight: 500;
@@ -1558,31 +1629,6 @@ body {
     background: #fff3cd;
     color: #856404;
     border-color: #ffeaa7;
-}
-
-/* Web Server Controls */
-.webserver-controls {
-    display: flex;
-    gap: 0.8rem;
-    margin-bottom: 0.5rem;
-}
-
-.webserver-btn {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.6rem 1rem;
-    border: none;
-    border-radius: 6px;
-    font-size: 0.85rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    flex: 1;
-}
-
-.webserver-btn .btn-icon {
-    font-size: 1rem;
 }
 
 .btn-secondary {
@@ -1676,6 +1722,16 @@ body {
     color: #555;
     margin-bottom: 0.4rem;
     font-size: 0.9rem;
+}
+
+/* Override for toggle labels in settings */
+.settings-section .form-group .toggle-label {
+    display: flex !important;
+    align-items: center;
+    gap: 0.8rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.95rem;
+    color: #333;
 }
 
 .settings-section .form-help {

@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
+<head>    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: file:; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
     <title>WATCHOUT Assistant</title>
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -263,14 +263,12 @@
                 <h3>Settings</h3>
                 <button class="modal-close" id="closeSettingsModal">×</button>
             </div>
-            <div class="modal-body">
-                <div class="settings-section">
+            <div class="modal-body">                <div class="settings-section">
                     <h4>Server Discovery</h4>
-                    <div class="form-group">
-                        <label class="checkbox-label">
+                    <div class="form-group">                        <label class="toggle-label">
                             <input type="checkbox" id="enableCacheFromDisk" checked>
-                            <span class="checkmark"></span>
-                            Load server cache from disk
+                            <span class="toggle-switch"></span>
+                            <span class="toggle-text">Load server cache from disk</span>
                         </label>
                         <small class="form-help">Save and load discovered servers between application sessions</small>
                     </div>
@@ -278,28 +276,15 @@
                   <div class="settings-section">
                     <h4>Web Server</h4>
                     <div class="form-group">
-                        <label class="checkbox-label">
+                        <label class="toggle-label">
                             <input type="checkbox" id="enableWebServer" checked>
-                            <span class="checkmark"></span>
-                            Enable web server (Port 3080)
+                            <span class="toggle-switch"></span>
+                            <span class="toggle-text">Enable web server (Port 3080)</span>
                         </label>
                         <small class="form-help">Allow browser access to WATCHOUT Assistant at http://localhost:3080</small>
                     </div>                    <div class="form-group" id="webServerStatusGroup">
                         <label style="display: inline-block;">Web Server Status:</label>
                         <span id="webServerStatus" class="status-indicator-text">Unknown</span>
-                    </div>
-                    <div class="form-group">
-                        <div class="webserver-controls">
-                            <button class="btn-secondary webserver-btn" id="stopWebServerBtn">
-                                <span class="btn-icon">🛑</span>
-                                Stop Web Server
-                            </button>
-                            <button class="btn-primary webserver-btn" id="restartWebServerBtn">
-                                <span class="btn-icon">🔄</span>
-                                Restart Web Server
-                            </button>
-                        </div>
-                        <small class="form-help">Manual web server controls - useful for troubleshooting connection issues</small>
                     </div>
                 </div>
                 

@@ -1803,29 +1803,12 @@ class WatchoutServerFinderApp {
     saveBtn.onclick = async () => {
       await this.saveSettings();
       closeModal();
-    };
-    // Update web server status when checkbox changes
+    };    // Update web server status when checkbox changes
     const enableWebServer = document.getElementById("enableWebServer");
     if (enableWebServer) {
       enableWebServer.onchange = () => {
         // Update status immediately to show expected state
         this.updateWebServerStatus();
-      };
-    }
-
-    // Web server control buttons
-    const stopWebServerBtn = document.getElementById("stopWebServerBtn");
-    const restartWebServerBtn = document.getElementById("restartWebServerBtn");
-
-    if (stopWebServerBtn) {
-      stopWebServerBtn.onclick = async () => {
-        await this.stopWebServer();
-      };
-    }
-
-    if (restartWebServerBtn) {
-      restartWebServerBtn.onclick = async () => {
-        await this.restartWebServer();
       };
     }
   }
@@ -1856,64 +1839,7 @@ class WatchoutServerFinderApp {
     } catch (error) {
       console.error("Error saving settings:", error);
     }
-  } // Web Server Control Methods
-  async stopWebServer() {
-    try {
-      const stopBtn = document.getElementById("stopWebServerBtn");
-      const restartBtn = document.getElementById("restartWebServerBtn");
-
-      // Disable buttons during operation
-      if (stopBtn) stopBtn.disabled = true;
-      if (restartBtn) restartBtn.disabled = true;
-
-      console.log("Stopping web server...");
-      await this.api.stopWebServer();
-
-      // Update status after stopping
-      setTimeout(() => {
-        this.updateWebServerStatus();
-        if (stopBtn) stopBtn.disabled = false;
-        if (restartBtn) restartBtn.disabled = false;
-      }, 1000);
-    } catch (error) {
-      console.error("Error stopping web server:", error);
-      // Re-enable buttons on error
-      const stopBtn = document.getElementById("stopWebServerBtn");
-      const restartBtn = document.getElementById("restartWebServerBtn");
-      if (stopBtn) stopBtn.disabled = false;
-      if (restartBtn) restartBtn.disabled = false;
-    }
-  }
-
-  async restartWebServer() {
-    try {
-      const stopBtn = document.getElementById("stopWebServerBtn");
-      const restartBtn = document.getElementById("restartWebServerBtn");
-
-      // Disable buttons during operation
-      if (stopBtn) stopBtn.disabled = true;
-      if (restartBtn) restartBtn.disabled = true;
-
-      console.log("Restarting web server...");
-      await this.api.restartWebServer();
-
-      // Update status after restarting
-      setTimeout(() => {
-        this.updateWebServerStatus();
-        if (stopBtn) stopBtn.disabled = false;
-        if (restartBtn) restartBtn.disabled = false;
-      }, 2000);
-    } catch (error) {
-      console.error("Error restarting web server:", error);
-      // Re-enable buttons on error
-      const stopBtn = document.getElementById("stopWebServerBtn");
-      const restartBtn = document.getElementById("restartWebServerBtn");
-      if (stopBtn) stopBtn.disabled = false;
-      if (restartBtn) restartBtn.disabled = false;
-    }
-  }
-
-  // Add Server Modal Methods
+  }  // Add Server Modal Methods
   showAddServerDialog() {
     const modal = document.getElementById("addServerModal");
     modal.style.display = "flex";
