@@ -1,11 +1,8 @@
 <!DOCTYPE html>
-<htm                            <button id="addServerButton" class="add-server-button-sidebar" title="Add server manually">
-                                +
-                            </button>ang="en">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' http://localhost:* http://192.168.*:* http://10.*:* ws://localhost:*; font-src 'self';">
     <title>WATCHOUT Assistant - Web</title>
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -20,8 +17,6 @@
                         <div class="sidebar-buttons">
                             <button id="scanButton" class="scan-button-sidebar">
                                 <img src="../assets/refresh.svg" class="button-icon" alt="Refresh">
-                            </button>                            <button id="addServerButton" class="add-server-button-sidebar" title="Add server manually">
-                                <img src="../assets/plus.svg" class="button-icon" alt="Add Server">
                             </button>
                             <button id="clearOfflineButton" class="clear-offline-button-sidebar" title="Clear offline cached servers">
                                 🗑️
@@ -29,7 +24,7 @@
                         </div>
                     </div>
                     <div class="sidebar-scan-status">
-                        <div class="scan-status" id="scanStatus">Discovery running every 30 seconds...</div>
+                        <div class="scan-status" id="scanStatus">Background scanning every 30 seconds...</div>
                     </div>
                     <div class="sidebar-content">
                         <div class="server-list" id="serverList">
@@ -200,48 +195,6 @@
                 <button class="btn-primary" id="executeCustomCommand">Execute</button>
             </div>
         </div>    </div>
-
-    <!-- Add Server Modal -->
-    <div class="modal-overlay" id="addServerModal" style="display: none;">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Add Server Manually</h3>
-                <button class="modal-close" id="closeAddServerModal">×</button>
-            </div>
-            <div class="modal-body">
-                <form id="addServerForm">
-                    <div class="form-group">
-                        <label for="serverIp">Server IP Address:</label>
-                        <input type="text" id="serverIp" name="serverIp" placeholder="192.168.1.100" required>
-                        <span class="form-help">Enter the IP address of the Watchout server</span>
-                    </div>
-                    <div class="form-group">
-                        <label for="serverName">Server Name (optional):</label>
-                        <input type="text" id="serverName" name="serverName" placeholder="Production Server">
-                        <span class="form-help">A friendly name for this server</span>
-                    </div>
-                    <div class="form-group">
-                        <label for="serverPorts">Ports (optional):</label>
-                        <input type="text" id="serverPorts" name="serverPorts" placeholder="3040,3041,3042" value="3040,3041,3042">
-                        <span class="form-help">Comma-separated list of ports (defaults to standard Watchout ports)</span>
-                    </div>
-                    <div class="form-group">
-                        <label for="serverType">Server Type:</label>
-                        <select id="serverType" name="serverType">
-                            <option value="Manual Entry">Manual Entry</option>
-                            <option value="Production Server (Manual)">Production Server</option>
-                            <option value="Display Server (Manual)">Display Server</option>
-                            <option value="Director Server (Manual)">Director Server</option>
-                        </select>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button class="btn-secondary" id="cancelAddServer">Cancel</button>
-                <button class="btn-primary" id="saveAddServer">Add Server</button>
-            </div>
-        </div>
-    </div>
 
     <script src="api-adapter.js"></script>
     <script src="renderer-web.js"></script>

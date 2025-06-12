@@ -37,13 +37,13 @@
 
 ✓ add a upload show button that takes .watch file or .json file and uses a correct way to upload it.
 
-✓ command response panel does not have any padding from the top and touches the component above it
+- command response panel does not have any padding from the top and touches the component above it
 
-✓ deal with electron content security policy warning
+- deal with electron content security policy warning
 
-✓ footer is getting clipped on the bottom if panels have any content, but is rendered correctly if they dont
+- footer is getting clipped on the bottom if panels have any content, but is rendered correctly if they dont
 
-✓ change checkboxes to toggle buttons
+- change checkboxes to toggle buttons
 
 ✓ checkboxes in settings dont have the correct width
 

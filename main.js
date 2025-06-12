@@ -246,12 +246,48 @@ ipcMain.handle('watchout-upload-show', async (event, serverIp, showName) => {
     
     const filePath = result.filePaths[0];
     const fileName = path.basename(filePath);
+    const fileExt = path.extname(filePath).toLowerCase();
     
-    // Use filename without extension as default show name
-    const finalShowName = showName || path.parse(fileName).name;
+    // Read the file
+    const fileData = await fs.readFile(filePath);
+    
+    // For .watch files, send as binary data
+    // For .json files, verify it's valid JSON and send as text
+    let processedData;
+    let finalShowName = showName;
+    
+    if (fileExt === '.json') {
+      try {
+        // Verify JSON is valid
+        const jsonContent = fileData.toString('utf8');
+        JSON.parse(jsonContent); // This will throw if invalid
+        processedData = jsonContent;
+        
+        // If no show name provided, use filename without extension
+        if (!finalShowName) {
+          finalShowName = path.parse(fileName).name;
+        }
+      } catch (parseError) {
+        return { success: false, error: `Invalid JSON file: ${parseError.message}` };
+      }
+    } else if (fileExt === '.watch') {
+      processedData = fileData;
+      
+      // If no show name provided, use filename without extension
+      if (!finalShowName) {
+        finalShowName = path.parse(fileName).name;
+      }
+    } else {
+      // For other file types, try to treat as binary data
+      processedData = fileData;
+      
+      if (!finalShowName) {
+        finalShowName = path.parse(fileName).name;
+      }
+    }
     
     // Upload the file to the server
-    const uploadResult = await watchoutCommands.uploadShowFromFile(serverIp, filePath, finalShowName);
+    const uploadResult = await watchoutCommands.loadShowFromFile(serverIp, finalShowName, processedData);
     
     if (uploadResult.success) {
       return {

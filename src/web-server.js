@@ -1,7 +1,7 @@
 const express = require('express');
 const path = require('path');
 const multer = require('multer');
-const { findWatchoutServers, clearOfflineServers, addManualServer, updateManualServer, removeManualServer } = require('./network-scanner');
+const { findWatchoutServers, clearOfflineServers } = require('./network-scanner');
 const WatchoutCommands = require('./watchout-commands');
 
 class WebServer {  constructor() {
@@ -30,23 +30,11 @@ class WebServer {  constructor() {
     this.setupMiddleware();
     this.setupRoutes();
   }
+
   setupMiddleware() {
     // Serve static files from src directory
     this.app.use(express.static(path.join(__dirname)));
     this.app.use(express.json());
-    
-    // Security headers including CSP
-    this.app.use((req, res, next) => {
-      // Content Security Policy
-      res.header('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' http://localhost:* http://192.168.*:* http://10.*:* ws://localhost:*; font-src 'self';");
-      
-      // Other security headers
-      res.header('X-Content-Type-Options', 'nosniff');
-      res.header('X-Frame-Options', 'DENY');
-      res.header('X-XSS-Protection', '1; mode=block');
-      
-      next();
-    });
     
     // CORS middleware for cross-origin requests
     this.app.use((req, res, next) => {
@@ -90,37 +78,6 @@ class WebServer {  constructor() {
         res.json(result);
       } catch (error) {
         console.error('Error clearing offline servers:', error);
-        res.status(500).json({ success: false, error: error.message });
-      }
-    });    // Add manual server
-    this.app.post('/api/manual-servers', async (req, res) => {
-      try {
-        const result = await addManualServer(req.body);
-        res.json(result);
-      } catch (error) {
-        console.error('Error adding manual server:', error);
-        res.status(500).json({ success: false, error: error.message });
-      }
-    });
-
-    // Update manual server
-    this.app.put('/api/manual-servers/:serverId', async (req, res) => {
-      try {
-        const result = await updateManualServer(req.params.serverId, req.body);
-        res.json(result);
-      } catch (error) {
-        console.error('Error updating manual server:', error);
-        res.status(500).json({ success: false, error: error.message });
-      }
-    });
-
-    // Remove manual server
-    this.app.delete('/api/manual-servers/:serverId', async (req, res) => {
-      try {
-        const result = await removeManualServer(req.params.serverId);
-        res.json(result);
-      } catch (error) {
-        console.error('Error removing manual server:', error);
         res.status(500).json({ success: false, error: error.message });
       }
     });

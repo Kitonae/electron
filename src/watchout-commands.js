@@ -63,17 +63,13 @@ class WatchoutCommands {
                         });
                     }
                 });
-            });
-
-            req.on('error', (error) => {
+            });            req.on('error', (error) => {
                 reject({
                     success: false,
                     error: this.formatConnectionError(error, serverIp),
                     code: error.code
                 });
-            });
-
-            req.on('timeout', () => {
+            });            req.on('timeout', () => {
                 req.destroy();
                 reject({
                     success: false,
@@ -104,6 +100,7 @@ class WatchoutCommands {
         try {
             return await this.sendRequest(serverIp, '/v0/show');
         } catch (error) {
+         
             return error;
         }
     }
@@ -180,25 +177,10 @@ class WatchoutCommands {
     }
 
     // ==================== SHOW MANAGEMENT ====================
-    
-    async loadShowFromFile(serverIp, showName, fileData) {
-        try {
-            const endpoint = showName ? 
-                `/v0/showfile?showName=${encodeURIComponent(showName)}` : 
-                '/v0/showfile';
-            
-            return await this.sendRequest(serverIp, endpoint, 'POST', fileData);
-        } catch (error) {
-            return error;
-        }
-    }
 
-    async uploadShowFromFile(serverIp, filePath, showName = null) {
+    async loadShowFromFile(filePath, showName = null) {
         try {
-            console.log('Loading show from file:', filePath);
             const fileExtension = path.extname(filePath).toLowerCase();
-            console.log('Detected file extension:', fileExtension);
-            
             const baseShowName = showName || path.basename(filePath, fileExtension);
             
             if (fileExtension === '.json') {
@@ -206,29 +188,25 @@ class WatchoutCommands {
                 const fileContent = fs.readFileSync(filePath, 'utf8');
                 try {
                     const jsonData = JSON.parse(fileContent);
-                    return await this.uploadJsonShow(serverIp, jsonData, baseShowName);
+                    return await this.uploadJsonShow(jsonData, baseShowName);
                 } catch (jsonError) {
                     throw new Error(`Invalid JSON file: ${jsonError.message}`);
                 }
             } else if (fileExtension === '.watch') {
-                // .watch files: use /v0/showfile endpoint
+                // .watch files: use /v0/showfile endpoint with HTTP
                 const fileData = fs.readFileSync(filePath);
-                return await this.uploadWatchShow(serverIp, fileData, baseShowName);
+                return await this.uploadWatchShow(fileData, baseShowName);
             } else {
-                console.error('Unsupported file extension:', fileExtension);
-                console.error('Supported extensions: .json, .watch');
-                throw new Error(`Unsupported file type "${fileExtension}". Only .watch and .json files are supported.`);
+                throw new Error('Unsupported file type. Only .watch and .json files are supported.');
             }
         } catch (error) {
-            console.error('Error in uploadShowFromFile:', error);
             throw new Error(`Failed to load show from file: ${error.message}`);
         }
     }
 
-    async uploadJsonShow(serverIp, jsonData, showName) {
+    async uploadJsonShow(jsonData, showName) {
         try {
-            console.log(`Uploading JSON show "${showName}" to ${serverIp}`);
-            const response = await fetch(`http://${serverIp}:3040/v0/show`, {
+            const response = await fetch(`http://${this.serverIp}:3040/v0/show`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -245,22 +223,19 @@ class WatchoutCommands {
             }
             
             const result = await response.text();
-            console.log('JSON upload successful:', result);
             return { 
                 success: true, 
                 message: `JSON show "${showName}" uploaded successfully`, 
                 data: result 
             };
         } catch (error) {
-            console.error('JSON upload error:', error);
             throw new Error(`Failed to upload JSON show: ${error.message}`);
         }
     }
 
-    async uploadWatchShow(serverIp, fileData, showName) {
+    async uploadWatchShow(fileData, showName) {
         try {
-            console.log(`Uploading .watch show "${showName}" to ${serverIp}`);
-            const response = await fetch(`http://${serverIp}:3040/v0/showfile`, {
+            const response = await fetch(`http://${this.serverIp}:3040/v0/showfile`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/octet-stream'
@@ -274,14 +249,12 @@ class WatchoutCommands {
             }
             
             const result = await response.text();
-            console.log('.watch upload successful:', result);
             return {
                 success: true,
                 message: `Watch show "${showName}" uploaded successfully`,
                 data: result
             };
         } catch (error) {
-            console.error('.watch upload error:', error);
             throw new Error(`Failed to upload .watch show: ${error.message}`);
         }
     }
