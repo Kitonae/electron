@@ -69,3 +69,17 @@
     ✓ replace checkboxes with toggle buttons
     ✓ ensure the layout is correct (button on the left and label to the right)
     ✓ remove the buttons for web server
+
+✓ fix upload show functionality - parameter passing issue resolved:
+    ✅ updated loadShowFromFile() method signature to receive serverIp parameter
+    ✅ fixed uploadJsonShow() and uploadWatchShow() methods to accept serverIp parameter
+    ✅ corrected API endpoints: /v0/show for JSON, /v0/showfile for .watch files
+    ✅ fixed method signatures in both Electron and web versions
+    ✅ resolved JSON structure compatibility - now uses exact format from GET /v0/show
+    ✅ confirmed working with successful POST upload returning HTTP 200
+    ✅ added showName parameter to API endpoints for both JSON and binary uploads
+    ✅ implemented showName parameter in both Electron and web versions
+    ✅ tested and confirmed working with new server IP (192.168.0.227)
+
+    
+

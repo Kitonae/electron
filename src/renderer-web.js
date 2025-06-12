@@ -180,9 +180,7 @@ class WatchoutServerFinderWebApp {
             const showName = prompt('Enter show name (or leave empty to use filename):') || 
                             fileName.substring(0, fileName.lastIndexOf('.'));
 
-            setCommandButtonLoading('uploadShow', true);
-
-            if (fileExtension === '.json') {
+            setCommandButtonLoading('uploadShow', true);            if (fileExtension === '.json') {
                 // Handle JSON files with /v0/show endpoint
                 const fileContent = await file.text();
                 let jsonData;
@@ -190,17 +188,12 @@ class WatchoutServerFinderWebApp {
                     jsonData = JSON.parse(fileContent);
                 } catch (error) {
                     throw new Error(`Invalid JSON file: ${error.message}`);
-                }
-
-                const response = await fetch(`http://${serverIp}:3040/v0/show`, {
+                }                const response = await fetch(`http://${serverIp}:3040/v0/show?showName=${encodeURIComponent(showName)}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({
-                        name: showName,
-                        data: jsonData
-                    })
+                    body: JSON.stringify(jsonData)
                 });
 
                 if (!response.ok) {
@@ -212,9 +205,7 @@ class WatchoutServerFinderWebApp {
                 updateCommandResponse(`JSON show "${showName}" uploaded successfully`);
             } else {
                 // Handle .watch files with /v0/showfile endpoint
-                const fileData = await file.arrayBuffer();
-
-                const response = await fetch(`http://${serverIp}:3040/v0/showfile`, {
+                const fileData = await file.arrayBuffer();                const response = await fetch(`http://${serverIp}:3040/v0/showfile?showName=${encodeURIComponent(showName)}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/octet-stream'

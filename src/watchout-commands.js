@@ -76,12 +76,78 @@ class WatchoutCommands {
                     error: `Connection timed out`,
                     code: 'TIMEOUT'
                 });
-            });
-
-            if (data && method !== 'GET') {
+            });            if (data && method !== 'GET') {
                 req.write(data);
             }
             
+            req.end();
+        });
+    }
+
+    // Specialized method for binary file uploads (like .watch files)
+    async sendBinaryRequest(serverIp, endpoint, data, port = null) {
+        const targetPort = port || this.defaultPort;
+        const url = `http://${serverIp}:${targetPort}${endpoint}`;
+        
+        return new Promise((resolve, reject) => {
+            const options = {
+                method: 'POST',
+                timeout: this.timeout,
+                headers: {
+                    'Content-Type': 'application/octet-stream',
+                    'Content-Length': Buffer.byteLength(data)
+                }
+            };
+
+            const req = http.request(url, options, (res) => {
+                let responseData = '';
+                
+                res.on('data', (chunk) => {
+                    responseData += chunk;
+                });
+                
+                res.on('end', () => {
+                    try {
+                        let parsedData = responseData;
+                        if (res.headers['content-type']?.includes('application/json')) {
+                            parsedData = JSON.parse(responseData);
+                        }
+                        
+                        resolve({
+                            success: true,
+                            statusCode: res.statusCode,
+                            data: parsedData,
+                            headers: res.headers
+                        });
+                    } catch (error) {
+                        resolve({
+                            success: true,
+                            statusCode: res.statusCode,
+                            data: responseData,
+                            headers: res.headers
+                        });
+                    }
+                });
+            });
+
+            req.on('error', (error) => {
+                reject({
+                    success: false,
+                    error: this.formatConnectionError(error, serverIp),
+                    code: error.code
+                });
+            });
+
+            req.on('timeout', () => {
+                req.destroy();
+                reject({
+                    success: false,
+                    error: `Connection timed out`,
+                    code: 'TIMEOUT'
+                });
+            });
+
+            req.write(data);
             req.end();
         });
     }
@@ -174,88 +240,118 @@ class WatchoutCommands {
         } catch (error) {
             return error;
         }
-    }
-
-    // ==================== SHOW MANAGEMENT ====================
-
-    async loadShowFromFile(filePath, showName = null) {
+    }    // ==================== SHOW MANAGEMENT ====================
+    
+    async loadShowFromFile(serverIp, showName, fileData) {
         try {
-            const fileExtension = path.extname(filePath).toLowerCase();
-            const baseShowName = showName || path.basename(filePath, fileExtension);
+            console.log(`Loading show "${showName}" to server ${serverIp}`);
+            console.log('File data type:', typeof fileData);
             
-            if (fileExtension === '.json') {
-                // JSON files: use /v0/show endpoint
-                const fileContent = fs.readFileSync(filePath, 'utf8');
+            // If fileData is a string, it's JSON data
+            if (typeof fileData === 'string') {
                 try {
-                    const jsonData = JSON.parse(fileContent);
-                    return await this.uploadJsonShow(jsonData, baseShowName);
+                    const jsonData = JSON.parse(fileData);
+                    return await this.uploadJsonShow(serverIp, jsonData, showName);
                 } catch (jsonError) {
-                    throw new Error(`Invalid JSON file: ${jsonError.message}`);
+                    throw new Error(`Invalid JSON data: ${jsonError.message}`);
                 }
-            } else if (fileExtension === '.watch') {
-                // .watch files: use /v0/showfile endpoint with HTTP
-                const fileData = fs.readFileSync(filePath);
-                return await this.uploadWatchShow(fileData, baseShowName);
             } else {
-                throw new Error('Unsupported file type. Only .watch and .json files are supported.');
+                // If fileData is binary, it's a .watch file
+                return await this.uploadWatchShow(serverIp, fileData, showName);
             }
         } catch (error) {
+            console.error('loadShowFromFile error:', error);
             throw new Error(`Failed to load show from file: ${error.message}`);
         }
-    }
-
-    async uploadJsonShow(jsonData, showName) {
+    }    async uploadJsonShow(serverIp, jsonData, showName) {
         try {
-            const response = await fetch(`http://${this.serverIp}:3040/v0/show`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    name: showName,
-                    data: jsonData
-                })
-            });
+            console.log(`Uploading JSON show "${showName}" to server ${serverIp}`);
             
-            if (!response.ok) {
-                const errorText = await response.text().catch(() => response.statusText);
-                throw new Error(`HTTP ${response.status}: ${errorText}`);
+            // Ensure the JSON data has the expected Watchout structure
+            let showData;
+            if (jsonData.show && jsonData.revision && jsonData.showName) {
+                // Already in correct format
+                showData = jsonData;
+            } else if (jsonData.show) {
+                // Has show data but missing other fields
+                showData = {
+                    show: jsonData.show,
+                    revision: jsonData.revision || {
+                        showId: "00000000-0000-0000-0000-000000000000",
+                        revision: 1,
+                        temporaryEdit: 0
+                    },
+                    showName: showName || "uploaded_show.watch",
+                    mediaPresets: jsonData.mediaPresets || {
+                        active: [],
+                        presets: {}
+                    }
+                };
+            } else {
+                // Assume the entire jsonData is the show content
+                showData = {
+                    show: jsonData,
+                    revision: {
+                        showId: "00000000-0000-0000-0000-000000000000",
+                        revision: 1,
+                        temporaryEdit: 0
+                    },
+                    showName: showName || "uploaded_show.watch",
+                    mediaPresets: {
+                        active: [],
+                        presets: {}
+                    }
+                };
             }
+              console.log('Show data structure prepared for upload');
+            console.log('Show name:', showData.showName);
+            console.log('Has show data:', !!showData.show);
+            console.log('Has revision:', !!showData.revision);
             
-            const result = await response.text();
+            // Add showName as query parameter to the API endpoint
+            const endpoint = `/v0/show?showName=${encodeURIComponent(showName)}`;
+            console.log('Upload endpoint:', endpoint);
+            
+            const result = await this.sendRequest(serverIp, endpoint, 'POST', showData);
+            
+            console.log('Upload result:', result);
+            
+            // The sendRequest method always resolves with success: true if the request succeeds
             return { 
                 success: true, 
                 message: `JSON show "${showName}" uploaded successfully`, 
-                data: result 
+                data: result.data 
             };
         } catch (error) {
-            throw new Error(`Failed to upload JSON show: ${error.message}`);
-        }
-    }
-
-    async uploadWatchShow(fileData, showName) {
-        try {
-            const response = await fetch(`http://${this.serverIp}:3040/v0/showfile`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/octet-stream'
-                },
-                body: fileData
-            });
-            
-            if (!response.ok) {
-                const errorText = await response.text().catch(() => response.statusText);
-                throw new Error(`HTTP ${response.status}: ${errorText}`);
+            console.error('Upload JSON show error:', error);
+            // If sendRequest rejects, it's already formatted
+            if (error && typeof error === 'object' && error.error) {
+                throw new Error(`Failed to upload JSON show: ${error.error}`);
+            } else {
+                throw new Error(`Failed to upload JSON show: ${error.message || error}`);
             }
+        }
+    }    async uploadWatchShow(serverIp, fileData, showName) {
+        try {
+            // Add showName as query parameter to the API endpoint
+            const endpoint = `/v0/showfile?showName=${encodeURIComponent(showName)}`;
+            console.log('Binary upload endpoint:', endpoint);
             
-            const result = await response.text();
+            const result = await this.sendBinaryRequest(serverIp, endpoint, fileData);
+            
+            // The sendBinaryRequest method always resolves with success: true if the request succeeds
             return {
                 success: true,
                 message: `Watch show "${showName}" uploaded successfully`,
-                data: result
+                data: result.data
             };
         } catch (error) {
-            throw new Error(`Failed to upload .watch show: ${error.message}`);
+            // If sendBinaryRequest rejects, it's already formatted
+            if (error && typeof error === 'object' && error.error) {
+                throw new Error(`Failed to upload .watch show: ${error.error}`);
+            } else {
+                throw new Error(`Failed to upload .watch show: ${error.message || error}`);
+            }
         }
     }
 
