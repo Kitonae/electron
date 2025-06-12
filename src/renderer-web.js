@@ -426,10 +426,22 @@ class WatchoutServerFinderWebApp {
                     result = await this.watchoutStopTimeline(this.selectedServerIp, stopTimelineId);
                     if (result.success) {
                         result.timelineContext = `Timeline ID: ${stopTimelineId}`;
-                    }
-                    break;
-                case 'status':
+                    }                    break;                case 'status':
                     result = await this.watchoutGetStatus(this.selectedServerIp);
+                    if (result.success && result.data) {
+                        result.isStatusResponse = true;
+                        // Also get timelines for name cross-reference
+                        try {
+                            const timelinesResult = await this.watchoutGetTimelines(this.selectedServerIp);
+                            if (timelinesResult.success && timelinesResult.data) {
+                                result.timelinesReference = timelinesResult.data;
+                            }
+                        } catch (error) {
+                            console.warn('Could not get timelines for status cross-reference:', error);
+                        }
+                        // Update the show information panel with status visualization
+                        this.updateServerDetailsWithStatus(result);
+                    }
                     break;
                 case 'timelines':
                     result = await this.watchoutGetTimelines(this.selectedServerIp);
@@ -597,10 +609,12 @@ class WatchoutServerFinderWebApp {
     selectServer(serverId) {
         // Update selected server
         this.selectedServerId = serverId;
-        
-        // Find the selected server to get its IP
+          // Find the selected server to get its IP
         const selectedServer = this.servers.find(server => this.getServerId(server) === serverId);
         this.selectedServerIp = selectedServer ? selectedServer.ip : null;
+        
+        // Hide status information area when switching servers
+        this.hideStatusInformation();
         
         // Update sidebar selection visual state
         const serverItems = document.querySelectorAll('.server-item');
@@ -632,12 +646,61 @@ class WatchoutServerFinderWebApp {
         const selector = document.getElementById('timelineSelector');
         const selectedValue = selector?.value;
         return selectedValue ? parseInt(selectedValue) : 0;
+    }    addCommandResponse(type, command, result) {
+        // Get or create response content area
+        const responseContent = document.getElementById('commandResponse') || document.getElementById('responseContent');
+        if (!responseContent) return;
+
+        // Create response item
+        const responseItem = document.createElement('div');
+        responseItem.className = `response-item ${type}`;
+        
+        const timestamp = new Date().toLocaleTimeString();
+        const commandName = this.getCommandDisplayName(command);
+
+        let resultText;
+        if (typeof result === "object") {
+            resultText = JSON.stringify(result, null, 2);
+        } else {
+            resultText = result.toString();
+        }
+
+        responseItem.innerHTML = `
+            <div class="response-timestamp">${timestamp}</div>
+            <div class="response-command">${commandName}</div>
+            <div class="response-data">${this.escapeHtml(resultText)}</div>
+        `;
+
+        // Clear "no response" message if it exists
+        const noResponse = responseContent.querySelector('.no-response');
+        if (noResponse) {
+            noResponse.remove();
+        }
+
+        // Add new response at the top
+        responseContent.insertBefore(responseItem, responseContent.firstChild);
+
+        // Limit to last 10 responses
+        const allResponses = responseContent.querySelectorAll('.response-item');
+        if (allResponses.length > 10) {
+            allResponses[allResponses.length - 1].remove();
+        }
     }
 
-    addCommandResponse(type, command, result) {
-        // TODO: Copy implementation from renderer.js
-        console.log('addCommandResponse:', type, command, result);
-    }    setCommandButtonLoading(commandType, loading) {
+    getCommandDisplayName(command) {
+        const commandNames = {
+            play: "▶️ Play Timeline",
+            pause: "⏸️ Pause Timeline", 
+            stop: "⏹️ Stop Timeline",
+            status: "📊 Get Status",
+            timelines: "📑 Get Timelines",
+            show: "💾 Save Show",
+            uploadShow: "📤 Upload Show",
+            testConnection: "🔗 Test Connection",
+            custom: "⚙️ Custom Command",
+        };
+        return commandNames[command] || command;
+    }setCommandButtonLoading(commandType, loading) {
         const buttonMap = {
             'play': 'playBtn',
             'pause': 'pauseBtn',
@@ -687,11 +750,14 @@ class WatchoutServerFinderWebApp {
     showCustomCommandDialog() {
         // TODO: Copy implementation from renderer.js
         console.log('showCustomCommandDialog');
-    }
-
-    clearCommandResponse() {
-        // TODO: Copy implementation from renderer.js
-        console.log('clearCommandResponse');
+    }    clearCommandResponse() {
+        const responseContent = document.getElementById('commandResponse') || document.getElementById('responseContent');
+        if (responseContent) {
+            responseContent.innerHTML = '<div class="no-response">No commands executed yet</div>';
+        }
+        
+        // Hide status information area when clearing responses
+        this.hideStatusInformation();
     }
 
     // Add Server Modal Methods
@@ -959,9 +1025,7 @@ class WatchoutServerFinderWebApp {
             const result = await this.apiCall(`/manual-servers/${serverId}`, {
                 method: 'PUT',
                 body: JSON.stringify(updatedServerData)
-            });
-            
-            if (result.success) {
+            });            if (result.success) {
                 // Update local servers array
                 const serverIndex = this.servers.findIndex(s => this.getServerId(s) === serverId);
                 if (serverIndex !== -1) {
@@ -1027,12 +1091,12 @@ class WatchoutServerFinderWebApp {
                 this.updateUI();
                 
                 this.updateScanStatus(`Removed manual server: ${serverName}`);
-                console.log('Manual server removed successfully:', serverName);
-            } else {
+                console.log('Manual server removed successfully:', serverName);            } else {
                 console.error('Failed to remove manual server:', result.error);
                 alert('Failed to remove server: ' + result.error);
             }
-        } catch (error) {            console.error('Error removing manual server:', error);
+        } catch (error) {
+            console.error('Error removing manual server:', error);
             alert('Failed to remove server. Please try again.');
         }
     }
@@ -1048,7 +1112,351 @@ class WatchoutServerFinderWebApp {
         setTimeout(() => {
             button.classList.remove('ripple-effect');
         }, 600);
+    }    renderStatusVisualization(statusData) {
+        if (!statusData || !statusData.data) return null;
+
+        const data = statusData.data;
+        const timelinesReference = statusData.timelinesReference;
+        
+        // Create status visualization container
+        const statusContainer = document.createElement("div");
+        statusContainer.className = "status-visualization";
+
+        // Title
+        const title = document.createElement("h4");
+        title.className = "status-title";
+        title.textContent = "Server Status";
+        statusContainer.appendChild(title);
+
+        // Create sections for different status information
+        const sectionsContainer = document.createElement("div");
+        sectionsContainer.className = "status-sections";
+
+        // Timeline Status Section
+        const timelineSection = this.createTimelineStatusSection(data, timelinesReference);
+        if (timelineSection) {
+            sectionsContainer.appendChild(timelineSection);
+        }
+
+        // Renderer Status Section
+        const rendererSection = this.createRendererStatusSection(data);
+        if (rendererSection) {
+            sectionsContainer.appendChild(rendererSection);
+        }
+
+        // General Status Section
+        const generalSection = this.createGeneralStatusSection(data);
+        if (generalSection) {
+            sectionsContainer.appendChild(generalSection);
+        }
+
+        statusContainer.appendChild(sectionsContainer);
+
+        // Add raw data toggle
+        const rawDataToggle = this.createRawDataToggle(statusData);
+        statusContainer.appendChild(rawDataToggle);
+
+        return statusContainer;
+    }    createTimelineStatusSection(data, timelinesReference) {
+        const section = document.createElement("div");
+        section.className = "status-section timeline-status-section";
+
+        const header = document.createElement("h5");
+        header.className = "status-section-header";
+        header.innerHTML = "🎬 Timeline Status";
+        section.appendChild(header);
+
+        const content = document.createElement("div");
+        content.className = "status-section-content";
+
+        // Handle timeline data according to the Watchout structure:
+        // - Missing from array = stopped
+        // - Present with running: false = paused  
+        // - Present with running: true = playing
+        
+        let timelineStatuses = [];
+        let allTimelineIds = new Set();
+        
+        // Get timeline names from reference if available
+        const timelineNames = new Map();
+        if (timelinesReference && Array.isArray(timelinesReference)) {
+            timelinesReference.forEach(timeline => {
+                if (timeline.id !== undefined) {
+                    timelineNames.set(String(timeline.id), timeline.name || `Timeline ${timeline.id}`);
+                    allTimelineIds.add(String(timeline.id));
+                }
+            });
+        }
+
+        if (data.timelines && Array.isArray(data.timelines)) {
+            // Process active timelines from status response
+            data.timelines.forEach(timeline => {
+                const id = String(timeline.id);
+                const name = timelineNames.get(id) || `Timeline ${id}`;
+                allTimelineIds.add(id);
+                
+                let state, displayState;
+                if (timeline.running === true) {
+                    state = 'playing';
+                    displayState = '▶ Playing';
+                } else {
+                    state = 'paused';
+                    displayState = '⏸ Paused';
+                }
+
+                let positionText = "";
+                if (timeline.timelineTime !== undefined) {
+                    const seconds = Math.floor(timeline.timelineTime / 1000);
+                    const minutes = Math.floor(seconds / 60);
+                    const remainingSeconds = seconds % 60;
+                    positionText = ` - ${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+                }
+
+                timelineStatuses.push({
+                    id,
+                    name,
+                    state,
+                    displayState: displayState + positionText,
+                    running: timeline.running
+                });
+            });
+
+            // Add stopped timelines (those not in the status response)
+            allTimelineIds.forEach(id => {
+                const existsInStatus = data.timelines.some(t => String(t.id) === id);
+                if (!existsInStatus) {
+                    const name = timelineNames.get(id) || `Timeline ${id}`;
+                    timelineStatuses.push({
+                        id,
+                        name,
+                        state: 'stopped',
+                        displayState: '⏹ Stopped',
+                        running: false
+                    });
+                }
+            });
+        } else if (allTimelineIds.size > 0) {
+            // No timeline status data, but we have timeline references - assume all stopped
+            allTimelineIds.forEach(id => {
+                const name = timelineNames.get(id) || `Timeline ${id}`;
+                timelineStatuses.push({
+                    id,
+                    name,
+                    state: 'stopped',
+                    displayState: '⏹ Stopped',
+                    running: false
+                });
+            });
+        }
+
+        if (timelineStatuses.length > 0) {
+            // Sort timelines: playing first, then paused, then stopped
+            timelineStatuses.sort((a, b) => {
+                const order = { playing: 0, paused: 1, stopped: 2 };
+                return order[a.state] - order[b.state];
+            });
+
+            timelineStatuses.forEach(timeline => {
+                const timelineItem = document.createElement("div");
+                timelineItem.className = `timeline-item ${timeline.state}`;
+
+                timelineItem.innerHTML = `
+                    <div class="timeline-indicator ${timeline.state}"></div>
+                    <div class="timeline-info">
+                        <span class="timeline-name">${this.escapeHtml(timeline.name)}</span>
+                        <span class="timeline-state">${timeline.displayState}</span>
+                    </div>
+                `;
+                content.appendChild(timelineItem);
+            });
+        } else {
+            const noDataItem = document.createElement("div");
+            noDataItem.className = "status-info";
+            noDataItem.textContent = "Timeline status information not available";
+            content.appendChild(noDataItem);
+        }
+
+        section.appendChild(content);
+        return section;
+    }    createRendererStatusSection(data) {
+        const section = document.createElement("div");
+        section.className = "status-section renderer-status-section";
+
+        const header = document.createElement("h5");
+        header.className = "status-section-header";
+        header.innerHTML = "🖥️ Renderer Status";
+        section.appendChild(header);
+
+        const content = document.createElement("div");
+        content.className = "status-section-content";
+
+        let freeRunningCount = 0;
+        let hasRendererData = false;
+
+        // Extract free running renderer count from freeRunningRenders object
+        if (data.freeRunningRenders && typeof data.freeRunningRenders === 'object') {
+            hasRendererData = true;
+            freeRunningCount = Object.keys(data.freeRunningRenders).length;
+        } else if (data.freeRunningRenderers !== undefined) {
+            hasRendererData = true;
+            freeRunningCount = data.freeRunningRenderers;
+        } else if (data.renderers) {
+            hasRendererData = true;
+            if (Array.isArray(data.renderers)) {
+                freeRunningCount = data.renderers.filter(r => r.freeRunning === true || r.state === 'free_running').length;
+            } else if (typeof data.renderers === 'object') {
+                freeRunningCount = Object.values(data.renderers).filter(r => r.freeRunning === true || r.state === 'free_running').length;
+            }
+        }
+
+        if (hasRendererData) {
+            const rendererSummary = document.createElement("div");
+            rendererSummary.className = "renderer-summary";
+
+            const freeRunningItem = document.createElement("div");
+            freeRunningItem.className = "renderer-item";
+            freeRunningItem.innerHTML = `
+                <div class="renderer-indicator ${freeRunningCount > 0 ? 'active' : 'inactive'}"></div>
+                <div class="renderer-info">
+                    <span class="renderer-count">${freeRunningCount}</span>
+                    <span class="renderer-label">Free Running Renderer${freeRunningCount !== 1 ? 's' : ''}</span>
+                </div>
+            `;
+            rendererSummary.appendChild(freeRunningItem);
+
+            content.appendChild(rendererSummary);
+        } else {
+            const noDataItem = document.createElement("div");
+            noDataItem.className = "status-info";
+            noDataItem.textContent = "Renderer status information not available";
+            content.appendChild(noDataItem);
+        }
+
+        section.appendChild(content);
+        return section;
     }
+
+    createGeneralStatusSection(data) {
+        const section = document.createElement("div");
+        section.className = "status-section general-status-section";
+
+        const header = document.createElement("h5");
+        header.className = "status-section-header";
+        header.innerHTML = "ℹ️ General Status";
+        section.appendChild(header);
+
+        const content = document.createElement("div");
+        content.className = "status-section-content";
+
+        const generalInfo = document.createElement("div");
+        generalInfo.className = "general-info";
+
+        // Show overall state if available
+        if (data.state) {
+            const stateItem = document.createElement("div");
+            stateItem.className = "general-item";
+            stateItem.innerHTML = `
+                <span class="general-label">State:</span>
+                <span class="general-value state-${data.state.toLowerCase()}">${data.state}</span>
+            `;
+            generalInfo.appendChild(stateItem);
+        }
+
+        // Show time information if available
+        if (data.time !== undefined || data.position !== undefined) {
+            const time = data.time || data.position;
+            const seconds = Math.floor(time / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            const timeStr = `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+
+            const timeItem = document.createElement("div");
+            timeItem.className = "general-item";
+            timeItem.innerHTML = `
+                <span class="general-label">Position:</span>
+                <span class="general-value">${timeStr}</span>
+            `;
+            generalInfo.appendChild(timeItem);
+        }
+
+        // Show any other relevant information
+        ['version', 'showName', 'currentShow'].forEach(field => {
+            if (data[field] !== undefined) {
+                const item = document.createElement("div");
+                item.className = "general-item";
+                item.innerHTML = `
+                    <span class="general-label">${field.charAt(0).toUpperCase() + field.slice(1)}:</span>
+                    <span class="general-value">${this.escapeHtml(String(data[field]))}</span>
+                `;
+                generalInfo.appendChild(item);
+            }
+        });
+
+        content.appendChild(generalInfo);
+        section.appendChild(content);
+        return section;
+    }
+
+    createRawDataToggle(statusData) {
+        const toggleContainer = document.createElement("div");
+        toggleContainer.className = "raw-data-toggle";
+
+        const toggleButton = document.createElement("button");
+        toggleButton.className = "toggle-raw-data-btn";
+        toggleButton.textContent = "Show Raw Data";
+        toggleButton.onclick = () => {
+            const rawDataDiv = toggleContainer.querySelector('.raw-data-content');
+            if (rawDataDiv.style.display === 'none') {
+                rawDataDiv.style.display = 'block';
+                toggleButton.textContent = "Hide Raw Data";
+            } else {
+                rawDataDiv.style.display = 'none';
+                toggleButton.textContent = "Show Raw Data";
+            }
+        };
+
+        const rawDataContent = document.createElement("div");
+        rawDataContent.className = "raw-data-content";
+        rawDataContent.style.display = "none";
+        rawDataContent.innerHTML = `<pre>${this.escapeHtml(JSON.stringify(statusData, null, 2))}</pre>`;
+
+        toggleContainer.appendChild(toggleButton);
+        toggleContainer.appendChild(rawDataContent);
+
+        return toggleContainer;
+    }    updateServerDetailsWithStatus(statusResult) {
+        if (!this.selectedServerId || !statusResult.success || !statusResult.data) {
+            return;
+        }
+
+        // Find the status information area in the commands panel
+        const statusInformationArea = document.getElementById('statusInformationArea');
+        const statusContent = document.getElementById('statusContent');
+        
+        if (!statusInformationArea || !statusContent) {
+            return;
+        }
+
+        // Show the status information area
+        statusInformationArea.style.display = 'block';
+
+        // Generate the status visualization
+        const statusVisualization = this.renderStatusVisualization(statusResult);
+        
+        if (statusVisualization) {
+            // Clear existing content and add new visualization
+            statusContent.innerHTML = '';
+            statusContent.appendChild(statusVisualization);        }
+    }
+
+    hideStatusInformation() {
+        const statusInformationArea = document.getElementById('statusInformationArea');
+        if (statusInformationArea) {
+            statusInformationArea.style.display = 'none';
+        }
+    }
+
+    // ...existing code...
 }
 
 // Initialize the web app when DOM is loaded

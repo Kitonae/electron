@@ -81,5 +81,8 @@
     ✅ implemented showName parameter in both Electron and web versions
     ✅ tested and confirmed working with new server IP (192.168.0.227)
 
-
-- content-area class is clipping the shadows of main-panels
+✓ visualise the response from get status:
+    ✓ show which timelines are being currently played
+    ✓ show how many free running renderes are currenlty being played
+    ✓ fixed DOM appendChild error - status visualization now generates fresh DOM elements each time
+    ✓ moved status visualization from command response panel to show information section in commands panel

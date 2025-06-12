@@ -1631,113 +1631,339 @@ body {
     border-color: #ffeaa7;
 }
 
-.btn-secondary {
-    background: #6c757d;
-    color: white;
-    border: none;
-    padding: 0.75rem 1.5rem;
+/* Status Visualization Styles */
+.status-visualization {
+    background: white;
     border-radius: 8px;
-    font-size: 0.9rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-family: inherit;
-}
-
-.btn-secondary:hover {
-    background: #5a6268;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
-
-.btn-secondary:active {
-    transform: translateY(0);
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
-}
-
-.btn-primary {
-    background: #667eea;
-    color: white;
-    border: none;
-    padding: 0.75rem 1.5rem;
-    border-radius: 8px;
-    font-size: 0.9rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-family: inherit;
-}
-
-.btn-primary:hover {
-    background: #5a67d8;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
-}
-
-.btn-primary:active {
-    transform: translateY(0);
-    box-shadow: 0 1px 4px rgba(102, 126, 234, 0.2);
-}
-
-.btn-primary:disabled,
-.btn-secondary:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
-}
-
-.webserver-btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
-}
-
-/* File Path Display */
-.file-path {
-    font-family: 'Courier New', monospace;
-    font-size: 0.85rem;
-    color: #6c757d;
-    background: #f8f9fa;
-    padding: 0.4rem 0.8rem;
-    border-radius: 6px;
     border: 1px solid #e9ecef;
-    word-break: break-all;
-    display: inline-block;
-    max-width: 100%;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
-/* Settings Form Group Overrides */
-.settings-section .form-group {
-    margin-bottom: 1.2rem;
+.status-title {
+    margin: 0;
+    padding: 1rem 1.2rem;
+    color: white;
+    font-size: 1.1rem;
+    font-weight: 600;
+    border-bottom: 1px solid #e9ecef;
 }
 
-.settings-section .form-group:last-child {
-    margin-bottom: 0;
+.status-sections {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
 }
 
-.settings-section .form-group label {
-    font-weight: 500;
-    color: #555;
-    margin-bottom: 0.4rem;
+.status-section {
+    padding: 1rem 1.2rem;
+    border-bottom: 1px solid #f1f3f4;
+}
+
+.status-section:last-child {
+    border-bottom: none;
+}
+
+.status-section-header {
+    margin: 0 0 0.8rem 0;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #333;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.status-section-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+/* Status Information Area in Commands Panel */
+.status-information-area {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+}
+
+.status-information-area .status-visualization {
+    margin: 0;
+    padding: 0;
+}
+
+.status-information-area .status-title {
+    color: #495057;
+    font-size: 1rem;
+    margin-bottom: 0.8rem;
+    text-align: center;
+}
+
+.status-information-area .status-sections {
+    gap: 0.8rem;
+}
+
+.status-information-area .status-section-header {
     font-size: 0.9rem;
+    margin-bottom: 0.5rem;
 }
 
-/* Override for toggle labels in settings */
-.settings-section .form-group .toggle-label {
-    display: flex !important;
+/* Server Status Section (old styles - can be removed if not needed) */
+.server-status-separator {
+    margin: 1rem 0 0.8rem 0;
+    padding: 0;
+    border: none;
+    border-top: 1px solid #e9ecef;
+    height: 1px;
+    background: none;
+}
+
+.server-status-section {
+    margin-top: 0.8rem;
+    padding-top: 0.8rem;
+}
+
+.server-status-section .status-visualization {
+    margin: 0;
+    padding: 0;
+}
+
+.server-status-section .timeline-status h4,
+.server-status-section .renderers-status h4 {
+    color: #495057;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+}
+
+/* Timeline Status Styles */
+.timeline-item {
+    display: flex;
     align-items: center;
     gap: 0.8rem;
-    margin-bottom: 0.5rem;
-    font-size: 0.95rem;
+    padding: 0.6rem 0.8rem;
+    background: #f8f9fa;
+    border-radius: 6px;
+    border: 1px solid #e9ecef;
+}
+
+.timeline-item.playing {
+    background: #d4edda;
+    border-color: #c3e6cb;
+}
+
+.timeline-item.stopped {
+    background: #f8d7da;
+    border-color: #f5c6cb;
+}
+
+.timeline-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.timeline-indicator.playing {
+    background: #28a745;
+    animation: pulse 2s infinite;
+}
+
+.timeline-indicator.paused {
+    background: #ffc107;
+}
+
+.timeline-indicator.stopped {
+    background: #dc3545;
+}
+
+.timeline-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    flex: 1;
+}
+
+.timeline-name {
+    font-weight: 500;
+    color: #333;
+    font-size: 0.9rem;
+}
+
+.timeline-state {
+    font-size: 0.8rem;
+    color: #666;
+}
+
+/* Renderer Status Styles */
+.renderer-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.renderer-item {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 0.6rem 0.8rem;
+    background: #f8f9fa;
+    border-radius: 6px;
+    border: 1px solid #e9ecef;
+}
+
+.renderer-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.renderer-indicator.active {
+    background: #17a2b8;
+    animation: pulse 2s infinite;
+}
+
+.renderer-indicator.inactive {
+    background: #6c757d;
+}
+
+.renderer-indicator.secondary {
+    background: #ffc107;
+}
+
+.renderer-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1;
+}
+
+.renderer-count {
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: #333;
+    min-width: 20px;
+}
+
+.renderer-label {
+    font-size: 0.85rem;
+    color: #666;
+}
+
+/* General Status Styles */
+.general-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.general-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.4rem 0.6rem;
+    background: #f8f9fa;
+    border-radius: 4px;
+    border: 1px solid #e9ecef;
+}
+
+.general-label {
+    font-weight: 500;
+    color: #333;
+    font-size: 0.85rem;
+}
+
+.general-value {
+    font-size: 0.85rem;
+    color: #666;
+    font-family: 'Courier New', monospace;
+}
+
+.general-value.state-playing {
+    color: #28a745;
+    font-weight: 500;
+}
+
+.general-value.state-paused {
+    color: #ffc107;
+    font-weight: 500;
+}
+
+.general-value.state-stopped {
+    color: #dc3545;
+    font-weight: 500;
+}
+
+/* Status Info */
+.status-info {
+    padding: 0.8rem 1rem;
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 4px;
+    color: #856404;
+    font-size: 0.85rem;
+    text-align: center;
+    font-style: italic;
+}
+
+/* Raw Data Toggle */
+.raw-data-toggle {
+    border-top: 1px solid #e9ecef;
+    padding: 0.8rem 1.2rem;
+    background: #f8f9fa;
+}
+
+.toggle-raw-data-btn {
+    padding: 0.4rem 0.8rem;
+    border: 1px solid #6c757d;
+    border-radius: 4px;
+    background: white;
+    color: #6c757d;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.toggle-raw-data-btn:hover {
+    background: #6c757d;
+    color: white;
+}
+
+.raw-data-content {
+    margin-top: 0.8rem;
+    padding: 0.8rem;
+    background: #f1f3f4;
+    border-radius: 4px;
+    border: 1px solid #dee2e6;
+    font-family: 'Courier New', monospace;
+    font-size: 0.75rem;
+    line-height: 1.4;
+    overflow-x: auto;
+}
+
+.raw-data-content pre {
+    margin: 0;
+    white-space: pre-wrap;
     color: #333;
 }
 
-.settings-section .form-help {
-    font-size: 0.8rem;
-    color: #6c757d;
-    margin-top: 0.4rem;
-    line-height: 1.3;
-    font-style: italic;
+/* Status Response Container */
+.response-item .response-data.status-response {
+    font-family: inherit;
+    padding: 0;
+}
+
+/* Pulse animation for active indicators */
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 6px rgba(40, 167, 69, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(40, 167, 69, 0);
+    }
 }
