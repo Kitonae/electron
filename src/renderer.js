@@ -147,9 +147,7 @@ class WatchoutServerFinderApp {
       const timelineSelector = document.getElementById("timelineSelector");
       if (timelineSelector) {
         timelineSelector.addEventListener("change", () => this.onTimelineSelectionChange());
-      }
-
-      // Command buttons
+      }      // Command buttons
       const commandButtons = [
         { id: "playBtn", command: "play" },
         { id: "pauseBtn", command: "pause" },
@@ -159,16 +157,21 @@ class WatchoutServerFinderApp {
         { id: "showBtn", command: "show" },
         { id: "uploadShowBtn", command: "uploadShow" },
         { id: "testConnectionBtn", command: "testConnection" },
-        { id: "customCommandBtn", command: "custom" }
+        { id: "customCommandBtn", command: "custom" },
+        { id: "logViewerBtn", command: "logViewer" }
       ];
 
       commandButtons.forEach(({ id, command }) => {
-        const button = document.getElementById(id);
-        if (button) {
+        const button = document.getElementById(id);        if (button) {
           if (command === "custom") {
             button.addEventListener("click", (e) => {
               this.addRippleEffect(e.currentTarget);
               this.showCustomCommandDialog();
+            });
+          } else if (command === "logViewer") {
+            button.addEventListener("click", (e) => {
+              this.addRippleEffect(e.currentTarget);
+              this.showLokiLogViewer();
             });
           } else {
             button.addEventListener("click", (e) => {
@@ -2244,54 +2247,386 @@ class WatchoutServerFinderApp {
     }
   }
 
-  // Add ripple effect animation to buttons
-  addRippleEffect(button) {
-    if (!button || button.disabled) return;
-
-    // Add ripple class
-    button.classList.add("ripple-effect");
-
-    // Remove class after animation
-    setTimeout(() => {
-      button.classList.remove("ripple-effect");
-    }, 600);
-  }
-
-  // Add this method if it's missing
-  isValidIpAddress(ip) {
-    const ipRegex =
-      /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
-    return ipRegex.test(ip);
-  }
-
-  // Add this method if it's missing for manual server editing
-  editManualServer(serverId) {
-    const server = this.servers.find((s) => this.getServerId(s) === serverId);
-    if (!server || !server.isManual) {
-      console.error("Server not found or not a manual server:", serverId);
+  // ==================== LOKI LOG VIEWER METHODS ====================
+  
+  showLokiLogViewer() {
+    if (!this.selectedServerIp) {
+      alert('Please select a server first');
       return;
     }
 
-    // Open the add server modal in edit mode
-    const modal = document.getElementById("addServerModal");
-    modal.dataset.editingServerId = serverId;
+    // Create modal for log viewer
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.innerHTML = `
+      <div class="modal-content log-viewer-modal">
+        <div class="modal-header">
+          <h3>🗂️ Real-time Log Viewer - ${this.selectedServerIp}:3022</h3>
+          <span class="close" onclick="this.closest('.modal').remove()">&times;</span>
+        </div>
+        <div class="modal-body">
+          <div class="log-controls">
+            <div class="control-group">
+              <label for="logQuery">Log Query:</label>
+              <select id="logQuerySelect">
+                <option value="">Select a common query...</option>
+              </select>
+              <input type="text" id="logQuery" placeholder='{job="watchout"}' value='{job="watchout"}'>
+            </div>
+            <div class="control-group">
+              <label for="logLimit">Limit:</label>
+              <input type="number" id="logLimit" value="100" min="10" max="1000">
+            </div>
+            <div class="control-group">
+              <label for="logSince">Since:</label>
+              <select id="logSince">
+                <option value="5m">5 minutes</option>
+                <option value="15m">15 minutes</option>
+                <option value="1h" selected>1 hour</option>
+                <option value="3h">3 hours</option>
+                <option value="6h">6 hours</option>
+                <option value="12h">12 hours</option>
+                <option value="24h">24 hours</option>
+              </select>
+            </div>
+            <div class="control-group">
+              <button id="testLokiBtn" class="btn btn-secondary">Test Connection</button>
+              <button id="queryLogsBtn" class="btn btn-primary">Query Logs</button>
+              <button id="startStreamBtn" class="btn btn-success">Start Stream</button>
+              <button id="stopStreamBtn" class="btn btn-danger" disabled>Stop Stream</button>
+            </div>
+          </div>
+          
+          <div class="log-status">
+            <div id="lokiConnectionStatus" class="connection-status unknown">
+              <div class="status-indicator"></div>
+              <span class="status-text">Connection Status: Unknown</span>
+            </div>
+            <div id="logStreamStatus" class="stream-status">
+              <span class="stream-indicator">⚫</span>
+              <span class="stream-text">Stream: Stopped</span>
+            </div>
+          </div>
 
-    // Update modal title and button text
-    const modalTitle = modal.querySelector(".modal-header h3");
-    modalTitle.textContent = "Edit Server";
+          <div class="log-viewer">
+            <div class="log-header">
+              <div class="log-stats">
+                <span id="logCount">0 logs</span>
+                <span id="logTimeRange"></span>
+              </div>
+              <div class="log-actions">
+                <button id="clearLogsBtn" class="btn btn-sm">Clear</button>
+                <button id="exportLogsBtn" class="btn btn-sm">Export</button>
+                <label class="checkbox-label">
+                  <input type="checkbox" id="autoScrollLogs" checked>
+                  Auto-scroll
+                </label>
+              </div>
+            </div>
+            <div id="logContainer" class="log-container">
+              <div class="log-placeholder">
+                No logs to display. Click "Query Logs" or "Start Stream" to begin.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;    document.body.appendChild(modal);
+    
+    // Show the modal
+    modal.style.display = "flex";
+    modal.classList.add("show");
+    
+    this.setupLokiLogViewer();
+  }
 
-    const saveBtn = document.getElementById("saveAddServer");
-    saveBtn.textContent = "Update Server";
+  async setupLokiLogViewer() {
+    // Load common queries
+    try {
+      const queriesResult = await this.api.lokiGetCommonQueries();
+      if (queriesResult.success) {
+        const select = document.getElementById('logQuerySelect');
+        queriesResult.data.forEach(query => {
+          const option = document.createElement('option');
+          option.value = query.query;
+          option.textContent = `${query.name} - ${query.description}`;
+          select.appendChild(option);
+        });
+      }
+    } catch (error) {
+      console.warn('Failed to load common queries:', error);
+    }
 
-    // Populate form with existing server data
-    document.getElementById("serverIp").value = server.ip;
-    document.getElementById("serverName").value =
-      server.hostname === server.ip ? "" : server.hostname;
-    document.getElementById("serverPorts").value = server.ports.join(",");
-    document.getElementById("serverType").value = server.type;
+    // Bind events
+    document.getElementById('logQuerySelect').addEventListener('change', (e) => {
+      if (e.target.value) {
+        document.getElementById('logQuery').value = e.target.value;
+      }
+    });
 
-    this.showAddServerDialog();
-  }  initializeStartupWarnings() {
+    document.getElementById('testLokiBtn').addEventListener('click', () => this.testLokiConnection());
+    document.getElementById('queryLogsBtn').addEventListener('click', () => this.queryLokiLogs());
+    document.getElementById('startStreamBtn').addEventListener('click', () => this.startLokiStream());
+    document.getElementById('stopStreamBtn').addEventListener('click', () => this.stopLokiStream());
+    document.getElementById('clearLogsBtn').addEventListener('click', () => this.clearLogViewer());
+    document.getElementById('exportLogsBtn').addEventListener('click', () => this.exportLogs());
+
+    // Set up event listeners for log updates
+    if (this.api.isElectron) {
+      window.electronAPI.onLokiLogs((logs) => this.displayLogs(logs));
+      window.electronAPI.onLokiError((error) => this.displayLogError(error));
+      window.electronAPI.onLokiStreamStarted((data) => this.updateStreamStatus(true));
+      window.electronAPI.onLokiStreamStopped(() => this.updateStreamStatus(false));
+    }
+
+    // Test connection automatically
+    this.testLokiConnection();
+  }
+
+  async testLokiConnection() {
+    const statusElement = document.getElementById('lokiConnectionStatus');
+    const statusText = statusElement.querySelector('.status-text');
+    
+    statusText.textContent = 'Testing connection...';
+    statusElement.className = 'connection-status testing';
+
+    try {
+      const result = await this.api.lokiTestConnection(this.selectedServerIp);
+      
+      if (result.success && result.connected) {
+        statusElement.className = 'connection-status connected';
+        statusText.textContent = `Connected: ${result.message}`;
+      } else {
+        statusElement.className = 'connection-status error';
+        statusText.textContent = `Error: ${result.message}`;
+      }
+    } catch (error) {
+      statusElement.className = 'connection-status error';
+      statusText.textContent = `Error: ${error.message}`;
+    }
+  }
+
+  async queryLokiLogs() {
+    const query = document.getElementById('logQuery').value || '{job="watchout"}';
+    const limit = parseInt(document.getElementById('logLimit').value) || 100;
+    const since = document.getElementById('logSince').value || '1h';
+
+    const queryBtn = document.getElementById('queryLogsBtn');
+    queryBtn.disabled = true;
+    queryBtn.textContent = 'Querying...';
+
+    try {
+      const result = await this.api.lokiQueryLogs(this.selectedServerIp, query, limit, since);
+      
+      if (result.success) {
+        this.displayLogs(result.data);
+      } else {
+        this.displayLogError(result.error);
+      }
+    } catch (error) {
+      this.displayLogError(error.message);
+    } finally {
+      queryBtn.disabled = false;
+      queryBtn.textContent = 'Query Logs';
+    }
+  }
+
+  async startLokiStream() {
+    const query = document.getElementById('logQuery').value || '{job="watchout"}';
+    const refreshInterval = 2000; // 2 seconds
+
+    const startBtn = document.getElementById('startStreamBtn');
+    const stopBtn = document.getElementById('stopStreamBtn');
+    
+    startBtn.disabled = true;
+    startBtn.textContent = 'Starting...';
+
+    try {
+      const result = await this.api.lokiStartStream(this.selectedServerIp, query, refreshInterval);
+      
+      if (result.success) {
+        this.updateStreamStatus(true);
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+      } else {
+        this.displayLogError(result.error);
+        startBtn.disabled = false;
+      }
+    } catch (error) {
+      this.displayLogError(error.message);
+      startBtn.disabled = false;
+    } finally {
+      startBtn.textContent = 'Start Stream';
+    }
+  }
+
+  async stopLokiStream() {
+    const startBtn = document.getElementById('startStreamBtn');
+    const stopBtn = document.getElementById('stopStreamBtn');
+    
+    stopBtn.disabled = true;
+    stopBtn.textContent = 'Stopping...';
+
+    try {
+      const result = await this.api.lokiStopStream(this.selectedServerIp);
+      
+      if (result.success) {
+        this.updateStreamStatus(false);
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+      }
+    } catch (error) {
+      this.displayLogError(error.message);
+    } finally {
+      stopBtn.textContent = 'Stop Stream';
+    }
+  }
+
+  updateStreamStatus(isStreaming) {
+    const statusElement = document.getElementById('logStreamStatus');
+    const indicator = statusElement.querySelector('.stream-indicator');
+    const text = statusElement.querySelector('.stream-text');
+    
+    if (isStreaming) {
+      indicator.textContent = '🔴';
+      text.textContent = 'Stream: Live';
+      statusElement.className = 'stream-status streaming';
+    } else {
+      indicator.textContent = '⚫';
+      text.textContent = 'Stream: Stopped';
+      statusElement.className = 'stream-status stopped';
+    }
+  }
+
+  displayLogs(logs) {
+    const container = document.getElementById('logContainer');
+    const autoScroll = document.getElementById('autoScrollLogs').checked;
+    
+    // Remove placeholder if it exists
+    const placeholder = container.querySelector('.log-placeholder');
+    if (placeholder) {
+      placeholder.remove();
+    }
+
+    // Add new logs
+    logs.forEach(log => {
+      const logElement = document.createElement('div');
+      logElement.className = `log-entry log-${log.level}`;
+      
+      const timestamp = new Date(log.timestamp).toLocaleTimeString();
+      const labels = Object.entries(log.labels || {})
+        .map(([key, value]) => `${key}="${value}"`)
+        .join(' ');
+      
+      logElement.innerHTML = `
+        <div class="log-timestamp">${timestamp}</div>
+        <div class="log-level log-level-${log.level}">${log.level.toUpperCase()}</div>
+        <div class="log-source">${log.source}</div>
+        <div class="log-message">${this.escapeHtml(log.message)}</div>
+        ${labels ? `<div class="log-labels">${labels}</div>` : ''}
+      `;
+      
+      container.appendChild(logElement);
+    });
+
+    // Limit the number of displayed logs to prevent memory issues
+    const maxLogs = 1000;
+    const logEntries = container.querySelectorAll('.log-entry');
+    if (logEntries.length > maxLogs) {
+      for (let i = 0; i < logEntries.length - maxLogs; i++) {
+        logEntries[i].remove();
+      }
+    }
+
+    // Update stats
+    this.updateLogStats();
+
+    // Auto-scroll to bottom
+    if (autoScroll) {
+      container.scrollTop = container.scrollHeight;
+    }
+  }
+
+  displayLogError(error) {
+    const container = document.getElementById('logContainer');
+    const errorElement = document.createElement('div');
+    errorElement.className = 'log-entry log-error';
+    errorElement.innerHTML = `
+      <div class="log-timestamp">${new Date().toLocaleTimeString()}</div>
+      <div class="log-level log-level-error">ERROR</div>
+      <div class="log-source">SYSTEM</div>
+      <div class="log-message">Log Error: ${this.escapeHtml(error)}</div>
+    `;
+    container.appendChild(errorElement);
+    
+    this.updateLogStats();
+  }
+
+  updateLogStats() {
+    const container = document.getElementById('logContainer');
+    const logEntries = container.querySelectorAll('.log-entry:not(.log-error)');
+    const countElement = document.getElementById('logCount');
+    
+    countElement.textContent = `${logEntries.length} logs`;
+    
+    // Update time range if we have logs
+    if (logEntries.length > 0) {
+      const firstTimestamp = logEntries[0].querySelector('.log-timestamp').textContent;
+      const lastTimestamp = logEntries[logEntries.length - 1].querySelector('.log-timestamp').textContent;
+      
+      const timeRangeElement = document.getElementById('logTimeRange');
+      if (firstTimestamp !== lastTimestamp) {
+        timeRangeElement.textContent = `${firstTimestamp} - ${lastTimestamp}`;
+      } else {
+        timeRangeElement.textContent = firstTimestamp;
+      }
+    }
+  }
+
+  clearLogViewer() {
+    const container = document.getElementById('logContainer');
+    container.innerHTML = '<div class="log-placeholder">Logs cleared. Click "Query Logs" or "Start Stream" to begin.</div>';
+    this.updateLogStats();
+  }
+
+  exportLogs() {
+    const container = document.getElementById('logContainer');
+    const logEntries = container.querySelectorAll('.log-entry:not(.log-error)');
+    
+    if (logEntries.length === 0) {
+      alert('No logs to export');
+      return;
+    }
+
+    const logs = Array.from(logEntries).map(entry => {
+      const timestamp = entry.querySelector('.log-timestamp').textContent;
+      const level = entry.querySelector('.log-level').textContent;
+      const source = entry.querySelector('.log-source').textContent;
+      const message = entry.querySelector('.log-message').textContent;
+      const labels = entry.querySelector('.log-labels')?.textContent || '';
+      
+      return {
+        timestamp,
+        level,
+        source,
+        message,
+        labels
+      };
+    });
+
+    const jsonContent = JSON.stringify(logs, null, 2);
+    const blob = new Blob([jsonContent], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `watchout-logs-${this.selectedServerIp}-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+  initializeStartupWarnings() {
     try {
       console.log("Renderer: Initializing startup warnings...");
       // Set up startup warning listener if in Electron environment
@@ -2865,7 +3200,6 @@ class WatchoutServerFinderApp {
     section.appendChild(content);
     return section;
   }
-
   createRawDataToggle(statusData) {
     const toggleContainer = document.createElement("div");
     toggleContainer.className = "raw-data-toggle";
@@ -2925,6 +3259,12 @@ class WatchoutServerFinderApp {
     if (statusInformationArea) {
       statusInformationArea.style.display = 'none';
     }
+  }
+
+  // Add ripple effect animation to buttons (no-op to remove visual effect)
+  addRippleEffect(button) {
+    // This method intentionally does nothing to remove the ripple effect
+    // while keeping the function signature intact for compatibility
   }
 }
 
