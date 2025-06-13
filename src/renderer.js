@@ -96,11 +96,17 @@ class WatchoutServerFinderApp {
       const clearOfflineButton = document.getElementById("clearOfflineButton");
       if (clearOfflineButton) {
         clearOfflineButton.addEventListener("click", () => this.clearOfflineServers());
-      }
-
-      const addServerButton = document.getElementById("addServerButton");
+      }      const addServerButton = document.getElementById("addServerButton");
       if (addServerButton) {
-        addServerButton.addEventListener("click", () => this.showAddServerDialog());
+        addServerButton.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          console.log('Add server button clicked');
+          this.showAddServerDialog();
+        });
+        console.log('Add server button event listener bound successfully');
+      } else {
+        console.warn('Add server button not found during binding');
       }
 
       const settingsButton = document.getElementById("settingsButton");
@@ -1421,10 +1427,10 @@ class WatchoutServerFinderApp {
       // Hide status information area when clearing responses
       this.hideStatusInformation();
     }
-  }
-  showCustomCommandDialog() {
+  }  showCustomCommandDialog() {
     const modal = document.getElementById("customCommandModal");
     modal.style.display = "flex";
+    modal.classList.add("show");
 
     // Bind modal events
     this.bindCustomCommandModal();
@@ -1463,14 +1469,16 @@ class WatchoutServerFinderApp {
           methodSelect.value = "POST";
         } else {
           methodSelect.value = "GET";
-        }
-        examplesSelect.value = ""; // Reset dropdown
+        }        examplesSelect.value = ""; // Reset dropdown
       }
     };
 
     // Close modal handlers
     const closeModal = () => {
-      modal.style.display = "none";
+      modal.classList.remove("show");
+      setTimeout(() => {
+        modal.style.display = "none";
+      }, 300);
     };
 
     closeBtn.onclick = closeModal;
@@ -1732,11 +1740,11 @@ class WatchoutServerFinderApp {
       }
     });
   }
-
   // Settings Modal Methods
   showSettingsDialog() {
     const modal = document.getElementById("settingsModal");
     modal.style.display = "flex";
+    modal.classList.add("show");
 
     // Load current settings values
     this.loadCurrentSettings();
@@ -1813,12 +1821,14 @@ class WatchoutServerFinderApp {
   bindSettingsModal() {
     const modal = document.getElementById("settingsModal");
     const closeBtn = document.getElementById("closeSettingsModal");
-    const cancelBtn = document.getElementById("cancelSettings");
-    const saveBtn = document.getElementById("saveSettings");
+    const cancelBtn = document.getElementById("cancelSettings");    const saveBtn = document.getElementById("saveSettings");
 
     // Close modal handlers
     const closeModal = () => {
-      modal.style.display = "none";
+      modal.classList.remove("show");
+      setTimeout(() => {
+        modal.style.display = "none";
+      }, 300);
     };
 
     closeBtn.onclick = closeModal;
@@ -1873,24 +1883,44 @@ class WatchoutServerFinderApp {
     }
   }  // Add Server Modal Methods
   showAddServerDialog() {
-    const modal = document.getElementById("addServerModal");
-    modal.style.display = "flex";
+    try {
+      console.log('showAddServerDialog called');
+      const modal = document.getElementById("addServerModal");
+      if (!modal) {
+        console.error('Add server modal not found');
+        return;
+      }
+        console.log('Setting modal display to flex and adding show class');
+      modal.style.display = "flex";
+      modal.classList.add("show");
 
-    // Bind modal events
-    this.bindAddServerModal();
+      // Bind modal events
+      this.bindAddServerModal();
 
-    // Clear previous values
-    document.getElementById("serverIp").value = "";
-    document.getElementById("serverName").value = "";
-    document.getElementById("serverPorts").value = "3040,3041,3042";
-    document.getElementById("serverType").value = "Manual Entry";
+      // Clear previous values
+      const serverIpInput = document.getElementById("serverIp");
+      const serverNameInput = document.getElementById("serverName");
+      const serverPortsInput = document.getElementById("serverPorts");
+      const serverTypeSelect = document.getElementById("serverType");
+      
+      if (serverIpInput) serverIpInput.value = "";
+      if (serverNameInput) serverNameInput.value = "";
+      if (serverPortsInput) serverPortsInput.value = "3040,3041,3042";
+      if (serverTypeSelect) serverTypeSelect.value = "Manual Entry";
 
-    // Focus on IP input
-    setTimeout(() => {
-      document.getElementById("serverIp").focus();
-    }, 100);
+      // Focus on IP input
+      setTimeout(() => {
+        if (serverIpInput) {
+          serverIpInput.focus();
+          console.log('Focused on server IP input');
+        }
+      }, 100);
+      
+      console.log('Add server dialog opened successfully');
+    } catch (error) {
+      console.error('Error opening add server dialog:', error);
+    }
   }
-
   bindAddServerModal() {
     const modal = document.getElementById("addServerModal");
     const closeBtn = document.getElementById("closeAddServerModal");
@@ -1898,66 +1928,105 @@ class WatchoutServerFinderApp {
     const saveBtn = document.getElementById("saveAddServer");
     const form = document.getElementById("addServerForm");
 
+    // Remove any existing event listeners to prevent duplicates
+    if (closeBtn && closeBtn._boundCloseHandler) {
+      closeBtn.removeEventListener('click', closeBtn._boundCloseHandler);
+    }
+    if (cancelBtn && cancelBtn._boundCancelHandler) {
+      cancelBtn.removeEventListener('click', cancelBtn._boundCancelHandler);
+    }
+    if (saveBtn && saveBtn._boundSaveHandler) {
+      saveBtn.removeEventListener('click', saveBtn._boundSaveHandler);
+    }    if (modal && modal._boundOverlayHandler) {
+      modal.removeEventListener('click', modal._boundOverlayHandler);
+    }
+
     // Close modal handlers
     const closeModal = () => {
-      modal.style.display = "none";
+      modal.classList.remove("show");
+      setTimeout(() => {
+        modal.style.display = "none";
+      }, 300); // Wait for CSS animation to complete
     };
 
-    closeBtn.onclick = closeModal;
-    cancelBtn.onclick = closeModal;
+    // Bind new event handlers and store references
+    if (closeBtn) {
+      closeBtn._boundCloseHandler = closeModal;
+      closeBtn.onclick = closeModal;
+    }
+    
+    if (cancelBtn) {
+      cancelBtn._boundCancelHandler = closeModal;
+      cancelBtn.onclick = closeModal;
+    }
 
     // Close on overlay click
-    modal.onclick = (e) => {
-      if (e.target === modal) {
-        closeModal();
-      }
-    };
-    // Save server
-    saveBtn.onclick = async () => {
-      if (form.checkValidity()) {
-        const modal = document.getElementById("addServerModal");
-        const isEditing = modal.dataset.editingServerId;
-
-        if (isEditing) {
-          await this.updateManualServer(isEditing);
-        } else {
-          await this.addManualServer();
+    if (modal) {
+      modal._boundOverlayHandler = (e) => {
+        if (e.target === modal) {
+          closeModal();
         }
+      };
+      modal.onclick = modal._boundOverlayHandler;
+    }
+    
+    // Save server
+    if (saveBtn) {
+      saveBtn._boundSaveHandler = async () => {
+        if (form && form.checkValidity()) {
+          const modal = document.getElementById("addServerModal");
+          const isEditing = modal.dataset.editingServerId;
 
-        // Reset modal state
-        delete modal.dataset.editingServerId;
-        const modalTitle = modal.querySelector(".modal-header h3");
-        modalTitle.textContent = "Add Server Manually";
-        saveBtn.textContent = "Add Server";
+          if (isEditing) {
+            await this.updateManualServer(isEditing);
+          } else {
+            await this.addManualServer();
+          }
 
-        closeModal();
-      } else {
-        // Show validation errors
-        form.reportValidity();
-      }
-    };
+          // Reset modal state
+          delete modal.dataset.editingServerId;
+          const modalTitle = modal.querySelector(".modal-header h3");
+          if (modalTitle) modalTitle.textContent = "Add Server Manually";
+          if (saveBtn) saveBtn.textContent = "Add Server";
+
+          closeModal();
+        } else {
+          // Show validation errors
+          if (form) form.reportValidity();
+        }
+      };      saveBtn.onclick = saveBtn._boundSaveHandler;
+    }
 
     // Add server on Enter key in IP field
-    document.getElementById("serverIp").onkeydown = (e) => {
-      if (e.key === "Enter" && form.checkValidity()) {
-        const modal = document.getElementById("addServerModal");
-        const isEditing = modal.dataset.editingServerId;
-
-        if (isEditing) {
-          this.updateManualServer(isEditing);
-        } else {
-          this.addManualServer();
-        }
-
-        // Reset modal state
-        delete modal.dataset.editingServerId;
-        const modalTitle = modal.querySelector(".modal-header h3");
-        modalTitle.textContent = "Add Server Manually";
-        saveBtn.textContent = "Add Server";
-
-        closeModal();
+    const serverIpInput = document.getElementById("serverIp");
+    if (serverIpInput) {
+      // Remove existing handler if any
+      if (serverIpInput._boundEnterHandler) {
+        serverIpInput.removeEventListener('keydown', serverIpInput._boundEnterHandler);
       }
-    };
+      
+      serverIpInput._boundEnterHandler = (e) => {
+        if (e.key === "Enter" && form && form.checkValidity()) {
+          const modal = document.getElementById("addServerModal");
+          const isEditing = modal.dataset.editingServerId;
+
+          if (isEditing) {
+            this.updateManualServer(isEditing);
+          } else {
+            this.addManualServer();
+          }
+
+          // Reset modal state
+          delete modal.dataset.editingServerId;
+          const modalTitle = modal.querySelector(".modal-header h3");
+          if (modalTitle) modalTitle.textContent = "Add Server Manually";
+          if (saveBtn) saveBtn.textContent = "Add Server";
+
+          closeModal();
+        }
+      };
+      serverIpInput.onkeydown = serverIpInput._boundEnterHandler;
+    }
   }
 
   async addManualServer() {
@@ -2427,8 +2496,7 @@ class WatchoutServerFinderApp {
     }
 
     return null;
-  }
-  hideStartupWarning() {
+  }  hideStartupWarning() {
     try {
       const modal = document.getElementById('startupWarningModal');
       if (modal) {
@@ -2436,6 +2504,9 @@ class WatchoutServerFinderApp {
         // Wait for animation to complete before hiding
         setTimeout(() => {
           modal.style.display = 'none';
+          // Ensure no interference with other elements
+          modal.style.visibility = 'hidden';
+          modal.style.opacity = '0';
         }, 300);
         console.log('Startup warning modal hidden');
       }
