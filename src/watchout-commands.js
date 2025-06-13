@@ -5,11 +5,13 @@ const http = require('http');
 const https = require('https');
 const fs = require('fs');
 const path = require('path');
+const LokiLogReader = require('./loki-log-reader');
 
 class WatchoutCommands {
     constructor() {
         this.defaultPort = 3019; // Standard Watchout HTTP API port
         this.timeout = 5000; // 5 second timeout
+        this.lokiLogReader = new LokiLogReader(); // Initialize Loki log reader
     }
 
     // General utility method to send HTTP requests to Watchout servers
@@ -386,6 +388,96 @@ class WatchoutCommands {
         } catch (error) {
             return error;
         }
+    }
+
+    // ==================== LOKI LOG MANAGEMENT ====================
+    
+    async testLokiConnection(serverIp) {
+        try {
+            return await this.lokiLogReader.testConnection(serverIp);
+        } catch (error) {
+            return {
+                success: false,
+                connected: false,
+                message: error.message
+            };
+        }
+    }
+
+    async queryLokiLogs(serverIp, query = '{job="watchout"}', limit = 100, since = '1h') {
+        try {
+            return await this.lokiLogReader.queryLogs(serverIp, query, limit, since);
+        } catch (error) {
+            return {
+                success: false,
+                error: error.message || error
+            };
+        }
+    }
+
+    async startLokiLogStream(serverIp, query = '{job="watchout"}', refreshInterval = 2000) {
+        try {
+            await this.lokiLogReader.startLogStream(serverIp, query, refreshInterval);
+            return {
+                success: true,
+                message: 'Log stream started',
+                streaming: true
+            };
+        } catch (error) {
+            return {
+                success: false,
+                error: error.message || error,
+                streaming: false
+            };
+        }
+    }
+
+    stopLokiLogStream() {
+        try {
+            this.lokiLogReader.stopLogStream();
+            return {
+                success: true,
+                message: 'Log stream stopped',
+                streaming: false
+            };
+        } catch (error) {
+            return {
+                success: false,
+                error: error.message || error,
+                streaming: true
+            };
+        }
+    }
+
+    async getLokiLabels(serverIp) {
+        try {
+            return await this.lokiLogReader.getLabels(serverIp);
+        } catch (error) {
+            return {
+                success: false,
+                error: error.message || error
+            };
+        }
+    }
+
+    async getLokiLabelValues(serverIp, label) {
+        try {
+            return await this.lokiLogReader.getLabelValues(serverIp, label);
+        } catch (error) {
+            return {
+                success: false,
+                error: error.message || error
+            };
+        }
+    }
+
+    getLokiCommonQueries() {
+        return this.lokiLogReader.getCommonQueries();
+    }
+
+    // Get the Loki log reader instance for direct event handling
+    getLokiLogReader() {
+        return this.lokiLogReader;
     }
 
     // ==================== HELPER METHODS ====================

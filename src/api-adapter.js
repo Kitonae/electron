@@ -207,6 +207,72 @@ class ApiAdapter {
         }
     }
 
+    // ==================== LOKI LOG METHODS ====================
+    
+    async lokiTestConnection(serverIp) {
+        if (this.isElectron) {
+            return window.electronAPI.lokiTestConnection(serverIp);
+        } else {
+            return this.webApiCall(`/loki/${serverIp}/test-connection`, { method: 'POST' });
+        }
+    }
+
+    async lokiQueryLogs(serverIp, query, limit, since) {
+        if (this.isElectron) {
+            return window.electronAPI.lokiQueryLogs(serverIp, query, limit, since);
+        } else {
+            const params = new URLSearchParams();
+            if (query) params.append('query', query);
+            if (limit) params.append('limit', limit.toString());
+            if (since) params.append('since', since);
+            
+            return this.webApiCall(`/loki/${serverIp}/query?${params}`);
+        }
+    }
+
+    async lokiStartStream(serverIp, query, refreshInterval) {
+        if (this.isElectron) {
+            return window.electronAPI.lokiStartStream(serverIp, query, refreshInterval);
+        } else {
+            return this.webApiCall(`/loki/${serverIp}/stream/start`, {
+                method: 'POST',
+                body: JSON.stringify({ query, refreshInterval })
+            });
+        }
+    }
+
+    async lokiStopStream(serverIp) {
+        if (this.isElectron) {
+            return window.electronAPI.lokiStopStream();
+        } else {
+            return this.webApiCall(`/loki/${serverIp}/stream/stop`, { method: 'POST' });
+        }
+    }
+
+    async lokiGetLabels(serverIp) {
+        if (this.isElectron) {
+            return window.electronAPI.lokiGetLabels(serverIp);
+        } else {
+            return this.webApiCall(`/loki/${serverIp}/labels`);
+        }
+    }
+
+    async lokiGetLabelValues(serverIp, label) {
+        if (this.isElectron) {
+            return window.electronAPI.lokiGetLabelValues(serverIp, label);
+        } else {
+            return this.webApiCall(`/loki/${serverIp}/labels/${encodeURIComponent(label)}/values`);
+        }
+    }
+
+    async lokiGetCommonQueries() {
+        if (this.isElectron) {
+            return window.electronAPI.lokiGetCommonQueries();
+        } else {
+            return this.webApiCall('/loki/common-queries');
+        }
+    }
+
     // Settings API
     async getAppSettings() {
         if (this.isElectron) {

@@ -63,5 +63,28 @@ contextBridge.exposeInMainWorld('electronAPI', {  scanForWatchoutServers: () => 
   testStartupWarning: () => ipcRenderer.invoke('test-startup-warning'),
 
   // For development purposes
-  openDevTools: () => ipcRenderer.invoke('open-dev-tools')
+  openDevTools: () => ipcRenderer.invoke('open-dev-tools'),
+
+  // Loki Log API
+  lokiTestConnection: (serverIp) => ipcRenderer.invoke('loki-test-connection', serverIp),
+  lokiQueryLogs: (serverIp, query, limit, since) => ipcRenderer.invoke('loki-query-logs', serverIp, query, limit, since),
+  lokiStartStream: (serverIp, query, refreshInterval) => ipcRenderer.invoke('loki-start-stream', serverIp, query, refreshInterval),
+  lokiStopStream: () => ipcRenderer.invoke('loki-stop-stream'),
+  lokiGetLabels: (serverIp) => ipcRenderer.invoke('loki-get-labels', serverIp),
+  lokiGetLabelValues: (serverIp, label) => ipcRenderer.invoke('loki-get-label-values', serverIp, label),
+  lokiGetCommonQueries: () => ipcRenderer.invoke('loki-get-common-queries'),
+
+  // Loki event listeners
+  onLokiLogs: (callback) => {
+    ipcRenderer.on('loki-logs', (event, logs) => callback(logs));
+  },
+  onLokiError: (callback) => {
+    ipcRenderer.on('loki-error', (event, error) => callback(error));
+  },
+  onLokiStreamStarted: (callback) => {
+    ipcRenderer.on('loki-stream-started', (event, data) => callback(data));
+  },
+  onLokiStreamStopped: (callback) => {
+    ipcRenderer.on('loki-stream-stopped', (event) => callback());
+  },
 });
