@@ -2306,10 +2306,7 @@ class WatchoutServerFinderApp {
               </select>
             </div>
             <div class="control-group">
-              <button id="testLokiBtn" class="btn btn-secondary">Test Connection</button>
               <button id="queryLogsBtn" class="btn btn-primary">Query Logs</button>
-              <button id="startStreamBtn" class="btn btn-success">Start Stream</button>
-              <button id="stopStreamBtn" class="btn btn-danger" disabled>Stop Stream</button>
             </div>
           </div>
           
@@ -2321,6 +2318,12 @@ class WatchoutServerFinderApp {
             <div id="logStreamStatus" class="stream-status">
               <span class="stream-indicator">⚫</span>
               <span class="stream-text">Stream: Stopped</span>
+            </div>            <div id="logStreamControls">
+              <label class="toggle-label">
+                <input type="checkbox" id="streamToggle">
+                <span class="toggle-switch"></span>
+                <span class="toggle-text">Enable Live Streaming</span>
+              </label>
             </div>
           </div>
 
@@ -2371,21 +2374,31 @@ class WatchoutServerFinderApp {
       }
     } catch (error) {
       console.warn('Failed to load common queries:', error);
-    }
-
-    // Bind events
+    }    // Bind events
     document.getElementById('logQuerySelect').addEventListener('change', (e) => {
       if (e.target.value) {
         document.getElementById('logQuery').value = e.target.value;
       }
     });
 
-    document.getElementById('testLokiBtn').addEventListener('click', () => this.testLokiConnection());
-    document.getElementById('queryLogsBtn').addEventListener('click', () => this.queryLokiLogs());
-    document.getElementById('startStreamBtn').addEventListener('click', () => this.startLokiStream());
-    document.getElementById('stopStreamBtn').addEventListener('click', () => this.stopLokiStream());
-    document.getElementById('clearLogsBtn').addEventListener('click', () => this.clearLogViewer());
-    document.getElementById('exportLogsBtn').addEventListener('click', () => this.exportLogs());
+    const streamToggle = document.getElementById('streamToggle');
+    const queryLogsBtn = document.getElementById('queryLogsBtn');
+    const clearLogsBtn = document.getElementById('clearLogsBtn');
+    const exportLogsBtn = document.getElementById('exportLogsBtn');
+
+    // Add null checks for all elements
+    if (streamToggle) {
+      streamToggle.addEventListener('change', () => this.toggleLokiStream());
+    }
+    if (queryLogsBtn) {
+      queryLogsBtn.addEventListener('click', () => this.queryLokiLogs());
+    }
+    if (clearLogsBtn) {
+      clearLogsBtn.addEventListener('click', () => this.clearLogViewer());
+    }
+    if (exportLogsBtn) {
+      exportLogsBtn.addEventListener('click', () => this.exportLogs());
+    }
 
     // Set up event listeners for log updates
     if (this.api.isElectron) {
@@ -2469,56 +2482,80 @@ class WatchoutServerFinderApp {
     } finally {
       queryBtn.disabled = false;
       queryBtn.textContent = 'Query Logs';
+    }  }
+  async toggleLokiStream() {
+    const streamToggle = document.getElementById('streamToggle');
+    const isStreaming = streamToggle.checked;
+    
+    if (isStreaming) {
+      await this.startLokiStream();
+    } else {
+      await this.stopLokiStream();
     }
-  }
-  async startLokiStream() {
+  }  async startLokiStream() {
     const query = document.getElementById('logQuery').value || '{app=~".+"}';
     const refreshInterval = 2000; // 2 seconds
 
-    const startBtn = document.getElementById('startStreamBtn');
-    const stopBtn = document.getElementById('stopStreamBtn');
+    const streamToggle = document.getElementById('streamToggle');
+    const queryBtn = document.getElementById('queryLogsBtn');
     
-    startBtn.disabled = true;
-    startBtn.textContent = 'Starting...';
+    // Disable toggle during operation
+    streamToggle.disabled = true;
 
     try {
       const result = await this.api.lokiStartStream(this.selectedServerIp, query, refreshInterval);
       
       if (result.success) {
         this.updateStreamStatus(true);
-        startBtn.disabled = true;
-        stopBtn.disabled = false;
+        
+        // Disable query button during streaming
+        if (queryBtn) {
+          queryBtn.disabled = true;
+        }
+        
+        // Keep toggle checked
+        streamToggle.checked = true;
+        streamToggle.disabled = false;
       } else {
         this.displayLogError(result.error);
-        startBtn.disabled = false;
+        // Uncheck toggle on failure
+        streamToggle.checked = false;
+        streamToggle.disabled = false;
       }
     } catch (error) {
       this.displayLogError(error.message);
-      startBtn.disabled = false;
-    } finally {
-      startBtn.textContent = 'Start Stream';
+      // Uncheck toggle on error
+      streamToggle.checked = false;
+      streamToggle.disabled = false;
     }
-  }
-
-  async stopLokiStream() {
-    const startBtn = document.getElementById('startStreamBtn');
-    const stopBtn = document.getElementById('stopStreamBtn');
+  }  async stopLokiStream() {
+    const streamToggle = document.getElementById('streamToggle');
+    const queryBtn = document.getElementById('queryLogsBtn');
     
-    stopBtn.disabled = true;
-    stopBtn.textContent = 'Stopping...';
+    // Disable toggle during operation
+    streamToggle.disabled = true;
 
     try {
       const result = await this.api.lokiStopStream(this.selectedServerIp);
       
       if (result.success) {
         this.updateStreamStatus(false);
-        startBtn.disabled = false;
-        stopBtn.disabled = true;
+        
+        // Re-enable query button when streaming stops
+        if (queryBtn) {
+          queryBtn.disabled = false;
+        }
+        
+        // Uncheck toggle
+        streamToggle.checked = false;
+        streamToggle.disabled = false;
       }
     } catch (error) {
       this.displayLogError(error.message);
     } finally {
-      stopBtn.textContent = 'Stop Stream';
+      if (streamToggle.disabled) {
+        streamToggle.disabled = false;
+      }
     }
   }
 
