@@ -316,12 +316,14 @@ class WatchoutServerFinderWebApp {
             this.scanInterval = null;
             console.log('Background scanning stopped');
         }
-    }
-
-    async performBackgroundScan() {
+    }    async performBackgroundScan() {
         if (this.isScanning) return;
 
         console.log('Performing background scan...');
+        
+        // Set scanning state and update button animation
+        this.isScanning = true;
+        this.updateScanButton();
         
         try {
             const result = await this.scanForWatchoutServers();
@@ -341,6 +343,10 @@ class WatchoutServerFinderWebApp {
             }
         } catch (error) {
             console.error('Background scan error:', error);
+        } finally {
+            // Clear scanning state and update button animation
+            this.isScanning = false;
+            this.updateScanButton();
         }
     }
 
