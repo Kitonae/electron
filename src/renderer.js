@@ -843,7 +843,6 @@ class WatchoutServerFinderApp {
 
     return html;
   }
-
   escapeHtml(unsafe) {
     if (typeof unsafe !== "string") return unsafe;
     return unsafe
@@ -852,6 +851,12 @@ class WatchoutServerFinderApp {
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#039;");
+  }
+
+  isValidIpAddress(ip) {
+    // Basic IP address validation
+    const ipRegex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+    return ipRegex.test(ip);
   }
   log(message) {
     console.log(`[WatchoutApp] ${message}`);
@@ -953,10 +958,10 @@ class WatchoutServerFinderApp {
 
     return item;
   }
-
   getServerId(server) {
     // Create a unique identifier for the server
-    return `${server.ip}:${server.ports.join(",")}`;
+    const ports = server.ports ? server.ports.join(",") : "manual";
+    return `${server.ip}:${ports}`;
   }
 
   getSimplifiedServerType(server) {
@@ -2044,8 +2049,7 @@ class WatchoutServerFinderApp {
       };
       serverIpInput.onkeydown = serverIpInput._boundEnterHandler;
     }
-  }
-  async addManualServer() {
+  }  async addManualServer() {
     try {
       const serverIp = document.getElementById("serverIp").value.trim();
       const serverName = document.getElementById("serverName").value.trim();
@@ -2063,6 +2067,7 @@ class WatchoutServerFinderApp {
         ip: serverIp,
         hostname: serverName || serverIp,
         type: serverType,
+        ports: [3040, 3041, 3042, 3022], // Standard Watchout ports + Loki
         discoveryMethod: "manual",
         status: "online", // Manual servers are always considered online
         isManual: true, // Flag to identify manual servers
