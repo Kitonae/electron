@@ -332,27 +332,21 @@
                         <label for="serverIp">Server IP Address *</label>
                         <input type="text" id="serverIp" placeholder="e.g., 192.168.1.100" required pattern="^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$">
                         <small class="form-help">Enter the IP address of the Watchout server</small>
-                    </div>
-                    <div class="form-group">
+                    </div>                    <div class="form-group">
                         <label for="serverName">Server Name (Optional)</label>
                         <input type="text" id="serverName" placeholder="e.g., Production Server 1">
                         <small class="form-help">Friendly name for the server (will use IP if empty)</small>
                     </div>
                     <div class="form-group">
-                        <label for="serverPorts">Ports (Optional)</label>
-                        <input type="text" id="serverPorts" value="3040,3041,3042" placeholder="3040,3041,3042">
-                        <small class="form-help">Comma-separated port numbers (default: 3040,3041,3042)</small>
-                    </div>
-                    <div class="form-group">
-                        <label for="serverType">Server Type</label>
-                        <select id="serverType">
+                        <label for="serverType">Server Type</label>                        <select id="serverType">
                             <option value="Manual Entry">Manual Entry</option>
+                            <option value="Loki Log Server">Loki Log Server</option>
                             <option value="Production Server">Production Server</option>
                             <option value="Director Server">Director Server</option>
                             <option value="Display Server">Display Server</option>
                             <option value="Asset Manager">Asset Manager</option>
                         </select>
-                        <small class="form-help">Select the type of Watchout server</small>
+                        <small class="form-help">All servers will include both Watchout ports (3040,3041,3042) and Loki log port (3022)</small>
                     </div>
                 </form>
             </div>

@@ -404,7 +404,7 @@ class WatchoutCommands {
         }
     }
 
-    async queryLokiLogs(serverIp, query = '{job="watchout"}', limit = 100, since = '1h') {
+    async queryLokiLogs(serverIp, query = '{app=~".+"}', limit = 100, since = '1h') {
         try {
             return await this.lokiLogReader.queryLogs(serverIp, query, limit, since);
         } catch (error) {
@@ -415,7 +415,7 @@ class WatchoutCommands {
         }
     }
 
-    async startLokiLogStream(serverIp, query = '{job="watchout"}', refreshInterval = 2000) {
+    async startLokiLogStream(serverIp, query = '{app=~".+"}', refreshInterval = 2000) {
         try {
             await this.lokiLogReader.startLogStream(serverIp, query, refreshInterval);
             return {

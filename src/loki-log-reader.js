@@ -15,29 +15,33 @@ class LokiLogReader extends EventEmitter {
         this.maxReconnectAttempts = 5;
         this.reconnectDelay = 2000; // 2 seconds
         this.lastQueryTime = null;
-    }
-
-    // Query Loki for recent logs
-    async queryLogs(serverIp, query = '{job="watchout"}', limit = 100, since = '1h') {
+    }    // Query Loki for recent logs
+    async queryLogs(serverIp, query = '{app=~".+"}', limit = 100, since = '1h') {
         const targetPort = this.defaultPort;
+        
+        // Calculate proper time range for Loki API
+        const now = new Date();
+        const start = new Date(now.getTime() - this.parseDuration(since));
+        
         const params = new URLSearchParams({
             query: query,
             limit: limit.toString(),
-            since: since
+            start: (start.getTime() * 1000000).toString(), // Convert to nanoseconds
+            end: (now.getTime() * 1000000).toString(), // Convert to nanoseconds
+            direction: 'backward'
         });
         
         const url = `http://${serverIp}:${targetPort}/loki/api/v1/query_range?${params}`;
         
         return new Promise((resolve, reject) => {
-            const options = {
+            const req = http.request(url, {
                 method: 'GET',
                 timeout: this.timeout,
                 headers: {
-                    'Accept': 'application/json'
+                    'Accept': 'application/json',
+                    'User-Agent': 'WATCHOUT-Assistant/1.0'
                 }
-            };
-
-            const req = http.request(url, options, (res) => {
+            }, (res) => {
                 let responseData = '';
                 
                 res.on('data', (chunk) => {
@@ -85,7 +89,7 @@ class LokiLogReader extends EventEmitter {
                 req.destroy();
                 reject({
                     success: false,
-                    error: `Connection timed out`,
+                    error: `Connection timed out after ${this.timeout}ms`,
                     code: 'TIMEOUT'
                 });
             });
@@ -94,8 +98,24 @@ class LokiLogReader extends EventEmitter {
         });
     }
 
+    // Parse duration string (e.g., "1h", "30m", "5s") to milliseconds
+    parseDuration(duration) {
+        const match = duration.match(/^(\d+)([smh])$/);
+        if (!match) return 3600000; // Default to 1 hour
+        
+        const value = parseInt(match[1]);
+        const unit = match[2];
+        
+        switch (unit) {
+            case 's': return value * 1000;
+            case 'm': return value * 60 * 1000;
+            case 'h': return value * 60 * 60 * 1000;
+            default: return 3600000;
+        }
+    }
+
     // Start real-time log streaming using tail-like functionality
-    async startLogStream(serverIp, query = '{job="watchout"}', refreshInterval = 2000) {
+    async startLogStream(serverIp, query = '{app=~".+"}', refreshInterval = 2000) {
         if (this.isStreaming) {
             console.log('Log stream already active');
             return;
@@ -252,13 +272,12 @@ class LokiLogReader extends EventEmitter {
                             const timestamp = new Date(parseInt(entry[0]) / 1000000); // Convert nanoseconds to milliseconds
                             const message = entry[1];
                             const labels = stream.stream || {};
-                            
-                            logs.push({
+                              logs.push({
                                 timestamp: timestamp.toISOString(),
                                 message: message,
                                 labels: labels,
                                 level: this.extractLogLevel(message),
-                                source: labels.job || 'unknown'
+                                source: labels.app || labels.job || 'unknown'
                             });
                         }
                     });
@@ -280,13 +299,11 @@ class LokiLogReader extends EventEmitter {
         if (upperMessage.includes('INFO')) return 'info';
         if (upperMessage.includes('DEBUG')) return 'debug';
         return 'info'; // default
-    }
-
-    // Test connection to Loki server
+    }    // Test connection to Loki server
     async testConnection(serverIp) {
         try {
             const url = `http://${serverIp}:${this.defaultPort}/ready`;
-            const result = await this.makeRequest(url);
+            const result = await this.makeRequestWithDetails(url);
             
             if (result.success) {
                 return {
@@ -297,7 +314,7 @@ class LokiLogReader extends EventEmitter {
             } else {
                 // Try alternative endpoint
                 const altUrl = `http://${serverIp}:${this.defaultPort}/metrics`;
-                const altResult = await this.makeRequest(altUrl);
+                const altResult = await this.makeRequestWithDetails(altUrl);
                 
                 return {
                     success: altResult.success,
@@ -378,42 +395,443 @@ class LokiLogReader extends EventEmitter {
         } else {
             return `Connection to Loki server failed: ${message.split(' ').slice(-1)[0] || 'Unknown error'}`;
         }
-    }
-
-    // Get common log queries for Watchout systems
+    }    // Get common log queries for Watchout systems
     getCommonQueries() {
         return [
             {
-                name: 'All Logs',
-                query: '{}',
-                description: 'Show all available logs'
+                name: 'All Applications',
+                query: '{app=~".+"}',
+                description: 'Show logs from all Watchouts'
             },
             {
-                name: 'Watchout Logs',
-                query: '{job="watchout"}',
-                description: 'Show logs from Watchout services'
+                name: 'Director Logs',
+                query: '{app="Director"}',
+                description: 'Show logs from Watchout Director'
             },
             {
-                name: 'Error Logs',
-                query: '{} |~ "(?i)error|err"',
-                description: 'Show only error messages'
+                name: 'Visual Renderer Logs',
+                query: '{app="VisualRenderer"}',
+                description: 'Show logs from Visual Renderer'
             },
             {
-                name: 'Warning Logs',
-                query: '{} |~ "(?i)warn|warning"',
-                description: 'Show only warning messages'
+                name: 'Audio Renderer Logs',
+                query: '{app="AudioRenderer"}',
+                description: 'Show logs from Audio Renderer'
             },
             {
-                name: 'Timeline Logs',
-                query: '{} |~ "(?i)timeline|play|pause|stop"',
-                description: 'Show timeline-related logs'
+                name: 'Operative Logs',
+                query: '{app="Operative"}',
+                description: 'Show logs from Operative'
             },
             {
-                name: 'Connection Logs',
-                query: '{} |~ "(?i)connect|disconnect|network|tcp"',
-                description: 'Show connection-related logs'
+                name: 'Runner Logs',
+                query: '{app="Runner"}',
+                description: 'Show logs from Runner'
+            },
+            {
+                name: 'System Logs',
+                query: '{app="sys"}',
+                description: 'Show system-level logs'
+            },
+            {
+                name: 'Error Messages',
+                query: '{app=~".+"} |~ "(?i)error|err|exception|fail"',
+                description: 'Show error messages from alls'
+            },
+            {
+                name: 'Warning Messages',
+                query: '{app=~".+"} |~ "(?i)warn|warning|alert"',
+                description: 'Show warning messages from alls'
+            },
+            {
+                name: 'Timeline Operations',
+                query: '{app=~".+"} |~ "(?i)timeline|play|pause|stop|cue|seek"',
+                description: 'Show timeline and playback related logs'
+            },
+            {
+                name: 'Network & Connection',
+                query: '{app=~".+"} |~ "(?i)connect|disconnect|network|tcp|udp|socket"',
+                description: 'Show network and connection related logs'
+            },
+            {
+                name: 'Performance & Stats',
+                query: '{app=~".+"} |~ "(?i)performance|fps|frame|render|cpu|memory|gpu"',
+                description: 'Show performance and statistics logs'
             }
         ];
+    }
+
+    // Comprehensive test suite for debugging
+    async runDiagnostics(serverIp) {
+        console.log(`\n=== Loki Server Diagnostics for ${serverIp}:${this.defaultPort} ===`);
+        const results = {
+            serverIp,
+            port: this.defaultPort,
+            timestamp: new Date().toISOString(),
+            tests: {}
+        };
+
+        // Test 1: Basic connectivity
+        console.log('\n1. Testing basic connectivity...');
+        try {
+            const connectTest = await this.testBasicConnectivity(serverIp);
+            results.tests.connectivity = connectTest;
+            console.log(`   Result: ${connectTest.success ? 'SUCCESS' : 'FAILED'}`);
+            console.log(`   Details: ${connectTest.message}`);
+        } catch (error) {
+            results.tests.connectivity = { success: false, error: error.message };
+            console.log(`   Result: FAILED - ${error.message}`);
+        }        // Test 2: Loki health endpoints
+        console.log('\n2. Testing Loki health endpoints...');
+        const healthTests = await this.testHealthEndpoints(serverIp);
+        const healthResults = Object.values(healthTests);
+        const healthSuccess = healthResults.some(r => r.success);
+        results.tests.health = {
+            success: healthSuccess,
+            details: healthTests,
+            message: healthSuccess ? 'Some health endpoints are accessible' : 'No health endpoints accessible'
+        };
+        for (const [endpoint, result] of Object.entries(healthTests)) {
+            console.log(`   ${endpoint}: ${result.success ? 'SUCCESS' : 'FAILED'} (${result.statusCode || 'N/A'})`);
+            if (result.error) console.log(`     Error: ${result.error}`);
+        }        // Test 3: API endpoints
+        console.log('\n3. Testing Loki API endpoints...');
+        const apiTests = await this.testApiEndpoints(serverIp);
+        const apiResults = Object.values(apiTests);
+        const apiSuccess = apiResults.some(r => r.success);
+        results.tests.api = {
+            success: apiSuccess,
+            details: apiTests,
+            message: apiSuccess ? 'Some API endpoints are accessible' : 'No API endpoints accessible'
+        };
+        for (const [endpoint, result] of Object.entries(apiTests)) {
+            console.log(`   ${endpoint}: ${result.success ? 'SUCCESS' : 'FAILED'} (${result.statusCode || 'N/A'})`);
+            if (result.error) console.log(`     Error: ${result.error}`);
+        }
+
+        // Test 4: Sample query
+        console.log('\n4. Testing sample log query...');
+        try {
+            const queryTest = await this.testSampleQuery(serverIp);
+            results.tests.query = queryTest;
+            console.log(`   Result: ${queryTest.success ? 'SUCCESS' : 'FAILED'}`);
+            console.log(`   Logs found: ${queryTest.success ? queryTest.data.length : 0}`);
+            if (queryTest.error) console.log(`   Error: ${queryTest.error}`);
+        } catch (error) {
+            results.tests.query = { success: false, error: error.message };
+            console.log(`   Result: FAILED - ${error.message}`);
+        }
+
+        // Test 5: Localhost test (if not already testing localhost)
+        if (serverIp !== 'localhost' && serverIp !== '127.0.0.1') {
+            console.log('\n5. Testing localhost fallback...');
+            try {
+                const localhostTest = await this.testLocalhost();
+                results.tests.localhost = localhostTest;
+                console.log(`   Result: ${localhostTest.success ? 'SUCCESS' : 'FAILED'}`);
+                console.log(`   Details: ${localhostTest.message}`);
+                if (localhostTest.success) {
+                    console.log(`   Suggestion: Try connecting to localhost:${this.defaultPort} instead`);
+                }
+            } catch (error) {
+                results.tests.localhost = { success: false, error: error.message };
+                console.log(`   Result: FAILED - ${error.message}`);
+            }
+        } else {
+            console.log('\n5. Localhost test skipped (already testing localhost)');
+            results.tests.localhost = { skipped: true, reason: 'Already testing localhost' };
+        }
+
+        console.log('\n=== Diagnostics Complete ===\n');
+        return results;
+    }
+
+    // Test basic TCP connectivity
+    async testBasicConnectivity(serverIp) {
+        return new Promise((resolve) => {
+            const net = require('net');
+            const socket = new net.Socket();
+            const timeout = 5000;
+
+            const timer = setTimeout(() => {
+                socket.destroy();
+                resolve({
+                    success: false,
+                    message: `Connection timeout after ${timeout}ms`
+                });
+            }, timeout);
+
+            socket.connect(this.defaultPort, serverIp, () => {
+                clearTimeout(timer);
+                socket.destroy();
+                resolve({
+                    success: true,
+                    message: `Port ${this.defaultPort} is open and accepting connections`
+                });
+            });
+
+            socket.on('error', (error) => {
+                clearTimeout(timer);
+                resolve({
+                    success: false,
+                    message: `Connection failed: ${error.code || error.message}`
+                });
+            });
+        });
+    }
+
+    // Test various Loki health endpoints
+    async testHealthEndpoints(serverIp) {
+        const endpoints = [
+            '/ready',
+            '/metrics',
+            '/config',
+            '/services',
+            '/loki/api/v1/labels'
+        ];
+
+        const results = {};
+        
+        for (const endpoint of endpoints) {
+            try {
+                const url = `http://${serverIp}:${this.defaultPort}${endpoint}`;
+                console.log(`   Testing: ${endpoint}`);
+                const result = await this.makeRequestWithDetails(url);
+                results[endpoint] = result;
+            } catch (error) {
+                results[endpoint] = {
+                    success: false,
+                    error: error.message
+                };
+            }
+        }
+
+        return results;
+    }    // Test Loki API endpoints
+    async testApiEndpoints(serverIp) {
+        const endpoints = [
+            '/loki/api/v1/labels',
+            '/loki/api/v1/label/job/values',
+            '/loki/api/v1/query?query={app=~".+"}'
+
+        ];
+
+        const results = {};
+        
+        for (const endpoint of endpoints) {
+            try {
+                const url = `http://${serverIp}:${this.defaultPort}${endpoint}`;
+                console.log(`   Testing: ${endpoint}`);
+                const result = await this.makeRequestWithDetails(url);
+                results[endpoint] = result;
+            } catch (error) {
+                results[endpoint] = {
+                    success: false,
+                    error: error.message
+                };
+            }
+        }
+
+        return results;
+    }// Test a sample query
+    async testSampleQuery(serverIp) {
+        try {            console.log('   Executing sample query: {app=~".+"}');
+            const result = await this.queryLogs(serverIp, '{app=~".+"}', 10, '1h');
+            return result;
+        } catch (error) {
+            return {
+                success: false,
+                error: error.message
+            };
+        }
+    }
+
+    // Enhanced request method with detailed response info
+    async makeRequestWithDetails(url) {
+        return new Promise((resolve, reject) => {
+            const startTime = Date.now();
+            
+            const req = http.request(url, { 
+                method: 'GET', 
+                timeout: 10000,
+                headers: {
+                    'Accept': 'application/json',
+                    'User-Agent': 'WATCHOUT-Assistant/1.0'
+                }
+            }, (res) => {
+                const responseTime = Date.now() - startTime;
+                let data = '';
+                
+                res.on('data', chunk => data += chunk);
+                res.on('end', () => {
+                    const result = {
+                        success: res.statusCode >= 200 && res.statusCode < 300,
+                        statusCode: res.statusCode,
+                        responseTime: responseTime,
+                        contentLength: data.length,
+                        contentType: res.headers['content-type'] || 'unknown'
+                    };
+
+                    if (!result.success) {
+                        result.error = `HTTP ${res.statusCode}: ${data.substring(0, 200)}`;
+                    }
+
+                    try {
+                        if (result.contentType.includes('application/json')) {
+                            result.data = JSON.parse(data);
+                        } else {
+                            result.data = data.substring(0, 200); // First 200 chars for non-JSON
+                        }
+                    } catch (parseError) {
+                        result.parseError = parseError.message;
+                        result.data = data.substring(0, 200);
+                    }
+
+                    resolve(result);
+                });
+            });
+
+            req.on('error', (error) => {
+                resolve({
+                    success: false,
+                    error: error.message,
+                    code: error.code,
+                    responseTime: Date.now() - startTime
+                });
+            });
+
+            req.on('timeout', () => {
+                req.destroy();
+                resolve({
+                    success: false,
+                    error: 'Request timeout',
+                    code: 'TIMEOUT',
+                    responseTime: Date.now() - startTime
+                });
+            });
+
+            req.end();
+        });
+    }
+
+    // Quick connection test
+    async quickTest(serverIp) {
+        console.log(`Quick test for Loki server at ${serverIp}:${this.defaultPort}`);
+        
+        try {
+            // Test basic connectivity first
+            const connectTest = await this.testBasicConnectivity(serverIp);
+            if (!connectTest.success) {
+                return {
+                    success: false,
+                    message: `Port not accessible: ${connectTest.message}`
+                };
+            }
+
+            // Test ready endpoint
+            const readyTest = await this.testConnection(serverIp);
+            if (readyTest.success) {
+                return {
+                    success: true,
+                    message: 'Loki server is ready and accessible'
+                };
+            }
+
+            // Test alternative endpoints
+            const altTest = await this.makeRequestWithDetails(`http://${serverIp}:${this.defaultPort}/metrics`);
+            if (altTest.success) {
+                return {
+                    success: true,
+                    message: 'Server is accessible via metrics endpoint'
+                };
+            }
+
+            return {
+                success: false,
+                message: 'Server accessible but Loki API not responding correctly'
+            };
+
+        } catch (error) {
+            return {
+                success: false,
+                message: `Test failed: ${error.message}`
+            };
+        }
+    }
+
+    // Test localhost connectivity specifically
+    async testLocalhost() {
+        const localhostAddresses = ['127.0.0.1', 'localhost'];
+        
+        for (const address of localhostAddresses) {
+            try {
+                console.log(`   Testing ${address}:${this.defaultPort}...`);
+                
+                // Test basic connectivity
+                const connectTest = await this.testBasicConnectivity(address);
+                if (connectTest.success) {
+                    // Test Loki ready endpoint
+                    const readyTest = await this.testConnection(address);
+                    if (readyTest.success) {
+                        return {
+                            success: true,
+                            address: address,
+                            message: `Loki server found on ${address}:${this.defaultPort}`
+                        };
+                    } else {
+                        // Test if any HTTP service is running
+                        const httpTest = await this.makeRequestWithDetails(`http://${address}:${this.defaultPort}/`);
+                        if (httpTest.success || httpTest.statusCode) {
+                            return {
+                                success: true,
+                                address: address,
+                                message: `HTTP service found on ${address}:${this.defaultPort} but may not be Loki`,
+                                warning: 'Service responding but not identified as Loki'
+                            };
+                        }
+                    }
+                }
+            } catch (error) {
+                console.log(`     ${address}: ${error.message}`);
+            }
+        }
+        
+        return {
+            success: false,
+            message: `No Loki server found on localhost:${this.defaultPort}`
+        };
+    }
+
+    // Run basic test suite for a server (for integration with main app)
+    async runBasicTests(serverIp) {
+        const results = {
+            serverIp,
+            port: this.defaultPort,
+            timestamp: new Date().toISOString(),
+            overall: false,
+            tests: {}
+        };
+
+        try {
+            // Quick connectivity test
+            const connectTest = await this.testBasicConnectivity(serverIp);
+            results.tests.connectivity = connectTest;
+
+            if (connectTest.success) {
+                // Test Loki endpoints
+                const readyTest = await this.testConnection(serverIp);
+                results.tests.loki = readyTest;                // Try a simple query
+                const queryTest = await this.queryLogs(serverIp, '{app=~".+"}', 5, '5m');
+                results.tests.query = queryTest;
+
+                results.overall = readyTest.success || queryTest.success;
+            }
+
+        } catch (error) {
+            results.error = error.message;
+        }
+
+        return results;
     }
 }
 

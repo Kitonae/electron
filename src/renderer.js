@@ -1898,18 +1898,25 @@ class WatchoutServerFinderApp {
       modal.classList.add("show");
 
       // Bind modal events
-      this.bindAddServerModal();
-
-      // Clear previous values
+      this.bindAddServerModal();      // Clear previous values
       const serverIpInput = document.getElementById("serverIp");
       const serverNameInput = document.getElementById("serverName");
-      const serverPortsInput = document.getElementById("serverPorts");
       const serverTypeSelect = document.getElementById("serverType");
       
       if (serverIpInput) serverIpInput.value = "";
       if (serverNameInput) serverNameInput.value = "";
-      if (serverPortsInput) serverPortsInput.value = "3040,3041,3042";
       if (serverTypeSelect) serverTypeSelect.value = "Manual Entry";
+
+      // Add listener for server type changes to auto-configure server names
+      if (serverTypeSelect) {
+        serverTypeSelect.addEventListener('change', (e) => {
+          if (e.target.value === 'Loki Log Server') {
+            if (serverNameInput && !serverNameInput.value) {
+              serverNameInput.value = "Loki Log Server";
+            }
+          }
+        });
+      }
 
       // Focus on IP input
       setTimeout(() => {
@@ -2031,12 +2038,10 @@ class WatchoutServerFinderApp {
       serverIpInput.onkeydown = serverIpInput._boundEnterHandler;
     }
   }
-
   async addManualServer() {
     try {
       const serverIp = document.getElementById("serverIp").value.trim();
       const serverName = document.getElementById("serverName").value.trim();
-      const serverPorts = document.getElementById("serverPorts").value.trim();
       const serverType = document.getElementById("serverType").value;
 
       // Validate IP address
@@ -2045,27 +2050,11 @@ class WatchoutServerFinderApp {
         return;
       }
 
-      // Parse ports
-      let ports = [3040, 3041, 3042]; // Default ports
-      if (serverPorts) {
-        try {
-          ports = serverPorts
-            .split(",")
-            .map((p) => parseInt(p.trim()))
-            .filter((p) => p > 0 && p <= 65535);
-          if (ports.length === 0) {
-            ports = [3040, 3041, 3042]; // Fallback to defaults
-          }
-        } catch (error) {
-          console.warn("Invalid ports specified, using defaults:", error);
-        }
-      }
-
-      // Create server object
+      // Ports are now hardcoded in the backend (3040, 3041, 3042, 3022)
+      // No need to parse or validate ports from user input      // Create server object (ports will be set by backend)
       const manualServer = {
         ip: serverIp,
         hostname: serverName || serverIp,
-        ports: ports,
         type: serverType,
         discoveryMethod: "manual",
         status: "online", // Manual servers are always considered online
@@ -2118,10 +2107,8 @@ class WatchoutServerFinderApp {
     }
   }
   async updateManualServer(serverId) {
-    try {
-      const serverIp = document.getElementById("serverIp").value.trim();
+    try {      const serverIp = document.getElementById("serverIp").value.trim();
       const serverName = document.getElementById("serverName").value.trim();
-      const serverPorts = document.getElementById("serverPorts").value.trim();
       const serverType = document.getElementById("serverType").value;
 
       // Validate IP address
@@ -2130,27 +2117,13 @@ class WatchoutServerFinderApp {
         return;
       }
 
-      // Parse ports
-      let ports = [3040, 3041, 3042]; // Default Watchout ports
-      if (serverPorts) {
-        try {
-          ports = serverPorts
-            .split(",")
-            .map((p) => parseInt(p.trim()))
-            .filter((p) => p > 0 && p <= 65535);
-          if (ports.length === 0) {
-            ports = [3040, 3041, 3042]; // Fallback to defaults
-          }
-        } catch (error) {
-          console.warn("Invalid ports specified, using defaults:", error);
-        }
-      }
+      // Ports are now hardcoded in the backend (3040, 3041, 3042, 3022)
+      // No need to parse or validate ports from user input
 
       // Create updated server object
       const updatedServerData = {
         ip: serverIp,
         hostname: serverName || serverIp,
-        ports: ports,
         type: serverType,
         discoveryMethod: "manual",
         status: "online",
@@ -2248,11 +2221,54 @@ class WatchoutServerFinderApp {
   }
 
   // ==================== LOKI LOG VIEWER METHODS ====================
-  
-  showLokiLogViewer() {
+    showLokiLogViewer() {
+    // Enhanced server selection validation
     if (!this.selectedServerIp) {
-      alert('Please select a server first');
+      alert('Please select a server first before opening the log viewer.');
       return;
+    }
+    
+    // Additional validation to ensure the selected server exists
+    const selectedServer = this.servers.find(
+      (server) => this.getServerId(server) === this.selectedServerId
+    );
+    
+    if (!selectedServer) {
+      alert('Selected server not found. Please refresh the server list and try again.');
+      return;
+    }
+    
+    console.log(`Opening Loki Log Viewer for server: ${this.selectedServerIp} (${selectedServer.hostname || selectedServer.ip})`);
+      // Check if this server has Loki port (3022) configured
+    const hasLokiPort = selectedServer.ports && selectedServer.ports.includes(3022);
+    if (!hasLokiPort) {
+      console.warn(`Port 3022 not detected during scan for ${this.selectedServerIp}. Loki may not be running or may be on a different system.`);
+      
+      // Show a less intrusive notification instead of blocking the user
+      const notification = document.createElement('div');
+      notification.className = 'notification warning';
+      notification.innerHTML = `
+        <div class="notification-content">
+          <strong>⚠️ Loki Port Not Detected</strong><br>
+          Port 3022 wasn't found during the network scan for this server.<br>
+          <small>Loki may be running on a different system or port. You can still try to connect.</small>
+        </div>
+        <button onclick="this.parentElement.remove()" class="notification-close">×</button>
+      `;
+      
+      // Add notification to the modal body when it's created
+      setTimeout(() => {
+        const modalBody = document.querySelector('.log-viewer-modal .modal-body');
+        if (modalBody) {
+          modalBody.insertBefore(notification, modalBody.firstChild);
+          // Auto-remove after 8 seconds
+          setTimeout(() => {
+            if (notification.parentElement) {
+              notification.remove();
+            }
+          }, 8000);
+        }
+      }, 100);
     }
 
     // Create modal for log viewer
@@ -2271,7 +2287,7 @@ class WatchoutServerFinderApp {
               <select id="logQuerySelect">
                 <option value="">Select a common query...</option>
               </select>
-              <input type="text" id="logQuery" placeholder='{job="watchout"}' value='{job="watchout"}'>
+              <input type="text" id="logQuery" placeholder='{app=~".+"}' value='{app=~".+"}'>
             </div>
             <div class="control-group">
               <label for="logLimit">Limit:</label>
@@ -2382,32 +2398,57 @@ class WatchoutServerFinderApp {
     // Test connection automatically
     this.testLokiConnection();
   }
-
   async testLokiConnection() {
+    // Validate server selection
+    if (!this.selectedServerIp) {
+      const statusElement = document.getElementById('lokiConnectionStatus');
+      const statusText = statusElement.querySelector('.status-text');
+      statusElement.className = 'connection-status error';
+      statusText.textContent = 'Error: No server selected';
+      return;
+    }
+    
     const statusElement = document.getElementById('lokiConnectionStatus');
     const statusText = statusElement.querySelector('.status-text');
     
-    statusText.textContent = 'Testing connection...';
+    statusText.textContent = `Testing connection to ${this.selectedServerIp}:3022...`;
     statusElement.className = 'connection-status testing';
 
     try {
+      console.log(`Testing Loki connection to: ${this.selectedServerIp}`);
       const result = await this.api.lokiTestConnection(this.selectedServerIp);
       
-      if (result.success && result.connected) {
+      console.log('Loki connection test result:', result);
+        if (result.success && result.connected) {
         statusElement.className = 'connection-status connected';
         statusText.textContent = `Connected: ${result.message}`;
       } else {
         statusElement.className = 'connection-status error';
-        statusText.textContent = `Error: ${result.message}`;
+        
+        // Provide more specific guidance based on the error
+        let errorMsg = result.message || 'Connection failed';
+        let suggestion = '';
+        
+        if (errorMsg.includes('Connection failed') || errorMsg.includes('ECONNREFUSED')) {
+          suggestion = ' • Check if Loki is running on this server';
+        } else if (errorMsg.includes('timeout')) {
+          suggestion = ' • Server may be running but port 3022 is not accessible';
+        } else if (errorMsg.includes('host not found')) {
+          suggestion = ' • Verify the server IP address is correct';
+        } else if (errorMsg.includes('network unreachable')) {
+          suggestion = ' • Check network connectivity to the server';
+        }
+        
+        statusText.textContent = `Error: ${errorMsg}${suggestion}`;
       }
     } catch (error) {
+      console.error('Loki connection test error:', error);
       statusElement.className = 'connection-status error';
       statusText.textContent = `Error: ${error.message}`;
     }
   }
-
   async queryLokiLogs() {
-    const query = document.getElementById('logQuery').value || '{job="watchout"}';
+    const query = document.getElementById('logQuery').value || '{app=~".+"}';
     const limit = parseInt(document.getElementById('logLimit').value) || 100;
     const since = document.getElementById('logSince').value || '1h';
 
@@ -2430,9 +2471,8 @@ class WatchoutServerFinderApp {
       queryBtn.textContent = 'Query Logs';
     }
   }
-
   async startLokiStream() {
-    const query = document.getElementById('logQuery').value || '{job="watchout"}';
+    const query = document.getElementById('logQuery').value || '{app=~".+"}';
     const refreshInterval = 2000; // 2 seconds
 
     const startBtn = document.getElementById('startStreamBtn');

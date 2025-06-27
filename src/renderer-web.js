@@ -799,9 +799,7 @@ class WatchoutServerFinderWebApp {
         
         // Hide status information area when clearing responses
         this.hideStatusInformation();
-    }
-
-    // Add Server Modal Methods
+    }    // Add Server Modal Methods
     showAddServerDialog() {
         const modal = document.getElementById('addServerModal');
         modal.style.display = 'flex';
@@ -809,10 +807,9 @@ class WatchoutServerFinderWebApp {
         // Bind modal events
         this.bindAddServerModal();
         
-        // Clear previous values
+        // Clear previous values (ports are now hardcoded)
         document.getElementById('serverIp').value = '';
         document.getElementById('serverName').value = '';
-        document.getElementById('serverPorts').value = '3040,3041,3042';
         document.getElementById('serverType').value = 'Manual Entry';
         
         // Focus on IP input
@@ -890,11 +887,9 @@ class WatchoutServerFinderWebApp {
         };
     }
 
-    async addManualServer() {
-        try {
+    async addManualServer() {        try {
             const serverIp = document.getElementById('serverIp').value.trim();
             const serverName = document.getElementById('serverName').value.trim();
-            const serverPorts = document.getElementById('serverPorts').value.trim();
             const serverType = document.getElementById('serverType').value;
             
             // Validate IP address
@@ -903,24 +898,13 @@ class WatchoutServerFinderWebApp {
                 return;
             }
             
-            // Parse ports
-            let ports = [3040, 3041, 3042]; // Default ports
-            if (serverPorts) {
-                try {
-                    ports = serverPorts.split(',').map(p => parseInt(p.trim())).filter(p => p > 0 && p <= 65535);
-                    if (ports.length === 0) {
-                        ports = [3040, 3041, 3042]; // Fallback to defaults
-                    }
-                } catch (error) {
-                    console.warn('Invalid ports specified, using defaults:', error);
-                }
-            }
+            // Ports are now hardcoded in the backend (3040, 3041, 3042, 3022)
+            // No need to parse or validate ports from user input
             
-            // Create server object
+            // Create server object (ports will be set by backend)
             const manualServer = {
                 ip: serverIp,
                 hostname: serverName || serverIp,
-                ports: ports,
                 type: serverType,
                 discoveryMethod: 'manual',
                 status: 'online', // Manual servers are always considered online
@@ -986,9 +970,7 @@ class WatchoutServerFinderWebApp {
         if (server.type.includes('Asset Manager')) return 'Asset Manager';
         if (server.type.includes('Watchout')) return 'Watchout Server';
         return 'Server';
-    }
-
-    // Manual Server Management Methods (Web Version)
+    }    // Manual Server Management Methods (Web Version)
     editManualServer(serverId) {
         // Find the server to edit
         const server = this.servers.find(s => this.getServerId(s) === serverId);
@@ -1001,10 +983,9 @@ class WatchoutServerFinderWebApp {
         const modal = document.getElementById('addServerModal');
         modal.style.display = 'flex';
 
-        // Fill in existing values
+        // Fill in existing values (ports are no longer editable)
         document.getElementById('serverIp').value = server.ip;
         document.getElementById('serverName').value = server.hostname || '';
-        document.getElementById('serverPorts').value = server.ports.join(',');
         document.getElementById('serverType').value = server.type;
 
         // Change modal title and button text to indicate editing
@@ -1023,13 +1004,10 @@ class WatchoutServerFinderWebApp {
         setTimeout(() => {
             document.getElementById('serverIp').focus();
         }, 100);
-    }
-
-    async updateManualServer(serverId) {
+    }    async updateManualServer(serverId) {
         try {
             const serverIp = document.getElementById('serverIp').value.trim();
             const serverName = document.getElementById('serverName').value.trim();
-            const serverPorts = document.getElementById('serverPorts').value.trim();
             const serverType = document.getElementById('serverType').value;
             
             // Validate IP address
@@ -1038,24 +1016,13 @@ class WatchoutServerFinderWebApp {
                 return;
             }
             
-            // Parse ports
-            let ports = [3040, 3041, 3042]; // Default ports
-            if (serverPorts) {
-                try {
-                    ports = serverPorts.split(',').map(p => parseInt(p.trim())).filter(p => p > 0 && p <= 65535);
-                    if (ports.length === 0) {
-                        ports = [3040, 3041, 3042]; // Fallback to defaults
-                    }
-                } catch (error) {
-                    console.warn('Invalid ports specified, using defaults:', error);
-                }
-            }
+            // Ports are now hardcoded in the backend (3040, 3041, 3042, 3022)
+            // No need to parse or validate ports from user input
             
-            // Create updated server object
+            // Create updated server object (ports will be set by backend)
             const updatedServerData = {
                 ip: serverIp,
                 hostname: serverName || serverIp,
-                ports: ports,
                 type: serverType,
                 discoveryMethod: 'manual',
                 status: 'online',
@@ -1512,7 +1479,7 @@ class WatchoutServerFinderWebApp {
                             <select id="logQuerySelect">
                                 <option value="">Select a common query...</option>
                             </select>
-                            <input type="text" id="logQuery" placeholder='{job="watchout"}' value='{job="watchout"}'>
+                            <input type="text" id="logQuery" placeholder='{app=~".+"}' value='{app=~".+"}'>
                         </div>
                         <div class="control-group">
                             <label for="logLimit">Limit:</label>
@@ -1611,13 +1578,11 @@ class WatchoutServerFinderWebApp {
 
         // Test connection automatically
         this.testLokiConnection();
-    }
-
-    async testLokiConnection() {
+    }    async testLokiConnection() {
         const statusElement = document.getElementById('lokiConnectionStatus');
         const statusText = statusElement.querySelector('.status-text');
         
-        statusText.textContent = 'Testing connection...';
+        statusText.textContent = `Testing connection to ${this.selectedServerIp}:3022...`;
         statusElement.className = 'connection-status testing';
 
         try {
@@ -1628,16 +1593,29 @@ class WatchoutServerFinderWebApp {
                 statusText.textContent = `Connected: ${result.message}`;
             } else {
                 statusElement.className = 'connection-status error';
-                statusText.textContent = `Error: ${result.message}`;
+                
+                // Provide more specific guidance based on the error
+                let errorMsg = result.message || 'Connection failed';
+                let suggestion = '';
+                
+                if (errorMsg.includes('Connection failed') || errorMsg.includes('ECONNREFUSED')) {
+                    suggestion = ' • Check if Loki is running on this server';
+                } else if (errorMsg.includes('timeout')) {
+                    suggestion = ' • Server may be running but port 3022 is not accessible';
+                } else if (errorMsg.includes('host not found')) {
+                    suggestion = ' • Verify the server IP address is correct';
+                } else if (errorMsg.includes('network unreachable')) {
+                    suggestion = ' • Check network connectivity to the server';
+                }
+                
+                statusText.textContent = `Error: ${errorMsg}${suggestion}`;
             }
         } catch (error) {
             statusElement.className = 'connection-status error';
             statusText.textContent = `Error: ${error.message}`;
         }
-    }
-
-    async queryLokiLogs() {
-        const query = document.getElementById('logQuery').value || '{job="watchout"}';
+    }async queryLokiLogs() {
+        const query = document.getElementById('logQuery').value || '{app=~".+"}';
         const limit = parseInt(document.getElementById('logLimit').value) || 100;
         const since = document.getElementById('logSince').value || '1h';
 
@@ -1659,10 +1637,8 @@ class WatchoutServerFinderWebApp {
             queryBtn.disabled = false;
             queryBtn.textContent = 'Query Logs';
         }
-    }
-
-    async startLokiStream() {
-        const query = document.getElementById('logQuery').value || '{job="watchout"}';
+    }    async startLokiStream() {
+        const query = document.getElementById('logQuery').value || '{app=~".+"}';
         const refreshInterval = 2000; // 2 seconds
 
         const startBtn = document.getElementById('startStreamBtn');

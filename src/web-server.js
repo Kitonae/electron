@@ -226,10 +226,9 @@ class WebServer {  constructor() {
     // Query Loki logs
     this.app.get('/api/loki/:serverIp/query', async (req, res) => {
       try {
-        const { query, limit, since } = req.query;
-        const result = await this.watchoutCommands.queryLokiLogs(
+        const { query, limit, since } = req.query;        const result = await this.watchoutCommands.queryLokiLogs(
           req.params.serverIp,
-          query || '{job="watchout"}',
+          query || '{app=~".+"}',
           parseInt(limit) || 100,
           since || '1h'
         );
@@ -242,10 +241,9 @@ class WebServer {  constructor() {
     // Start Loki log stream
     this.app.post('/api/loki/:serverIp/stream/start', async (req, res) => {
       try {
-        const { query, refreshInterval } = req.body;
-        const result = await this.watchoutCommands.startLokiLogStream(
+        const { query, refreshInterval } = req.body;        const result = await this.watchoutCommands.startLokiLogStream(
           req.params.serverIp,
-          query || '{job="watchout"}',
+          query || '{app=~".+"}',
           refreshInterval || 2000
         );
         res.json(result);
