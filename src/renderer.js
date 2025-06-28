@@ -854,9 +854,10 @@ class WatchoutServerFinderApp {
   }
 
   isValidIpAddress(ip) {
-    // Basic IP address validation
-    const ipRegex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
-    return ipRegex.test(ip);
+    // Basic IP address validation - no leading zeros allowed
+    if (!ip || typeof ip !== 'string') return false;
+    const ipRegex = /^(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])$/;
+    return ipRegex.test(ip.trim());
   }
   log(message) {
     console.log(`[WatchoutApp] ${message}`);
@@ -980,7 +981,7 @@ class WatchoutServerFinderApp {
   }
   getServerId(server) {
     // Create a unique identifier for the server
-    const ports = server.ports ? server.ports.join(",") : "manual";
+    const ports = server.ports && server.ports.length > 0 ? server.ports.join(",") : "manual";
     return `${server.ip}:${ports}`;
   }
 

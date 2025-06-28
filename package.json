@@ -13,7 +13,10 @@
     "build:mac": "electron-builder --mac",
     "build:linux": "electron-builder --linux",
     "dist": "electron-builder --publish=never",
-    "postinstall": "electron-builder install-app-deps"
+    "postinstall": "electron-builder install-app-deps",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
   },
   "build": {
     "appId": "kitonae.watchout-assistant",
@@ -23,7 +26,8 @@
       "provider": "github",
       "owner": "kitonae",
       "repo": "watchout-assistant"
-    },    "files": [
+    },
+    "files": [
       "main.js",
       "src/**/*",
       "assets/**/*",
@@ -38,13 +42,16 @@
       "!**/._*",
       "!**/{.DS_Store,.git,.hg,.svn,CVS,RCS,SCCS,.gitignore,.gitattributes}",
       "!**/{__pycache__,thumbs.db,.flowconfig,.idea,.vs,.nyc_output}",
-      "!**/{appveyor.yml,.travis.yml,circle.yml}",      "!**/{npm-debug.log,yarn.lock,.yarn-integrity,.yarn-metadata.json}"
+      "!**/{appveyor.yml,.travis.yml,circle.yml}",
+      "!**/{npm-debug.log,yarn.lock,.yarn-integrity,.yarn-metadata.json}"
     ],
     "extraResources": [
       {
         "from": "assets",
         "to": "assets",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       }
     ],
     "win": {
@@ -86,7 +93,13 @@
     "multer": "^2.0.1"
   },
   "devDependencies": {
+    "@babel/preset-env": "^7.27.2",
+    "@jest/globals": "^30.0.3",
+    "babel-jest": "^30.0.2",
     "electron": "^33.2.1",
-    "electron-builder": "^26.0.12"
+    "electron-builder": "^26.0.12",
+    "jest": "^30.0.3",
+    "jest-environment-jsdom": "^30.0.2",
+    "jsdom": "^26.1.0"
   }
 }
