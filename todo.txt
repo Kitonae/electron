@@ -88,4 +88,3 @@
     ✓ moved status visualization from command response panel to show information section in commands panel
 
 - add controls for time span selection in log viewer
-- terminal output in proper log format

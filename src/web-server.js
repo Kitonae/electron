@@ -3,9 +3,11 @@ const path = require('path');
 const multer = require('multer');
 const { findWatchoutServers, clearOfflineServers } = require('./network-scanner');
 const WatchoutCommands = require('./watchout-commands');
+const { Logger } = require('./logger');
 
 class WebServer {
   constructor() {
+    this.logger = new Logger({ component: 'WEB-SERVER' });
     this.app = express();
     this.server = null;
     this.port = 3080; // Default port for web server
@@ -31,8 +33,9 @@ class WebServer {
     try {
       this.setupMiddleware();
       this.setupRoutes();
+      this.logger.info('Web server initialized successfully');
     } catch (error) {
-      console.error('Error setting up web server:', error);
+      this.logger.error('Error setting up web server', { error: error.message });
       throw error;
     }
   }
@@ -324,22 +327,28 @@ class WebServer {
 
   async start(port = this.port) {
     return new Promise((resolve, reject) => {
+      this.logger.info('Starting web server...', { port });
+      
       this.server = this.app.listen(port, (err) => {
         if (err) {
-          console.error('Failed to start web server:', err);
+          this.logger.error('Failed to start web server', { port, error: err.message });
           reject(err);
         } else {
           this.port = port;
-          console.log(`Web server started on http://localhost:${this.port}`);
+          this.logger.info('Web server started successfully', { 
+            port: this.port, 
+            url: `http://localhost:${this.port}` 
+          });
           resolve(this.port);
         }
       });
 
       this.server.on('error', (err) => {
         if (err.code === 'EADDRINUSE') {
-          console.log(`Port ${port} is in use, trying ${port + 1}...`);
+          this.logger.warn('Port in use, trying next port', { currentPort: port, nextPort: port + 1 });
           this.start(port + 1).then(resolve).catch(reject);
         } else {
+          this.logger.error('Server error', { error: err.message });
           reject(err);
         }
       });
@@ -350,7 +359,7 @@ class WebServer {
     if (this.server) {
       this.server.close();
       this.server = null;
-      console.log('Web server stopped');
+      this.logger.info('Web server stopped');
     }
   }
 

@@ -2,13 +2,14 @@ const dgram = require('dgram');
 const fs = require('fs').promises;
 const path = require('path');
 const { exec } = require('child_process');
+const { Logger } = require('./logger');
 
 // Try to load node-nmap, fall back gracefully if not available
 let nmap;
 try {
   nmap = require('node-nmap');
 } catch (error) {
-  console.log('node-nmap package not available - nmap scanning disabled');
+  // Logger not available yet at module level, will log later in class
   nmap = null;
 }
 
@@ -17,7 +18,7 @@ let bonjour;
 try {
   bonjour = require('bonjour-service')();
 } catch (error) {
-  console.warn('Bonjour service not available:', error.message);
+  // Logger not available yet at module level, will log later in class
   bonjour = null;
 }
 
@@ -40,11 +41,21 @@ const CACHE_EXPIRY_HOURS = 24; // Cache servers for 24 hours
 
 class WatchoutAssistant {
   constructor() {
+    this.logger = new Logger({ component: 'NET-SCANNER' });
     this.servers = new Map();
     this.serverCache = new Map(); // Cache to track all discovered servers
     this.lastScanTime = null;
     this.cacheFilePath = null;
     this.missedScans = new Map(); // Track missed scan counts per server
+    
+    // Log module availability
+    if (!nmap) {
+      this.logger.warn('node-nmap package not available - nmap scanning disabled');
+    }
+    if (!bonjour) {
+      this.logger.warn('Bonjour service not available - service discovery limited');
+    }
+    
     this.initializeCachePath();
   }
 
@@ -58,7 +69,7 @@ class WatchoutAssistant {
       await fs.mkdir(userDataPath, { recursive: true });
       
       this.cacheFilePath = path.join(userDataPath, CACHE_FILE_NAME);
-      console.log('Cache file path:', this.cacheFilePath);
+      this.logger.info('Cache file path initialized', { path: this.cacheFilePath });
       
       // Test write permissions
       try {
@@ -77,10 +88,10 @@ class WatchoutAssistant {
         const fallbackDir = path.join(__dirname, '..', 'cache');
         await fs.mkdir(fallbackDir, { recursive: true });
         this.cacheFilePath = path.join(fallbackDir, CACHE_FILE_NAME);
-        console.log('Using fallback cache path:', this.cacheFilePath);
+        this.logger.info('Using fallback cache path', { path: this.cacheFilePath });
         await this.loadCacheFromFile();
       } catch (fallbackError) {
-        console.error('Failed to create fallback cache directory:', fallbackError);
+        this.logger.error('Failed to create fallback cache directory', { error: fallbackError.message });
         this.cacheFilePath = null; // Disable caching
       }
     }
@@ -88,7 +99,7 @@ class WatchoutAssistant {
   async loadCacheFromFile() {
     try {
       if (!this.cacheFilePath) {
-        console.log('No cache file path available, skipping cache load');
+        this.logger.debug('No cache file path available, skipping cache load');
         return;
       }
       
@@ -96,7 +107,7 @@ class WatchoutAssistant {
       try {
         await fs.access(this.cacheFilePath);
       } catch (accessError) {
-        console.log('Cache file does not exist yet, will create on first save');
+        this.logger.debug('Cache file does not exist yet, will create on first save');
         return;
       }
       
@@ -124,10 +135,10 @@ class WatchoutAssistant {
         // Load missed scan counts if available
         if (parsedCache.missedScans && typeof parsedCache.missedScans === 'object') {
           this.missedScans = new Map(Object.entries(parsedCache.missedScans));
-          console.log(`Loaded missed scan counts for ${this.missedScans.size} servers`);
+          this.logger.debug('Loaded missed scan counts', { serverCount: this.missedScans.size });
         }
         
-        console.log(`Loaded ${loadedCount} servers from cache`);
+        this.logger.info('Cache loaded successfully', { serverCount: loadedCount });
       }
     } catch (error) {
       if (error.code !== 'ENOENT') {
@@ -138,7 +149,7 @@ class WatchoutAssistant {
   async saveCacheToFile() {
     try {
       if (!this.cacheFilePath) {
-        console.log('No cache file path available, skipping cache save');
+        this.logger.debug('No cache file path available, skipping cache save');
         return;
       }
       
@@ -153,7 +164,7 @@ class WatchoutAssistant {
       await fs.mkdir(cacheDir, { recursive: true });
       
       await fs.writeFile(this.cacheFilePath, JSON.stringify(cacheData, null, 2), 'utf8');
-      console.log(`Saved ${cacheData.servers.length} servers to cache file`);
+      this.logger.debug('Cache saved successfully', { serverCount: cacheData.servers.length });
     } catch (error) {
       console.error('Error saving cache to file:', error);
       // If writing to cache fails, try to disable caching to prevent future errors
@@ -170,14 +181,14 @@ class WatchoutAssistant {
   }
 
   async findWatchoutServers() {
-    console.log('Starting Watchout server discovery...');
+    this.logger.info('Starting Watchout server discovery...');
     
     // Clear current scan results but keep cache
     this.servers.clear();
     this.lastScanTime = new Date().toISOString();
       const discoveryMethods = [
       this.scanNetworkPorts().catch(err => {
-        console.log('Port scanning skipped:', err?.message || 'Nmap not available');
+        this.logger.debug('Port scanning skipped', { reason: err?.message || 'Nmap not available' });
         return [];
       }),
       this.listenForMulticast().catch(err => {
@@ -200,7 +211,11 @@ class WatchoutAssistant {
       const onlineServers = totalServers.filter(s => s.status === 'online');
       const offlineServers = totalServers.filter(s => s.status === 'offline');
       
-      console.log(`Discovery complete: ${onlineServers.length} online, ${offlineServers.length} offline (cached)`);
+      this.logger.info('Discovery complete', { 
+        online: onlineServers.length, 
+        offline: offlineServers.length,
+        source: 'cached'
+      });
       
       return totalServers;    } catch (error) {
       console.error('Error during server discovery:', error?.message || 'Unknown discovery error');
@@ -210,7 +225,7 @@ class WatchoutAssistant {
     return new Promise(async (resolve) => {
       // Check if nmap package is available
       if (!nmap) {
-        console.log('Nmap package not installed - skipping port scan');
+        this.logger.warn('Nmap package not installed - skipping port scan');
         resolve();
         return;
       }
@@ -218,8 +233,8 @@ class WatchoutAssistant {
       // Check if nmap executable is available
       const nmapAvailable = await this.checkNmapAvailability();
       if (!nmapAvailable) {
-        console.log('Nmap executable not found - skipping port scan');
-        console.log('Note: Install nmap from https://nmap.org/download.html for enhanced server discovery');
+        this.logger.warn('Nmap executable not found - skipping port scan');
+        this.logger.info('Note: Install nmap from https://nmap.org/download.html for enhanced server discovery');
         resolve();
         return;
       }
@@ -274,8 +289,8 @@ class WatchoutAssistant {
         nmapScan.startScan();
       } catch (error) {
         const errorMsg = error?.message || error?.toString() || 'Unknown error initializing nmap';
-        console.log('Nmap scan skipped:', errorMsg);
-        console.log('Note: Install nmap from https://nmap.org/download.html for enhanced server discovery');
+        this.logger.warn('Nmap scan skipped', { reason: errorMsg });
+        this.logger.info('Note: Install nmap from https://nmap.org/download.html for enhanced server discovery');
         resolve();
       }
     });
@@ -320,12 +335,15 @@ class WatchoutAssistant {
         socket.bind(WATCHOUT_RESPONSE_PORT, () => {
           try {
             socket.addMembership(WATCHOUT_MULTICAST_IP);
-            console.log(`Listening for Watchout multicast on ${WATCHOUT_MULTICAST_IP}:${WATCHOUT_RESPONSE_PORT}`);
+            this.logger.debug('Listening for Watchout multicast', { 
+              ip: WATCHOUT_MULTICAST_IP, 
+              port: WATCHOUT_RESPONSE_PORT 
+            });
             
             // Send discovery query to Watchout multicast address
             this.sendWatchoutDiscoveryQuery(socket);
           } catch (membershipError) {
-            console.warn('Failed to join Watchout multicast group:', membershipError.message);
+            this.logger.warn('Failed to join Watchout multicast group', { error: membershipError.message });
           }
         });
       } catch (error) {
@@ -351,20 +369,23 @@ class WatchoutAssistant {
       
       socket.send(discoveryMessage, WATCHOUT_QUERY_PORT, WATCHOUT_MULTICAST_IP, (error) => {
         if (error) {
-          console.warn('Failed to send Watchout discovery query:', error.message);
+          this.logger.warn('Failed to send Watchout discovery query', { error: error.message });
         } else {
-          console.log(`Sent Watchout discovery query 'discovery_ping' to ${WATCHOUT_MULTICAST_IP}:${WATCHOUT_QUERY_PORT}`);
+          this.logger.debug('Sent Watchout discovery query', { 
+            query: 'discovery_ping',
+            target: `${WATCHOUT_MULTICAST_IP}:${WATCHOUT_QUERY_PORT}`
+          });
         }
       });
     } catch (error) {
-      console.warn('Error sending Watchout discovery query:', error.message);
+      this.logger.warn('Error sending Watchout discovery query', { error: error.message });
     }
   }
   async bonjourDiscovery() {
     return new Promise((resolve) => {
       // Skip if bonjour is not available
       if (!bonjour) {
-        console.log('Skipping Bonjour discovery - service not available');
+        this.logger.debug('Skipping Bonjour discovery - service not available');
         resolve();
         return;
       }
@@ -503,7 +524,7 @@ class WatchoutAssistant {
     // Add to current scan results
     if (!this.servers.has(key)) {
       this.servers.set(key, serverInfo);
-      console.log('Found Watchout server:', serverInfo);
+      this.logger.debug('Found Watchout server', serverInfo);
     } else {
       // Update existing server with additional info
       const existing = this.servers.get(key);
@@ -541,7 +562,9 @@ class WatchoutAssistant {
           
           // Add manual server to current results (always online)
           this.servers.set(key, manualServer);
-          console.log(`Manual server kept online (skips discovery):`, manualServer.hostname || manualServer.ip);
+          this.logger.debug('Manual server kept online (skips discovery)', { 
+            server: manualServer.hostname || manualServer.ip 
+          });
         } else {
           // Regular discovered servers - increment missed scan count
           const currentMissedCount = this.missedScans.get(key) || 0;
@@ -559,7 +582,10 @@ class WatchoutAssistant {
             
             // Add offline server to current results
             this.servers.set(key, offlineServer);
-            console.log(`Server marked offline after ${newMissedCount} missed scans:`, offlineServer.hostRef || offlineServer.ip);
+            this.logger.info('Server marked offline after missed scans', {
+              server: offlineServer.hostRef || offlineServer.ip,
+              missedCount: newMissedCount
+            });
           } else {
             // Keep server as online but track missed scans
             const onlineServer = {
@@ -571,7 +597,11 @@ class WatchoutAssistant {
             
             // Add server to current results (still online)
             this.servers.set(key, onlineServer);
-            console.log(`Server missed ${newMissedCount}/10 scans, keeping online:`, onlineServer.hostRef || onlineServer.ip);
+            this.logger.debug('Server missed scans, keeping online', {
+              server: onlineServer.hostRef || onlineServer.ip,
+              missedCount: newMissedCount,
+              maxMissed: 10
+            });
           }
         }
       }

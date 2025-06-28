@@ -5,16 +5,15 @@ const { findWatchoutServers, clearOfflineServers, addManualServer, updateManualS
 const WatchoutCommands = require('./src/watchout-commands');
 const WebServer = require('./src/web-server');
 const StartupChecker = require('./src/startup-checker');
+const { Logger, logger } = require('./src/logger');
 
 // Global error handlers
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('Unhandled Promise Rejection at:', promise, 'reason:', reason);
-  // Optionally log to file or send to error reporting service
+  logger.error('Unhandled Promise Rejection', { reason: reason.toString(), promise: promise.toString() });
 });
 
 process.on('uncaughtException', (error) => {
-  console.error('Uncaught Exception:', error);
-  // Log error and gracefully exit if necessary
+  logger.error('Uncaught Exception', { error: error.toString(), stack: error.stack });
 });
 
 let mainWindow;
@@ -22,7 +21,10 @@ let webServer;
 let startupChecker;
 const watchoutCommands = new WatchoutCommands();
 
-function createWindow() {  // Create the browser window
+function createWindow() {
+  logger.info('Creating main window...');
+  
+  // Create the browser window
   mainWindow = new BrowserWindow({
     width: 1600,
     height: 1000,
@@ -44,8 +46,10 @@ function createWindow() {  // Create the browser window
 
   // Load the app
   mainWindow.loadFile('src/index.html');
+  
   // Show window when ready to prevent visual flash
   mainWindow.once('ready-to-show', () => {
+    logger.info('Main window ready to show');
     mainWindow.show();
   });
 
@@ -60,12 +64,20 @@ function createWindow() {  // Create the browser window
 
   // Open DevTools in development
   if (process.argv.includes('--dev')) {
+    logger.debug('Development mode detected, opening DevTools');
+    mainWindow.webContents.openDevTools();
+  }
+  // Open DevTools in development
+  if (process.argv.includes('--dev')) {
+    logger.debug('Development mode detected, opening DevTools');
     mainWindow.webContents.openDevTools();
   }
 }
 
 // This method will be called when Electron has finished initialization
 app.whenReady().then(async () => {
+  logger.info('Electron app ready, initializing...');
+  
   // Set a custom cache directory to avoid permission issues
   try {
     const path = require('path');
@@ -73,45 +85,53 @@ app.whenReady().then(async () => {
     const cacheDir = path.join(os.tmpdir(), 'watchout-assistant-electron-cache');
     app.setPath('userData', path.join(os.homedir(), 'AppData', 'Roaming', 'watchout-assistant'));
     app.setPath('cache', cacheDir);
+    logger.debug('Custom cache directory set', { cacheDir });
   } catch (error) {
-    console.warn('Could not set custom cache directory:', error.message);
+    logger.warn('Could not set custom cache directory', { error: error.message });
   }
 
   // Initialize startup checker
   startupChecker = new StartupChecker();
+  logger.info('Startup checker initialized');
   
   createWindow();
   
   // Perform startup checks after window finishes loading
   mainWindow.webContents.once('did-finish-load', async () => {
-    console.log('Main: Window loaded, performing startup checks...');
+    logger.info('Window loaded, performing startup checks...');
     try {
+      const timer = logger.time('startup-checks');
       const checkResult = await startupChecker.performStartupChecks(3080);
-      console.log('Main: Startup check result:', checkResult);
-      const notification = startupChecker.createStartupNotification(checkResult);
-      console.log('Main: Created notification:', notification);
+      timer.end('Startup checks completed');
       
+      logger.debug('Startup check result', checkResult);
+      
+      const notification = startupChecker.createStartupNotification(checkResult);
       if (notification) {
-        console.log('Main: Sending startup warning to renderer...');
+        logger.info('Startup notification created', { 
+          type: notification.type, 
+          severity: notification.severity 
+        });
         // Small delay to ensure renderer is ready
         setTimeout(() => {
           mainWindow.webContents.send('startup-warning', notification);
         }, 500);
       } else {
-        console.log('Main: No startup warnings to display');
+        logger.info('No startup warnings to display');
       }
     } catch (error) {
-      console.warn('Startup checks failed:', error);
+      logger.warn('Startup checks failed', { error: error.message });
     }
   });
   
   // Start web server for browser access
   try {
+    logger.info('Initializing web server...');
     webServer = new WebServer();
     webServer.start().then(() => {
-      console.log('Web server started successfully');
+      logger.info('Web server started successfully', { port: webServer.getPort() });
     }).catch(error => {
-      console.error('Failed to start web server:', error);
+      logger.error('Failed to start web server', { error: error.message });
       
       // Send web server error to renderer
       if (mainWindow && mainWindow.webContents) {
@@ -122,7 +142,7 @@ app.whenReady().then(async () => {
       }
     });
   } catch (error) {
-    console.error('Failed to create web server:', error);
+    logger.error('Failed to create web server', { error: error.message });
     
     // Send web server error to renderer
     if (mainWindow && mainWindow.webContents) {

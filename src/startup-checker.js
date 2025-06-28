@@ -1,7 +1,9 @@
 const ProcessDetector = require('./process-detector');
+const { Logger } = require('./logger');
 
 class StartupChecker {
     constructor() {
+        this.logger = new Logger({ component: 'STARTUP-CHK' });
         this.processDetector = new ProcessDetector();
     }
 
@@ -10,16 +12,18 @@ class StartupChecker {
      * @param {number} webServerPort - The port the web server will use
      * @returns {Promise<{success: boolean, warnings: Array, errors: Array}>}
      */    async performStartupChecks(webServerPort = 3080) {
-        console.log('StartupChecker: Performing startup checks...');
+        this.logger.info('Performing startup checks...');
         const warnings = [];
         const errors = [];
 
         try {
             // Check for Watchout processes
-            console.log('StartupChecker: Checking for Watchout processes...');            const watchoutCheck = await this.processDetector.checkWatchoutProcesses();
-            console.log('StartupChecker: Watchout check result:', watchoutCheck);
+            this.logger.debug('Checking for Watchout processes...');
+            const watchoutCheck = await this.processDetector.checkWatchoutProcesses();
+            this.logger.debug('Watchout check result', watchoutCheck);
+            
             if (watchoutCheck.running) {
-                console.log('StartupChecker: Watchout processes detected!');
+                this.logger.warn('Watchout processes detected', { processes: watchoutCheck.processes });
                 warnings.push({
                     type: 'watchout-running',
                     title: 'Watchout Software Detected',
@@ -28,8 +32,10 @@ class StartupChecker {
                     severity: 'warning'
                 });
             }            // Check if web server port is occupied
-            console.log('StartupChecker: Checking web server port', webServerPort);            const portInUse = await this.processDetector.isPortInUse(webServerPort);
-            console.log('StartupChecker: Web server port check result:', portInUse);
+            this.logger.debug('Checking web server port', { port: webServerPort });
+            const portInUse = await this.processDetector.isPortInUse(webServerPort);
+            this.logger.debug('Web server port check result', { inUse: portInUse });
+            
             if (portInUse) {
                 const portInfo = await this.processDetector.getPortInfo(webServerPort);
                 const processInfo = portInfo ? ` (used by: ${portInfo})` : '';
@@ -39,7 +45,10 @@ class StartupChecker {
                 const isCurrentProcess = portInfo && portInfo.includes(`(PID: ${currentPid})`);
                 
                 if (!isCurrentProcess) {
-                    console.log('StartupChecker: Web server port is in use by external process!');
+                    this.logger.warn('Web server port is in use by external process', { 
+                        port: webServerPort, 
+                        processInfo: portInfo 
+                    });
                     warnings.push({
                         type: 'port-occupied',
                         title: 'Port Already in Use',
@@ -49,12 +58,15 @@ class StartupChecker {
                         severity: 'warning'
                     });
                 } else {
-                    console.log('StartupChecker: Web server port is in use by current process (normal)');
+                    this.logger.debug('Web server port is in use by current process (normal)');
                 }
-            }            // Check multicast port (3012) - commonly used by Watchout
-            console.log('StartupChecker: Checking multicast port 3012...');
+            }
+
+            // Check multicast port (3012) - commonly used by Watchout
+            this.logger.debug('Checking multicast port 3012...');
             const multicastPortInUse = await this.processDetector.isPortInUse(3012);
-            console.log('StartupChecker: Multicast port check result:', multicastPortInUse);
+            this.logger.debug('Multicast port check result', { inUse: multicastPortInUse });
+            
             if (multicastPortInUse) {
                 const portInfo = await this.processDetector.getPortInfo(3012);
                 const processInfo = portInfo ? ` (used by: ${portInfo})` : '';
@@ -64,7 +76,10 @@ class StartupChecker {
                 const isCurrentProcess = portInfo && portInfo.includes(`(PID: ${currentPid})`);
                 
                 if (!isCurrentProcess) {
-                    console.log('StartupChecker: Multicast port is in use by external process!');
+                    this.logger.warn('Multicast port is in use by external process', {
+                        port: 3012,
+                        processInfo: portInfo
+                    });
                     warnings.push({
                         type: 'multicast-port-occupied',
                         title: 'Multicast Port in Use',
@@ -74,12 +89,12 @@ class StartupChecker {
                         severity: 'info'
                     });
                 } else {
-                    console.log('StartupChecker: Multicast port is in use by current process (normal)');
+                    this.logger.debug('Multicast port is in use by current process (normal)');
                 }
             }
 
         } catch (error) {
-            console.error('Error during startup checks:', error);
+            this.logger.error('Error during startup checks', { error: error.message });
             warnings.push({
                 type: 'check-failed',
                 title: 'Startup Check Failed',
@@ -88,7 +103,11 @@ class StartupChecker {
             });
         }
 
-        console.log('StartupChecker: Checks completed. Warnings:', warnings.length, 'Errors:', errors.length);
+        this.logger.info('Checks completed', { 
+            warnings: warnings.length, 
+            errors: errors.length 
+        });
+        
         return {
             success: errors.length === 0,
             warnings,
