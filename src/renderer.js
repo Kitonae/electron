@@ -2222,6 +2222,63 @@ class WatchoutServerFinderApp {
     }
   }
 
+  editManualServer(serverId) {
+    // Find the server to edit
+    const server = this.servers.find((s) => this.getServerId(s) === serverId);
+    if (!server || !server.isManual) {
+      console.error("Server not found or not a manual server:", serverId);
+      return;
+    }
+
+    try {
+      console.log('editManualServer called for serverId:', serverId);
+      const modal = document.getElementById("addServerModal");
+      if (!modal) {
+        console.error('Add server modal not found');
+        return;
+      }
+
+      // Set modal to editing mode
+      modal.dataset.editingServerId = serverId;
+
+      // Update modal title and button text for editing
+      const modalTitle = modal.querySelector(".modal-header h3");
+      if (modalTitle) modalTitle.textContent = "Edit Server";
+      
+      const saveBtn = document.getElementById("saveAddServer");
+      if (saveBtn) saveBtn.textContent = "Update Server";
+
+      // Populate form fields with existing server data
+      const serverIpInput = document.getElementById("serverIp");
+      const serverNameInput = document.getElementById("serverName");
+      const serverTypeSelect = document.getElementById("serverType");
+      
+      if (serverIpInput) serverIpInput.value = server.ip || "";
+      if (serverNameInput) serverNameInput.value = server.hostname || "";
+      if (serverTypeSelect) serverTypeSelect.value = server.type || "Manual Entry";
+
+      // Show the modal
+      modal.style.display = "flex";
+      modal.classList.add("show");
+
+      // Bind modal events
+      this.bindAddServerModal();
+
+      // Focus on IP input
+      setTimeout(() => {
+        if (serverIpInput) {
+          serverIpInput.focus();
+          serverIpInput.select(); // Select all text for easy editing
+          console.log('Focused on server IP input for editing');
+        }
+      }, 100);
+      
+      console.log('Edit server dialog opened successfully for server:', server);
+    } catch (error) {
+      console.error('Error opening edit server dialog:', error);
+    }
+  }
+
   async removeManualServer(serverId) {
     // Find the server to remove
     const server = this.servers.find((s) => this.getServerId(s) === serverId);

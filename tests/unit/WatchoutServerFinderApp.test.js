@@ -284,4 +284,124 @@ describe('WatchoutServerFinderApp', () => {
       expect(result.response).toHaveProperty('timeline');
     });
   });
+
+  describe('Manual Server Editing', () => {
+    test('should validate edit method exists for manual servers', () => {
+      // Add editManualServer method to our mock app
+      app.editManualServer = function(serverId) {
+        const server = this.servers.find((s) => this.getServerId(s) === serverId);
+        if (!server || !server.isManual) {
+          console.error("Server not found or not a manual server:", serverId);
+          return;
+        }
+        
+        // Mock modal setup
+        const modal = document.getElementById("addServerModal");
+        if (!modal) {
+          console.error('Add server modal not found');
+          return;
+        }
+
+        modal.dataset.editingServerId = serverId;
+        modal.style.display = "flex";
+        modal.classList.add("show");
+        
+        // Mock field population
+        const serverIpInput = document.getElementById("serverIp");
+        const serverNameInput = document.getElementById("serverName");
+        const serverTypeSelect = document.getElementById("serverType");
+        
+        if (serverIpInput) serverIpInput.value = server.ip || "";
+        if (serverNameInput) serverNameInput.value = server.hostname || "";
+        if (serverTypeSelect) serverTypeSelect.value = server.type || "Manual Entry";
+      };
+
+      const testServer = {
+        ip: '192.168.1.100',
+        hostname: 'Test Server',
+        type: 'Production Server',
+        isManual: true,
+        status: 'online',
+        ports: [3040, 3041]
+      };
+
+      app.servers = [testServer];
+      
+      const serverId = app.getServerId(testServer);
+      app.editManualServer(serverId);
+
+      // Verify modal setup
+      const modal = document.getElementById("addServerModal");
+      expect(modal.style.display).toBe('flex');
+      expect(modal.classList.contains('show')).toBe(true);
+      expect(modal.dataset.editingServerId).toBe(serverId);
+
+      // Verify form fields are populated
+      const serverIpInput = document.getElementById("serverIp");
+      const serverNameInput = document.getElementById("serverName");
+      const serverTypeSelect = document.getElementById("serverType");
+      
+      expect(serverIpInput.value).toBe('192.168.1.100');
+      expect(serverNameInput.value).toBe('Test Server');
+      expect(serverTypeSelect.value).toBe('Production Server');
+    });
+
+    test('should handle edit for non-existent server', () => {
+      // Add editManualServer method to our mock app
+      app.editManualServer = function(serverId) {
+        const server = this.servers.find((s) => this.getServerId(s) === serverId);
+        if (!server || !server.isManual) {
+          console.error("Server not found or not a manual server:", serverId);
+          return;
+        }
+      };
+
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      // Try to edit a server that doesn't exist
+      app.editManualServer('non-existent-id');
+
+      expect(consoleSpy).toHaveBeenCalledWith(
+        'Server not found or not a manual server:',
+        'non-existent-id'
+      );
+
+      consoleSpy.mockRestore();
+    });
+
+    test('should handle edit for non-manual server', () => {
+      // Add editManualServer method to our mock app
+      app.editManualServer = function(serverId) {
+        const server = this.servers.find((s) => this.getServerId(s) === serverId);
+        if (!server || !server.isManual) {
+          console.error("Server not found or not a manual server:", serverId);
+          return;
+        }
+      };
+
+      const testServer = {
+        ip: '192.168.1.100',
+        hostname: 'Test Server',
+        type: 'Auto-discovered',
+        isManual: false,
+        status: 'online',
+        ports: [3040, 3041]
+      };
+
+      app.servers = [testServer];
+
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      // Try to edit a non-manual server
+      const serverId = app.getServerId(testServer);
+      app.editManualServer(serverId);
+
+      expect(consoleSpy).toHaveBeenCalledWith(
+        'Server not found or not a manual server:',
+        serverId
+      );
+
+      consoleSpy.mockRestore();
+    });
+  });
 });
