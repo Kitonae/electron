@@ -6,6 +6,17 @@ const WatchoutCommands = require('./src/watchout-commands');
 const WebServer = require('./src/web-server');
 const StartupChecker = require('./src/startup-checker');
 
+// Global error handlers
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Promise Rejection at:', promise, 'reason:', reason);
+  // Optionally log to file or send to error reporting service
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  // Log error and gracefully exit if necessary
+});
+
 let mainWindow;
 let webServer;
 let startupChecker;
@@ -55,6 +66,17 @@ function createWindow() {  // Create the browser window
 
 // This method will be called when Electron has finished initialization
 app.whenReady().then(async () => {
+  // Set a custom cache directory to avoid permission issues
+  try {
+    const path = require('path');
+    const os = require('os');
+    const cacheDir = path.join(os.tmpdir(), 'watchout-assistant-electron-cache');
+    app.setPath('userData', path.join(os.homedir(), 'AppData', 'Roaming', 'watchout-assistant'));
+    app.setPath('cache', cacheDir);
+  } catch (error) {
+    console.warn('Could not set custom cache directory:', error.message);
+  }
+
   // Initialize startup checker
   startupChecker = new StartupChecker();
   
@@ -84,20 +106,32 @@ app.whenReady().then(async () => {
   });
   
   // Start web server for browser access
-  webServer = new WebServer();
-  webServer.start().then(() => {
-    console.log('Web server started successfully');
-  }).catch(error => {
-    console.error('Failed to start web server:', error);
+  try {
+    webServer = new WebServer();
+    webServer.start().then(() => {
+      console.log('Web server started successfully');
+    }).catch(error => {
+      console.error('Failed to start web server:', error);
+      
+      // Send web server error to renderer
+      if (mainWindow && mainWindow.webContents) {
+        mainWindow.webContents.send('web-server-error', {
+          type: 'start-failed',
+          message: error.message
+        });
+      }
+    });
+  } catch (error) {
+    console.error('Failed to create web server:', error);
     
     // Send web server error to renderer
     if (mainWindow && mainWindow.webContents) {
       mainWindow.webContents.send('web-server-error', {
-        type: 'start-failed',
+        type: 'create-failed',
         message: error.message
       });
     }
-  });
+  }
 });
 
 // Quit when all windows are closed, except on macOS

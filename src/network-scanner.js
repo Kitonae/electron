@@ -53,20 +53,52 @@ class WatchoutAssistant {
       // Use userData directory for cache file
       const { app } = require('electron');
       const userDataPath = app.getPath('userData');
+      
+      // Ensure the directory exists
+      await fs.mkdir(userDataPath, { recursive: true });
+      
       this.cacheFilePath = path.join(userDataPath, CACHE_FILE_NAME);
       console.log('Cache file path:', this.cacheFilePath);
+      
+      // Test write permissions
+      try {
+        await fs.access(userDataPath, fs.constants.W_OK);
+      } catch (permissionError) {
+        console.warn('No write permission for userData directory, using fallback');
+        throw permissionError;
+      }
       
       // Load existing cache on startup
       await this.loadCacheFromFile();
     } catch (error) {
       console.error('Error initializing cache path:', error);
       // Fallback to local directory
-      this.cacheFilePath = path.join(__dirname, CACHE_FILE_NAME);
+      try {
+        const fallbackDir = path.join(__dirname, '..', 'cache');
+        await fs.mkdir(fallbackDir, { recursive: true });
+        this.cacheFilePath = path.join(fallbackDir, CACHE_FILE_NAME);
+        console.log('Using fallback cache path:', this.cacheFilePath);
+        await this.loadCacheFromFile();
+      } catch (fallbackError) {
+        console.error('Failed to create fallback cache directory:', fallbackError);
+        this.cacheFilePath = null; // Disable caching
+      }
     }
   }
   async loadCacheFromFile() {
     try {
-      if (!this.cacheFilePath) return;
+      if (!this.cacheFilePath) {
+        console.log('No cache file path available, skipping cache load');
+        return;
+      }
+      
+      // Check if cache file exists
+      try {
+        await fs.access(this.cacheFilePath);
+      } catch (accessError) {
+        console.log('Cache file does not exist yet, will create on first save');
+        return;
+      }
       
       const cacheData = await fs.readFile(this.cacheFilePath, 'utf8');
       const parsedCache = JSON.parse(cacheData);
@@ -105,7 +137,10 @@ class WatchoutAssistant {
   }
   async saveCacheToFile() {
     try {
-      if (!this.cacheFilePath) return;
+      if (!this.cacheFilePath) {
+        console.log('No cache file path available, skipping cache save');
+        return;
+      }
       
       const cacheData = {
         lastUpdated: new Date().toISOString(),
@@ -113,10 +148,20 @@ class WatchoutAssistant {
         missedScans: Object.fromEntries(this.missedScans)
       };
       
+      // Ensure directory exists before writing
+      const cacheDir = path.dirname(this.cacheFilePath);
+      await fs.mkdir(cacheDir, { recursive: true });
+      
       await fs.writeFile(this.cacheFilePath, JSON.stringify(cacheData, null, 2), 'utf8');
       console.log(`Saved ${cacheData.servers.length} servers to cache file`);
     } catch (error) {
-      console.error('Error saving cache to file:', error);    }
+      console.error('Error saving cache to file:', error);
+      // If writing to cache fails, try to disable caching to prevent future errors
+      if (error.code === 'EACCES' || error.code === 'EPERM') {
+        console.warn('Cache write permission denied, disabling cache for this session');
+        this.cacheFilePath = null;
+      }
+    }
   }
 
   getServerId(server) {

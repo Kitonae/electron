@@ -4,7 +4,8 @@ const multer = require('multer');
 const { findWatchoutServers, clearOfflineServers } = require('./network-scanner');
 const WatchoutCommands = require('./watchout-commands');
 
-class WebServer {  constructor() {
+class WebServer {
+  constructor() {
     this.app = express();
     this.server = null;
     this.port = 3080; // Default port for web server
@@ -27,8 +28,13 @@ class WebServer {  constructor() {
       }
     });
     
-    this.setupMiddleware();
-    this.setupRoutes();
+    try {
+      this.setupMiddleware();
+      this.setupRoutes();
+    } catch (error) {
+      console.error('Error setting up web server:', error);
+      throw error;
+    }
   }
 
   setupMiddleware() {
@@ -293,6 +299,26 @@ class WebServer {  constructor() {
       } catch (error) {
         res.status(500).json({ success: false, error: error.message });
       }
+    });
+    
+    // Global error handler
+    this.app.use((error, req, res, next) => {
+      console.error('Express error:', error);
+      if (res.headersSent) {
+        return next(error);
+      }
+      res.status(500).json({ 
+        success: false, 
+        error: error.message || 'Internal server error' 
+      });
+    });
+
+    // 404 handler
+    this.app.use('*', (req, res) => {
+      res.status(404).json({ 
+        success: false, 
+        error: 'Endpoint not found' 
+      });
     });
   }
 
