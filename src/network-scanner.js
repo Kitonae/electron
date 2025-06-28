@@ -27,7 +27,8 @@ try {
 // - Query Port: 3011 (send discovery requests)
 // - Response Port: 3012 (receive discovery responses)
 // - Operational Ports: 3040, 3041, 3042 (main Watchout services)
-const WATCHOUT_PORTS = [3040, 3041, 3042]; // Common Watchout operational ports
+// - Loki Log Port: 3022 (log aggregation service)
+const WATCHOUT_PORTS = [3040, 3041, 3042, 3022]; // Common Watchout operational ports + Loki
 const WATCHOUT_MULTICAST_IP = '239.2.2.2'; // Watchout multicast discovery IP
 const WATCHOUT_QUERY_PORT = 3011; // Watchout discovery query port
 const WATCHOUT_RESPONSE_PORT = 3012; // Watchout discovery response port
@@ -584,7 +585,6 @@ class WatchoutAssistant {
       });
     });
   }
-
   /**
    * Add a manual server to the cache
    * Manual servers are always considered online and skip availability checks
@@ -593,14 +593,15 @@ class WatchoutAssistant {
    */
   async addManualServer(serverData) {
     try {
-      // Validate required fields
-      if (!serverData.ip || !serverData.ports || !Array.isArray(serverData.ports)) {
-        return { success: false, error: 'Invalid server data: IP and ports are required' };
+      // Validate required fields (only IP is required now)
+      if (!serverData.ip) {
+        return { success: false, error: 'Invalid server data: IP address is required' };
       }
 
-      // Create server entry
+      // Create server entry with hardcoded ports
       const manualServer = {
         ...serverData,
+        ports: WATCHOUT_PORTS, // Always use hardcoded ports (3040, 3041, 3042, 3022)
         discoveryMethod: 'manual',
         status: 'online', // Manual servers are always online
         isManual: true,
@@ -643,17 +644,16 @@ class WatchoutAssistant {
       const existingServer = this.serverCache.get(serverId);
       if (!existingServer || !existingServer.isManual) {
         return { success: false, error: 'Manual server not found or not a manual server' };
+      }      // Validate required fields (only IP is required now)
+      if (!serverData.ip) {
+        return { success: false, error: 'Invalid server data: IP address is required' };
       }
 
-      // Validate required fields
-      if (!serverData.ip || !serverData.ports || !Array.isArray(serverData.ports)) {
-        return { success: false, error: 'Invalid server data: IP and ports are required' };
-      }
-
-      // Update server entry
+      // Update server entry with hardcoded ports
       const updatedServer = {
         ...existingServer,
         ...serverData,
+        ports: WATCHOUT_PORTS, // Always use hardcoded ports (3040, 3041, 3042, 3022)
         discoveryMethod: 'manual',
         status: 'online', // Manual servers are always online
         isManual: true,

@@ -98,10 +98,13 @@ class ProcessDetector {
         try {
             // Use netstat -ano to get process IDs
             const { stdout } = await execAsync(`netstat -ano`, { encoding: 'utf8' });
-            
-            const lines = stdout.split('\n');
+              const lines = stdout.split('\n');
             for (const line of lines) {
-                if (line.includes(`:${port} `) && (line.includes('LISTENING') || line.includes('ESTABLISHED'))) {
+                // Check for both TCP (LISTENING/ESTABLISHED) and UDP connections
+                const isTcpConnection = line.includes(`:${port} `) && (line.includes('LISTENING') || line.includes('ESTABLISHED'));
+                const isUdpConnection = line.includes('UDP') && line.includes(`:${port} `);
+                
+                if (isTcpConnection || isUdpConnection) {
                     // Extract PID from the end of the line
                     const parts = line.trim().split(/\s+/);
                     const pid = parts[parts.length - 1];

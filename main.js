@@ -385,6 +385,113 @@ ipcMain.handle('watchout-send-custom-request', async (event, serverIp, endpoint,
   }
 });
 
+// ==================== LOKI LOG IPC HANDLERS ====================
+
+ipcMain.handle('loki-test-connection', async (event, serverIp) => {
+  try {
+    const result = await watchoutCommands.testLokiConnection(serverIp);
+    return result;
+  } catch (error) {
+    console.error('Error testing Loki connection:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('loki-query-logs', async (event, serverIp, query, limit, since) => {
+  try {
+    const result = await watchoutCommands.queryLokiLogs(serverIp, query, limit, since);
+    return result;
+  } catch (error) {
+    console.error('Error querying Loki logs:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('loki-start-stream', async (event, serverIp, query, refreshInterval) => {
+  try {
+    const result = await watchoutCommands.startLokiLogStream(serverIp, query, refreshInterval);
+    
+    // Set up event forwarding from Loki log reader to renderer
+    const lokiReader = watchoutCommands.getLokiLogReader();
+    
+    // Remove any existing listeners first
+    lokiReader.removeAllListeners('logs');
+    lokiReader.removeAllListeners('error');
+    lokiReader.removeAllListeners('streamStarted');
+    lokiReader.removeAllListeners('streamStopped');
+    
+    // Forward events to renderer
+    lokiReader.on('logs', (logs) => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('loki-logs', logs);
+      }
+    });
+    
+    lokiReader.on('error', (error) => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('loki-error', error.message);
+      }
+    });
+    
+    lokiReader.on('streamStarted', (data) => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('loki-stream-started', data);
+      }
+    });
+    
+    lokiReader.on('streamStopped', () => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('loki-stream-stopped');
+      }
+    });
+    
+    return result;
+  } catch (error) {
+    console.error('Error starting Loki log stream:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('loki-stop-stream', async (event) => {
+  try {
+    const result = watchoutCommands.stopLokiLogStream();
+    return result;
+  } catch (error) {
+    console.error('Error stopping Loki log stream:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('loki-get-labels', async (event, serverIp) => {
+  try {
+    const result = await watchoutCommands.getLokiLabels(serverIp);
+    return result;
+  } catch (error) {
+    console.error('Error getting Loki labels:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('loki-get-label-values', async (event, serverIp, label) => {
+  try {
+    const result = await watchoutCommands.getLokiLabelValues(serverIp, label);
+    return result;
+  } catch (error) {
+    console.error('Error getting Loki label values:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('loki-get-common-queries', async (event) => {
+  try {
+    const queries = watchoutCommands.getLokiCommonQueries();
+    return { success: true, data: queries };
+  } catch (error) {
+    console.error('Error getting common queries:', error);
+    return { success: false, error: error.message };
+  }
+});
+
 // Settings IPC handlers
 ipcMain.handle('get-app-settings', async () => {
   try {

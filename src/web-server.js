@@ -210,6 +210,90 @@ class WebServer {  constructor() {
       const packageJson = require('../package.json');
       res.json({ version: packageJson.version });
     });
+    
+    // ==================== LOKI LOG ENDPOINTS ====================
+    
+    // Test Loki connection
+    this.app.post('/api/loki/:serverIp/test-connection', async (req, res) => {
+      try {
+        const result = await this.watchoutCommands.testLokiConnection(req.params.serverIp);
+        res.json(result);
+      } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+      }
+    });
+
+    // Query Loki logs
+    this.app.get('/api/loki/:serverIp/query', async (req, res) => {
+      try {
+        const { query, limit, since } = req.query;        const result = await this.watchoutCommands.queryLokiLogs(
+          req.params.serverIp,
+          query || '{app=~".+"}',
+          parseInt(limit) || 100,
+          since || '1h'
+        );
+        res.json(result);
+      } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+      }
+    });
+
+    // Start Loki log stream
+    this.app.post('/api/loki/:serverIp/stream/start', async (req, res) => {
+      try {
+        const { query, refreshInterval } = req.body;        const result = await this.watchoutCommands.startLokiLogStream(
+          req.params.serverIp,
+          query || '{app=~".+"}',
+          refreshInterval || 2000
+        );
+        res.json(result);
+      } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+      }
+    });
+
+    // Stop Loki log stream
+    this.app.post('/api/loki/:serverIp/stream/stop', async (req, res) => {
+      try {
+        const result = this.watchoutCommands.stopLokiLogStream();
+        res.json(result);
+      } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+      }
+    });
+
+    // Get Loki labels
+    this.app.get('/api/loki/:serverIp/labels', async (req, res) => {
+      try {
+        const result = await this.watchoutCommands.getLokiLabels(req.params.serverIp);
+        res.json(result);
+      } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+      }
+    });
+
+    // Get Loki label values
+    this.app.get('/api/loki/:serverIp/labels/:label/values', async (req, res) => {
+      try {
+        const result = await this.watchoutCommands.getLokiLabelValues(
+          req.params.serverIp,
+          req.params.label
+        );
+        res.json(result);
+      } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+      }
+    });
+
+    // Get common Loki queries
+    this.app.get('/api/loki/common-queries', (req, res) => {
+      try {
+        const queries = this.watchoutCommands.getLokiCommonQueries();
+        res.json({ success: true, data: queries });
+      } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+      }
+    });
   }
 
   async start(port = this.port) {

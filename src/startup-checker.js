@@ -27,43 +27,55 @@ class StartupChecker {
                     processes: watchoutCheck.processes,
                     severity: 'warning'
                 });
-            }
-
-            // Check if web server port is occupied
+            }            // Check if web server port is occupied
             console.log('StartupChecker: Checking web server port', webServerPort);            const portInUse = await this.processDetector.isPortInUse(webServerPort);
             console.log('StartupChecker: Web server port check result:', portInUse);
             if (portInUse) {
                 const portInfo = await this.processDetector.getPortInfo(webServerPort);
                 const processInfo = portInfo ? ` (used by: ${portInfo})` : '';
-                console.log('StartupChecker: Web server port is in use!');
                 
-                warnings.push({
-                    type: 'port-occupied',
-                    title: 'Port Already in Use',
-                    message: `Port ${webServerPort} is already in use${processInfo}. Web server functionality may not work properly.`,
-                    port: webServerPort,
-                    processInfo: portInfo,
-                    severity: 'warning'
-                });
-            }
-
-            // Check multicast port (3012) - commonly used by Watchout
+                // Check if the port is being used by the current process
+                const currentPid = process.pid;
+                const isCurrentProcess = portInfo && portInfo.includes(`(PID: ${currentPid})`);
+                
+                if (!isCurrentProcess) {
+                    console.log('StartupChecker: Web server port is in use by external process!');
+                    warnings.push({
+                        type: 'port-occupied',
+                        title: 'Port Already in Use',
+                        message: `Port ${webServerPort} is already in use${processInfo}. Web server functionality may not work properly.`,
+                        port: webServerPort,
+                        processInfo: portInfo,
+                        severity: 'warning'
+                    });
+                } else {
+                    console.log('StartupChecker: Web server port is in use by current process (normal)');
+                }
+            }            // Check multicast port (3012) - commonly used by Watchout
             console.log('StartupChecker: Checking multicast port 3012...');
             const multicastPortInUse = await this.processDetector.isPortInUse(3012);
             console.log('StartupChecker: Multicast port check result:', multicastPortInUse);
             if (multicastPortInUse) {
                 const portInfo = await this.processDetector.getPortInfo(3012);
                 const processInfo = portInfo ? ` (used by: ${portInfo})` : '';
-                console.log('StartupChecker: Multicast port is in use!');
                 
-                warnings.push({
-                    type: 'multicast-port-occupied',
-                    title: 'Multicast Port in Use',
-                    message: `Multicast port 3012 is in use${processInfo}. Auto-discovery may be limited.`,
-                    port: 3012,
-                    processInfo: portInfo,
-                    severity: 'info'
-                });
+                // Check if the port is being used by the current process
+                const currentPid = process.pid;
+                const isCurrentProcess = portInfo && portInfo.includes(`(PID: ${currentPid})`);
+                
+                if (!isCurrentProcess) {
+                    console.log('StartupChecker: Multicast port is in use by external process!');
+                    warnings.push({
+                        type: 'multicast-port-occupied',
+                        title: 'Multicast Port in Use',
+                        message: `Multicast port 3012 is in use${processInfo}. Auto-discovery may be limited.`,
+                        port: 3012,
+                        processInfo: portInfo,
+                        severity: 'info'
+                    });
+                } else {
+                    console.log('StartupChecker: Multicast port is in use by current process (normal)');
+                }
             }
 
         } catch (error) {
