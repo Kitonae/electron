@@ -920,10 +920,10 @@ class WatchoutServerFinderApp {
     if (server.isManual) {
       manualActions = `
                 <div class="manual-server-actions">
-                    <button class="manual-edit-btn" title="Edit server" onclick="event.stopPropagation(); app.editManualServer('${serverId}')">
+                    <button class="manual-edit-btn" title="Edit server" data-server-id="${serverId}">
                         ✏️
                     </button>
-                    <button class="manual-remove-btn" title="Remove server" onclick="event.stopPropagation(); app.removeManualServer('${serverId}')">
+                    <button class="manual-remove-btn" title="Remove server" data-server-id="${serverId}">
                         🗑️
                     </button>
                 </div>
@@ -951,10 +951,30 @@ class WatchoutServerFinderApp {
             </div>
         `;
 
-    // Add click event listener
+    // Add click event listener for server selection
     item.addEventListener("click", () => {
       this.selectServer(serverId);
     });
+
+    // Add event listeners for manual server action buttons
+    if (server.isManual) {
+      const editBtn = item.querySelector('.manual-edit-btn');
+      const removeBtn = item.querySelector('.manual-remove-btn');
+      
+      if (editBtn) {
+        editBtn.addEventListener('click', (event) => {
+          event.stopPropagation();
+          this.editManualServer(serverId);
+        });
+      }
+      
+      if (removeBtn) {
+        removeBtn.addEventListener('click', (event) => {
+          event.stopPropagation();
+          this.removeManualServer(serverId);
+        });
+      }
+    }
 
     return item;
   }
@@ -2051,6 +2071,10 @@ class WatchoutServerFinderApp {
     }
   }  async addManualServer() {
     try {
+      const modal = document.getElementById("addServerModal");
+      const editingServerId = modal?.dataset.editingServerId;
+      const isEditing = !!editingServerId;
+
       const serverIp = document.getElementById("serverIp").value.trim();
       const serverName = document.getElementById("serverName").value.trim();
       const serverType = document.getElementById("serverType").value;
@@ -2058,6 +2082,20 @@ class WatchoutServerFinderApp {
       // Validate IP address
       if (!this.isValidIpAddress(serverIp)) {
         alert("Please enter a valid IP address (e.g., 192.168.1.100)");
+        return;
+      }
+
+      if (isEditing) {
+        // Handle editing existing server
+        await this.updateManualServer(editingServerId);
+        
+        // Reset modal state
+        const modalTitle = modal.querySelector(".modal-header h3");
+        const saveButton = document.getElementById("saveAddServer");
+        if (modalTitle) modalTitle.textContent = "Add Server Manually";
+        if (saveButton) saveButton.textContent = "Add Server";
+        delete modal.dataset.editingServerId;
+        
         return;
       }
 
@@ -2270,6 +2308,7 @@ class WatchoutServerFinderApp {
       
       // Add notification to the modal body when it's created
       setTimeout(() => {
+       
         const modalBody = document.querySelector('.log-viewer-modal .modal-body');
         if (modalBody) {
           modalBody.insertBefore(notification, modalBody.firstChild);
