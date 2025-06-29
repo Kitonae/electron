@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: file:; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
+    <title>WATCHOUT Assistant - CSS Test</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Custom Title Bar -->
+    <div class="title-bar">
+        <div class="title-bar-drag-region">
+            <div class="title-bar-left">
+                <img src="../assets/icon.png" alt="App Icon" class="title-bar-icon">
+                <span class="title-bar-title">WATCHOUT Assistant - CSS Test</span>
+            </div>
+            <div class="title-bar-right">
+                <button class="title-bar-button minimize-button" id="minimizeBtn" title="Minimize">
+                    <svg width="12" height="12" viewBox="0 0 12 12">
+                        <rect x="0" y="5" width="12" height="2" fill="currentColor"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="main-container">
+        <div class="app-layout">
+            <!-- Left Sidebar -->
+            <div class="server-panel">
+                <div class="panel-header">
+                    <h2>CSS Test - Server Panel</h2>
+                </div>
+                
+                <div class="server-list" id="serverList">
+                    <div class="empty-state">
+                        <p>This should be styled with the CSS from styles.css</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="content-panel">
+                <div class="panel-header">
+                    <h2>CSS Test - Content Panel</h2>
+                </div>
+                
+                <div class="commands-container">
+                    <div class="empty-state">
+                        <p>If you can see the styled layout, CSS is working correctly.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Only load API adapter, no complex modules -->
+    <script src="api-adapter.js"></script>
+    
+    <script>
+        console.log('CSS Test loaded');
+        console.log('ApiAdapter type:', typeof ApiAdapter);
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM loaded for CSS test');
+            
+            // Check if CSS is applied by examining computed styles
+            const titleBar = document.querySelector('.title-bar');
+            if (titleBar) {
+                const style = window.getComputedStyle(titleBar);
+                console.log('Title bar computed style:');
+                console.log('- background:', style.background);
+                console.log('- height:', style.height);
+                console.log('- position:', style.position);
+                console.log('- display:', style.display);
+            }
+            
+            const mainContainer = document.querySelector('.main-container');
+            if (mainContainer) {
+                const style = window.getComputedStyle(mainContainer);
+                console.log('Main container computed style:');
+                console.log('- margin-top:', style.marginTop);
+                console.log('- height:', style.height);
+            }
+        });
+    </script>
+</body>
+</html>

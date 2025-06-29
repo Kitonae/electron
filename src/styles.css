@@ -427,6 +427,10 @@ body {
     background: #dc3545;
 }
 
+.status-indicator.manual {
+    background: #007bff;
+}
+
 .status-text {
     color: #666;
 }
@@ -2407,7 +2411,6 @@ body {
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: #6c757d;
 }
 
 .connection-status.connected .status-indicator {
@@ -2652,4 +2655,260 @@ body {
 @keyframes pulse {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.5; }
+}
+
+/* Dark Theme Styles for Modular Version */
+body.modular-dark {
+    background: #1a1a1a;
+    color: #ffffff;
+}
+
+body.modular-dark .app-container {
+    background: linear-gradient(135deg, #2d1b69 0%, #1a1a2e 50%, #16213e 100%);
+}
+
+body.modular-dark .sidebar {
+    background: rgba(30, 30, 50, 0.95);
+    border: 1px solid rgba(102, 126, 234, 0.2);
+    backdrop-filter: blur(10px);
+}
+
+body.modular-dark .sidebar-header {
+    background: rgba(102, 126, 234, 0.1);
+    border-bottom: 1px solid rgba(102, 126, 234, 0.2);
+}
+
+body.modular-dark .sidebar-header h3 {
+    color: #ffffff;
+}
+
+body.modular-dark .server-count-sidebar {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+body.modular-dark .main-panel {
+    background: rgba(30, 30, 50, 0.95);
+    border: 1px solid rgba(102, 126, 234, 0.2);
+    backdrop-filter: blur(10px);
+}
+
+body.modular-dark .main-panel-header {
+    background: rgba(102, 126, 234, 0.1);
+    border-bottom: 1px solid rgba(102, 126, 234, 0.2);
+}
+
+body.modular-dark .main-panel h2 {
+    color: #ffffff;
+}
+
+body.modular-dark .commands-panel {
+    background: rgba(30, 30, 50, 0.95);
+    border: 1px solid rgba(102, 126, 234, 0.2);
+    backdrop-filter: blur(10px);
+}
+
+body.modular-dark .commands-header {
+    background: rgba(102, 126, 234, 0.1);
+    border-bottom: 1px solid rgba(102, 126, 234, 0.2);
+}
+
+body.modular-dark .commands-header h3 {
+    color: #ffffff;
+}
+
+body.modular-dark .panel {
+    background: rgba(30, 30, 50, 0.95);
+    border: 1px solid rgba(102, 126, 234, 0.2);
+    backdrop-filter: blur(10px);
+}
+
+body.modular-dark .panel-header {
+    background: rgba(102, 126, 234, 0.1);
+    border-bottom: 1px solid rgba(102, 126, 234, 0.2);
+}
+
+body.modular-dark .panel-header h3 {
+    color: #ffffff;
+}
+
+body.modular-dark .scan-status {
+    background: rgba(102, 126, 234, 0.15);
+    border: 1px solid rgba(102, 126, 234, 0.3);
+    color: #a5b4fc;
+}
+
+body.modular-dark .status-label {
+    color: #d1d5db;
+}
+
+body.modular-dark .connection-status {
+    color: #d1d5db;
+}
+
+body.modular-dark .no-server-selected,
+body.modular-dark .no-servers {
+    color: #9ca3af;
+}
+
+body.modular-dark .timeline-controls label,
+body.modular-dark .command-group h4 {
+    color: #d1d5db;
+}
+
+body.modular-dark select,
+body.modular-dark input[type="text"],
+body.modular-dark input[type="number"] {
+    background: rgba(30, 30, 50, 0.8);
+    border: 1px solid rgba(102, 126, 234, 0.3);
+    color: #ffffff;
+}
+
+body.modular-dark select:focus,
+body.modular-dark input:focus {
+    border-color: #667eea;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
+body.modular-dark .cmd-button {
+    background: rgba(102, 126, 234, 0.1);
+    border: 1px solid rgba(102, 126, 234, 0.3);
+    color: #ffffff;
+}
+
+body.modular-dark .cmd-button:hover:not(:disabled) {
+    background: rgba(102, 126, 234, 0.2);
+    border-color: #667eea;
+}
+
+body.modular-dark .cmd-button:disabled {
+    background: rgba(50, 50, 70, 0.5);
+    border-color: rgba(102, 126, 234, 0.1);
+    color: #6b7280;
+}
+
+body.modular-dark .header-button {
+    background: rgba(102, 126, 234, 0.1);
+    border: 1px solid rgba(102, 126, 234, 0.3);
+    color: #ffffff;
+}
+
+body.modular-dark .header-button:hover {
+    background: rgba(102, 126, 234, 0.2);
+    border-color: #667eea;
+}
+
+body.modular-dark .clear-offline-button {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #fca5a5;
+}
+
+body.modular-dark .clear-offline-button:hover:not(:disabled) {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: #ef4444;
+}
+
+/* Additional Dark Theme Refinements */
+body.modular-dark .sidebar-content {
+    background: transparent;
+}
+
+body.modular-dark .server-status-overview {
+    background: rgba(102, 126, 234, 0.05);
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+body.modular-dark .status-item {
+    color: #d1d5db;
+}
+
+body.modular-dark .status-indicator.online {
+    background: #10b981;
+}
+
+body.modular-dark .status-indicator.offline {
+    background: #ef4444;
+}
+
+body.modular-dark .server-card {
+    background: rgba(30, 30, 50, 0.7);
+    border: 1px solid rgba(102, 126, 234, 0.2);
+}
+
+body.modular-dark .server-card:hover {
+    background: rgba(30, 30, 50, 0.9);
+    border-color: rgba(102, 126, 234, 0.4);
+}
+
+body.modular-dark .server-card.selected {
+    background: rgba(102, 126, 234, 0.15);
+    border-color: #667eea;
+}
+
+body.modular-dark .server-name {
+    color: #ffffff;
+}
+
+body.modular-dark .server-ip {
+    color: #9ca3af;
+}
+
+body.modular-dark .server-status {
+    color: #d1d5db;
+}
+
+body.modular-dark .sidebar-footer {
+    background: rgba(102, 126, 234, 0.05);
+    border-top: 1px solid rgba(102, 126, 234, 0.2);
+}
+
+/* Button Icon Styling for Dark Theme */
+body.modular-dark .button-icon {
+    filter: brightness(1.2);
+}
+
+body.modular-dark .scan-button-sidebar,
+body.modular-dark .add-server-button-sidebar {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+}
+
+body.modular-dark .scan-button-sidebar:hover,
+body.modular-dark .add-server-button-sidebar:hover {
+    background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+    transform: scale(1.05);
+}
+
+/* Response area styling */
+body.modular-dark .response-area {
+    background: rgba(30, 30, 50, 0.8);
+    border: 1px solid rgba(102, 126, 234, 0.2);
+    color: #d1d5db;
+}
+
+body.modular-dark .response-content {
+    background: rgba(0, 0, 0, 0.3);
+    color: #f3f4f6;
+}
+
+/* Modal styling for dark theme */
+body.modular-dark .modal-content {
+    background: rgba(30, 30, 50, 0.98);
+    border: 1px solid rgba(102, 126, 234, 0.3);
+    color: #ffffff;
+}
+
+body.modular-dark .modal-header {
+    border-bottom: 1px solid rgba(102, 126, 234, 0.2);
+}
+
+body.modular-dark .modal-body {
+    color: #d1d5db;
+}
+
+body.modular-dark .form-group label {
+    color: #f3f4f6;
 }

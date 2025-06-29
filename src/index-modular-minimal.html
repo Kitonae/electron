@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: file:; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
+    <title>WATCHOUT Assistant - Minimal Test</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        /* Test styles to verify CSS is working */
+        body { 
+            border: 5px solid red !important; 
+            background: yellow !important;
+        }
+        .test-indicator {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: green;
+            color: white;
+            padding: 10px;
+            z-index: 10000;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-indicator">Minimal Test - CSS Working</div>
+    
+    <h1>Basic Test</h1>
+    <p>This is a minimal test to check if CSS is loading.</p>
+    
+    <!-- Only load essential scripts for testing -->
+    <script>
+        console.log('Minimal test page loaded');
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM loaded for minimal test');
+            
+            // Test if styles.css is loaded by checking computed styles
+            const body = document.body;
+            const computedStyle = window.getComputedStyle(body);
+            console.log('Body background color:', computedStyle.backgroundColor);
+            console.log('Body font family:', computedStyle.fontFamily);
+            
+            // Check if our test CSS is applied
+            const testDiv = document.querySelector('.test-indicator');
+            if (testDiv) {
+                const testStyle = window.getComputedStyle(testDiv);
+                console.log('Test indicator background:', testStyle.backgroundColor);
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: file:; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
+    <title>WATCHOUT Assistant</title>
+    <link rel="stylesheet" href="styles-compiled.css">
+</head>
+<body class="h-full bg-watchout-dark text-white font-sans antialiased">
+    <!-- Custom Title Bar -->
+    <div class="title-bar">
+        <div class="title-bar-drag-region">
+            <div class="title-bar-left">
+                <img src="../assets/icon.png" alt="App Icon" class="title-bar-icon">
+                <span class="title-bar-title">WATCHOUT Assistant</span>
+            </div>
+            <div class="title-bar-right">
+                <button class="title-bar-button" id="minimizeBtn" title="Minimize">
+                    <svg width="12" height="12" viewBox="0 0 12 12">
+                        <rect x="0" y="5" width="12" height="2" fill="currentColor"/>
+                    </svg>
+                </button>
+                <button class="title-bar-button" id="maximizeBtn" title="Maximize">
+                    <svg width="12" height="12" viewBox="0 0 12 12" class="maximize-icon">
+                        <rect x="1" y="1" width="10" height="10" fill="none" stroke="currentColor" stroke-width="1"/>
+                    </svg>
+                    <svg width="12" height="12" viewBox="0 0 12 12" class="restore-icon hidden">
+                        <rect x="1" y="3" width="8" height="8" fill="none" stroke="currentColor" stroke-width="1"/>
+                        <rect x="3" y="1" width="8" height="8" fill="none" stroke="currentColor" stroke-width="1"/>
+                    </svg>
+                </button>
+                <button class="title-bar-button close-button" id="closeBtn" title="Close">
+                    <svg width="12" height="12" viewBox="0 0 12 12">
+                        <path d="M1 1 L11 11 M11 1 L1 11" stroke="currentColor" stroke-width="1"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="main-container">
+        <div class="app-layout">
+            <!-- Left Sidebar -->
+            <div class="server-panel">
+                <div class="panel-header">
+                    <h2 class="text-lg font-semibold text-white mb-0">Discovered Servers</h2>
+                    <div class="panel-actions">
+                        <button class="scan-button" id="scanButton" title="Scan for Watchout servers">
+                            <img src="../assets/refresh.svg" alt="Scan" class="w-4 h-4">
+                            <span>Scan</span>
+                        </button>
+                        <button class="settings-button" id="settingsButton" title="Settings">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="3"></circle>
+                                <path d="m12 1 0 6m0 6 0 6"></path>
+                                <path d="m17.5 6.5-4.24 4.24m-2.52 2.52L6.5 17.5"></path>
+                                <path d="m6.5 6.5 4.24 4.24m2.52 2.52 4.24 4.24"></path>
+                            </svg>
+                        </button>
+                        <button class="add-server-button" id="addServerButton" title="Add Manual Server">
+                            <img src="../assets/plus.svg" alt="Add" class="w-4 h-4">
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="server-list scrollable" id="serverList">
+                    <div class="empty-state">
+                        <p class="text-gray-400">No servers found. Click "Scan" to discover Watchout servers on your network.</p>
+                    </div>
+                </div>
+                
+                <div class="scan-status" id="scanStatus">
+                    Ready to scan
+                </div>
+                
+                <div class="p-3 bg-watchout-light border-t border-gray-600">
+                    <button class="btn btn-warning btn-sm w-full" id="clearOfflineButton" style="display: none;">
+                        Clear Offline Servers
+                    </button>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="content-panel">
+                <div class="panel-header">
+                    <h2 id="commandsPanelTitle" class="text-lg font-semibold text-white mb-0">Select a Server</h2>
+                </div>
+                
+                <div class="panel-content" id="serversContainer">
+                    <div class="no-servers" id="noServers">
+                        <div class="text-center py-8">
+                            <div class="text-6xl mb-4">📡</div>
+                            <h3 class="text-lg font-medium text-gray-300 mb-2">No Watchout servers discovered yet</h3>
+                            <p class="text-gray-400">Click "Scan" to begin discovery</p>
+                        </div>
+                    </div>
+                    <div class="no-selection" id="noSelection" style="display: none;">
+                        <div class="text-center py-8">
+                            <div class="text-6xl mb-4">👈</div>
+                            <h3 class="text-lg font-medium text-gray-300 mb-2">Select a server from the sidebar to view details</h3>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="commands-container scrollable" id="commandsContainer">
+                    <div class="no-server-selected" id="noServerSelected">
+                        <div class="text-center py-8">
+                            <div class="text-6xl mb-4">🖥️</div>
+                            <h3 class="text-lg font-medium text-gray-300 mb-2">No Server Selected</h3>
+                            <p class="text-gray-400 mb-1">Select a server to send commands</p>
+                            <p class="text-sm text-gray-500">Choose a server from the sidebar first</p>
+                        </div>
+                    </div>
+                    
+                    <div class="commands-area hidden" id="commandsArea">
+                        <!-- Timeline Control Commands -->
+                        <div class="command-section">
+                            <h3>Timeline Control</h3>
+                            
+                            <!-- Timeline Selection -->
+                            <div class="timeline-selection mb-4">
+                                <div class="flex items-center gap-3 mb-3">
+                                    <label for="timelineSelector" class="text-sm font-medium text-gray-300">Select Timeline:</label>
+                                    <select id="timelineSelector" class="form-select flex-1">
+                                        <option value="">Choose timeline...</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="command-grid">
+                                <button class="command-button" id="playBtn" data-command="play" title="Play timeline">
+                                    <img src="../assets/play-solid.svg" alt="Play" class="w-6 h-6">
+                                    <span>Play</span>
+                                </button>
+                                <button class="command-button" id="pauseBtn" data-command="pause" title="Pause timeline">
+                                    <img src="../assets/pause-solid.svg" alt="Pause" class="w-6 h-6">
+                                    <span>Pause</span>
+                                </button>
+                                <button class="command-button" id="stopBtn" data-command="stop" title="Stop timeline">
+                                    <img src="../assets/stop-solid.svg" alt="Stop" class="w-6 h-6">
+                                    <span>Stop</span>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Information Commands -->
+                        <div class="command-section">
+                            <h3>Information</h3>
+                            <div class="command-grid">
+                                <button class="command-button" id="statusBtn" data-command="getStatus" title="Get server status">
+                                    <span class="text-2xl">ℹ️</span>
+                                    <span>Status</span>
+                                </button>
+                                <button class="command-button" id="timelinesBtn" data-command="getTimelines" title="Get available timelines">
+                                    <img src="../assets/playlist-play.svg" alt="Timelines" class="w-6 h-6">
+                                    <span>Timelines</span>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Command Response Panel -->
+                        <div class="response-panel" id="responsePanel" style="display: none;">
+                            <div class="response-header">
+                                <h4 class="text-sm font-medium text-gray-300">Response</h4>
+                                <button class="btn btn-ghost btn-sm" id="clearResponseBtn">Clear</button>
+                            </div>
+                            <div class="response-content" id="responseContent">
+                                <!-- Response will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Connection Status -->
+    <div id="connectionStatus" class="hidden fixed top-10 right-4 px-4 py-2 rounded-lg shadow-lg z-40">
+        <div class="flex items-center gap-2">
+            <div class="status-dot"></div>
+            <span class="text-sm font-medium"></span>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Settings</h3>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label" for="backgroundScanEnabled">
+                        Background Scanning
+                    </label>
+                    <div class="flex items-center">
+                        <input type="checkbox" id="backgroundScanEnabled" class="form-checkbox">
+                        <span class="ml-2 text-sm text-gray-300">Enable automatic server discovery</span>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="scanInterval">
+                        Scan Interval (seconds)
+                    </label>
+                    <input type="number" id="scanInterval" class="form-input" min="10" max="300" value="30">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancelSettingsButton">Cancel</button>
+                <button class="btn btn-primary" id="saveSettingsButton">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Server Modal -->
+    <div id="addServerModal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add Manual Server</h3>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label" for="serverName">
+                        Server Name
+                    </label>
+                    <input type="text" id="serverName" class="form-input" placeholder="My Watchout Server">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="serverIp">
+                        IP Address
+                    </label>
+                    <input type="text" id="serverIp" class="form-input" placeholder="192.168.1.100" pattern="^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="serverPort">
+                        Port (optional)
+                    </label>
+                    <input type="number" id="serverPort" class="form-input" placeholder="3040" min="1" max="65535">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancelAddServerButton">Cancel</button>
+                <button class="btn btn-primary" id="addServerSubmitButton">Add Server</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Command Modal -->
+    <div id="customCommandModal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Custom Command</h3>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label" for="customEndpoint">
+                        Endpoint
+                    </label>
+                    <input type="text" id="customEndpoint" class="form-input" placeholder="/api/status">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="customMethod">
+                        Method
+                    </label>
+                    <select id="customMethod" class="form-select">
+                        <option value="GET">GET</option>
+                        <option value="POST">POST</option>
+                        <option value="PUT">PUT</option>
+                        <option value="DELETE">DELETE</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="customData">
+                        Request Body (JSON)
+                    </label>
+                    <textarea id="customData" class="form-textarea" rows="4" placeholder='{"key": "value"}'></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancelCustomCommandButton">Cancel</button>
+                <button class="btn btn-primary" id="executeCustomCommandButton">Execute</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Startup Warning Modal -->
+    <div id="startupWarningModal" class="modal-overlay hidden">
+        <div class="modal-content startup-warning-modal">
+            <div class="modal-header">
+                <div class="flex items-center gap-3">
+                    <div class="warning-icon text-2xl" id="startupWarningIcon">⚠️</div>
+                    <h3 id="startupWarningTitle">Startup Warning</h3>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div class="warning-message text-gray-300" id="startupWarningMessage">
+                    <!-- Warning message will be populated by JavaScript -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <div class="modal-actions w-full" id="startupWarningActions">
+                    <!-- Action buttons will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load scripts -->
+    <script src="api-adapter.js"></script>
+    
+    <!-- Load modules -->
+    <script src="modules/BaseApp.js"></script>
+    <script src="modules/EventManager.js"></script>
+    <script src="modules/ScanManager.js"></script>
+    <script src="modules/UIManager.js"></script>
+    <script src="modules/CommandManager.js"></script>
+    <script src="modules/ModalManager.js"></script>
+    <script src="modules/ServerManager.js"></script>
+    <script src="modules/LokiLogManager.js"></script>
+    <script src="modules/StartupManager.js"></script>
+    
+    <!-- Load main application -->
+    <script src="renderer-modular.js"></script>
+</body>
+</html>

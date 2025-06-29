@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: file:; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
+    <title>WATCHOUT Assistant</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        /* Debug styles to verify CSS is loading */
+        body { 
+            background-color: #1e1e1e !important; 
+            color: #ffffff !important;
+            font-family: Arial, sans-serif !important;
+        }
+        .debug-indicator {
+            position: fixed;
+            top: 0;
+            right: 0;
+            background: green;
+            color: white;
+            padding: 5px;
+            z-index: 10000;
+        }
+    </style>
+</head>
+<body>
+    <div class="debug-indicator">CSS Loaded</div>
+    
+    <!-- Custom Title Bar -->
+    <div class="title-bar">
+        <div class="title-bar-drag-region">
+            <div class="title-bar-left">
+                <img src="../assets/icon.png" alt="App Icon" class="title-bar-icon">
+                <span class="title-bar-title">WATCHOUT Assistant</span>
+            </div>
+            <div class="title-bar-right">
+                <button class="title-bar-button minimize-button" id="minimizeBtn" title="Minimize">
+                    <svg width="12" height="12" viewBox="0 0 12 12">
+                        <rect x="0" y="5" width="12" height="2" fill="currentColor"/>
+                    </svg>
+                </button>
+                <button class="title-bar-button maximize-button" id="maximizeBtn" title="Maximize">
+                    <svg width="12" height="12" viewBox="0 0 12 12" class="maximize-icon">
+                        <rect x="1" y="1" width="10" height="10" fill="none" stroke="currentColor" stroke-width="1"/>
+                    </svg>
+                    <svg width="12" height="12" viewBox="0 0 12 12" class="restore-icon">
+                        <rect x="1" y="3" width="8" height="8" fill="none" stroke="currentColor" stroke-width="1"/>
+                        <rect x="3" y="1" width="8" height="8" fill="none" stroke="currentColor" stroke-width="1"/>
+                    </svg>
+                </button>
+                <button class="title-bar-button close-button" id="closeBtn" title="Close">
+                    <svg width="12" height="12" viewBox="0 0 12 12">
+                        <path d="M1 1 L11 11 M11 1 L1 11" stroke="currentColor" stroke-width="1.5"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="app-container">
+        <main class="app-main">
+            <div class="main-content">
+                <!-- Left Sidebar -->
+                <aside class="sidebar">
+                    <div class="sidebar-header">
+                        <div class="sidebar-title-group">
+                            <h3>Servers</h3>
+                            <div class="server-count-sidebar" id="serverCountSidebar">0</div>
+                        </div>
+                        <div class="sidebar-buttons">
+                            <button id="scanButton" class="scan-button-sidebar">
+                                <img src="../assets/refresh.svg" class="button-icon" alt="Refresh">
+                            </button>
+                            <button id="addServerButton" class="add-server-button-sidebar" title="Add server manually">
+                                <img src="../assets/plus.svg" class="button-icon" alt="Add">
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="sidebar-content">
+                        <div class="server-status-overview">
+                            <div class="status-group">
+                                <div class="status-item online">
+                                    <div class="status-indicator online"></div>
+                                    <span class="status-label">Online</span>
+                                    <span class="status-count" id="onlineCount">0</span>
+                                </div>
+                                <div class="status-item offline">
+                                    <div class="status-indicator offline"></div>
+                                    <span class="status-label">Offline</span>
+                                    <span class="status-count" id="offlineCount">0</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="servers-container" id="serversContainer">
+                            <div id="serverList" class="server-list">
+                                <!-- Server cards will be populated by JavaScript -->
+                            </div>
+                        </div>
+
+                        <div class="sidebar-footer">
+                            <button id="clearOfflineButton" class="clear-offline-button" disabled>
+                                Clear Offline Servers
+                            </button>
+                        </div>
+                    </div>
+                </aside>
+
+                <!-- Main Content Area -->
+                <section class="main-panel">
+                    <div class="main-panel-header">
+                        <h2>Watchout Server Discovery</h2>
+                        <div class="header-actions">
+                            <button id="settingsButton" class="header-button" title="Settings">
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                    <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z"/>
+                                    <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115l.094-.319z"/>
+                                </svg>
+                            </button>
+                            <button id="testStartupWarningButton" class="header-button" title="Test Startup Warning" style="display: none;">
+                                Test Warning
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="scan-status-bar">
+                        <div class="scan-status" id="scanStatus">
+                            Ready to scan for Watchout servers
+                        </div>
+                    </div>
+
+                    <!-- Commands Panel -->
+                    <div class="commands-panel">
+                        <div class="commands-header" id="commandsPanelHeader">
+                            <h3>Commands</h3>
+                            <div class="connection-info">
+                                <div id="connectionStatus" class="connection-status disconnected">
+                                    <div id="connectionIndicator" class="connection-indicator disconnected"></div>
+                                    <span id="connectionText">No server selected</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="commands-content">
+                            <!-- Timeline Selection -->
+                            <div class="timeline-section">
+                                <div class="timeline-controls">
+                                    <label for="timelineSelector">Timeline:</label>
+                                    <select id="timelineSelector" disabled>
+                                        <option value="">Select a timeline...</option>
+                                    </select>
+                                </div>
+                                <div class="timeline-list" id="timelineList">
+                                    <div class="timeline-placeholder">No timelines available</div>
+                                </div>
+                            </div>
+
+                            <!-- Command Buttons -->
+                            <div class="command-buttons">
+                                <div class="command-group">
+                                    <h4>Timeline Control</h4>
+                                    <div class="button-row">
+                                        <button id="startTimelineBtn" class="cmd-button" disabled title="Start selected timeline">
+                                            <img src="../assets/play-solid.svg" class="button-icon" alt="Play">
+                                            Start
+                                        </button>
+                                        <button id="pauseTimelineBtn" class="cmd-button" disabled title="Pause selected timeline">
+                                            <img src="../assets/pause-solid.svg" class="button-icon" alt="Pause">
+                                            Pause
+                                        </button>
+                                        <button id="stopTimelineBtn" class="cmd-button" disabled title="Stop selected timeline">
+                                            <img src="../assets/stop-solid.svg" class="button-icon" alt="Stop">
+                                            Stop
+                                        </button>
+                                        <button id="gotoTimeBtn" class="cmd-button" disabled title="Go to specific time">
+                                            Go to Time
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="command-group">
+                                    <h4>System Control</h4>
+                                    <div class="button-row">
+                                        <button id="standByBtn" class="cmd-button" disabled title="Put system in standby">
+                                            Stand By
+                                        </button>
+                                        <button id="onlineBtn" class="cmd-button" disabled title="Bring system online">
+                                            Go Online
+                                        </button>
+                                        <button id="loadBtn" class="cmd-button" disabled title="Load show">
+                                            Load Show
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="command-group">
+                                    <h4>Information</h4>
+                                    <div class="button-row">
+                                        <button id="statusBtn" class="cmd-button" disabled title="Get system status">
+                                            Get Status
+                                        </button>
+                                        <button id="getTimelinesBtn" class="cmd-button" disabled title="Get available timelines">
+                                            Get Timelines
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="command-group">
+                                    <h4>Tools</h4>
+                                    <div class="button-row">
+                                        <button id="customBtn" class="cmd-button" disabled title="Send custom command">
+                                            Custom Command
+                                        </button>
+                                        <button id="lokiLogViewerBtn" class="cmd-button" disabled title="Open log viewer">
+                                            🗂️ Log Viewer
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Status Information Area -->
+                        <div class="status-information-area" id="statusInformationArea" style="display: none;">
+                            <div class="status-header">
+                                <h4>Server Status</h4>
+                            </div>
+                            <div class="status-content" id="statusContent">
+                                <!-- Status visualization will be populated here -->
+                            </div>
+                        </div>
+
+                        <!-- Command Response Area -->
+                        <div class="command-response-area">
+                            <div class="response-header">
+                                <h4>Command History</h4>
+                                <button id="clearResponseBtn" class="clear-response-button" title="Clear response history">
+                                    Clear
+                                </button>
+                            </div>
+                            <div class="command-response" id="commandResponse">
+                                <div class="response-placeholder">Command responses will appear here</div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-left">
+            <span class="app-version" id="appVersion">Loading...</span>
+        </div>
+        <div class="footer-center">
+            <span class="copyright">© 2023 WATCHOUT Assistant</span>
+        </div>
+        <div class="footer-right">
+            <span class="status-text">Ready</span>
+        </div>
+    </footer>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Settings</h3>
+                <span class="close" id="closeSettingsModal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="setting-group">
+                    <label class="setting-label">
+                        <input type="checkbox" id="enableCacheFromDisk" checked>
+                        <span class="checkmark"></span>
+                        Enable disk cache for server discovery
+                    </label>
+                    <div class="setting-description">
+                        Cache discovered servers to disk for faster startup
+                    </div>
+                </div>
+
+                <div class="setting-group">
+                    <label class="setting-label">
+                        <input type="checkbox" id="enableWebServer" checked>
+                        <span class="checkmark"></span>
+                        Enable web server
+                    </label>
+                    <div class="setting-description">
+                        Start a local web server for browser-based access
+                    </div>
+                    <div id="webServerStatus" class="web-server-status">
+                        <span class="status-indicator"></span> Checking status...
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="cancelSettings" class="btn btn-secondary">Cancel</button>
+                <button id="saveSettings" class="btn btn-primary">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Server Modal -->
+    <div id="addServerModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add New Server</h3>
+                <span class="close" id="closeAddServerModal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="addServerForm">
+                    <div class="form-group">
+                        <label for="serverIp">IP Address *</label>
+                        <input type="text" id="serverIp" placeholder="192.168.1.100" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="serverName">Server Name</label>
+                        <input type="text" id="serverName" placeholder="Display Server 1">
+                        <div class="form-help">Leave empty to use IP address</div>
+                    </div>
+                    <div class="form-group">
+                        <label for="serverType">Server Type</label>
+                        <select id="serverType">
+                            <option value="Manual Entry">Manual Entry</option>
+                            <option value="Display Server">Display Server</option>
+                            <option value="Production Server">Production Server</option>
+                            <option value="Backup Server">Backup Server</option>
+                            <option value="Test Server">Test Server</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button id="cancelAddServer" class="btn btn-secondary">Cancel</button>
+                <button id="saveAddServer" class="btn btn-primary">Add Server</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Command Modal -->
+    <div id="customCommandModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Custom Command</h3>
+                <span class="close" id="closeCustomModal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="endpointExamples">Common Endpoints:</label>
+                    <select id="endpointExamples">
+                        <option value="">Select an example...</option>
+                        <option value="/api/v1/status">Get Status</option>
+                        <option value="/api/v1/timelines">Get Timelines</option>
+                        <option value="/api/v1/system/standby">Stand By</option>
+                        <option value="/api/v1/system/online">Go Online</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="customEndpoint">Endpoint *</label>
+                    <input type="text" id="customEndpoint" placeholder="/api/v1/custom-endpoint" required>
+                </div>
+                <div class="form-group">
+                    <label for="customMethod">Method</label>
+                    <select id="customMethod">
+                        <option value="GET">GET</option>
+                        <option value="POST">POST</option>
+                        <option value="PUT">PUT</option>
+                        <option value="DELETE">DELETE</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="customData">Request Data (JSON)</label>
+                    <textarea id="customData" placeholder='{"key": "value"}' rows="4"></textarea>
+                    <div class="form-help">Only used for POST, PUT, DELETE requests</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="cancelCustomCommand" class="btn btn-secondary">Cancel</button>
+                <button id="executeCustomCommand" class="btn btn-primary">Execute</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Startup Warning Modal -->
+    <div id="startupWarningModal" class="modal startup-warning-modal">
+        <div class="modal-overlay"></div>
+        <div class="modal-content startup-warning-modal">
+            <div class="modal-header">
+                <div class="warning-icon" id="startupWarningIcon">⚠️</div>
+                <h3 id="startupWarningTitle">Startup Warning</h3>
+            </div>
+            <div class="modal-body">
+                <div class="warning-message" id="startupWarningMessage">
+                    <!-- Warning message will be populated by JavaScript -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <div class="modal-actions" id="startupWarningActions">
+                    <!-- Action buttons will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load modules in correct order -->
+    <script>
+        console.log('Starting to load modules...');
+        
+        // Check if API adapter is loaded
+        window.addEventListener('load', () => {
+            console.log('Window loaded, checking modules...');
+            console.log('ApiAdapter:', typeof ApiAdapter);
+            console.log('BaseApp:', typeof BaseApp);
+        });
+    </script>
+    
+    <script src="api-adapter.js"></script>
+    
+    <!-- Load base modules first -->
+    <script src="modules/BaseApp.js"></script>
+    
+    <!-- Load manager modules -->
+    <script src="modules/EventManager.js"></script>
+    <script src="modules/ScanManager.js"></script>
+    <script src="modules/UIManager.js"></script>
+    <script src="modules/CommandManager.js"></script>
+    <script src="modules/ModalManager.js"></script>
+    <script src="modules/ServerManager.js"></script>
+    <script src="modules/LokiLogManager.js"></script>
+    <script src="modules/StartupManager.js"></script>
+    
+    <!-- Load main application last -->
+    <script src="renderer-modular.js"></script>
+    
+    <script>
+        console.log('All scripts loaded');
+        setTimeout(() => {
+            console.log('Final module check:');
+            console.log('- ApiAdapter:', typeof ApiAdapter);
+            console.log('- BaseApp:', typeof BaseApp);
+            console.log('- EventManager:', typeof EventManager);
+            console.log('- WatchoutServerFinderApp:', typeof WatchoutServerFinderApp);
+            console.log('- window.app:', typeof window.app);
+        }, 1000);
+    </script>
+</body>
+</html>

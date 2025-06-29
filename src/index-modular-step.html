@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: file:; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
+    <title>WATCHOUT Assistant - Step Test</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Custom Title Bar -->
+    <div class="title-bar">
+        <div class="title-bar-drag-region">
+            <div class="title-bar-left">
+                <img src="../assets/icon.png" alt="App Icon" class="title-bar-icon">
+                <span class="title-bar-title">WATCHOUT Assistant - Step Test</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="main-container">
+        <div class="app-layout">
+            <!-- Left Sidebar -->
+            <div class="server-panel">
+                <div class="panel-header">
+                    <h2>Discovered Servers</h2>
+                    <div class="panel-actions">
+                        <button class="scan-button" id="scanButton" title="Scan for Watchout servers">
+                            <img src="../assets/refresh.svg" alt="Scan" class="button-icon">
+                            <span>Scan</span>
+                        </button>
+                        <button class="settings-button" id="settingsButton" title="Settings">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="3"></circle>
+                                <path d="m12 1 0 6m0 6 0 6"></path>
+                                <path d="m17.5 6.5-4.24 4.24m-2.52 2.52L6.5 17.5"></path>
+                                <path d="m6.5 6.5 4.24 4.24m2.52 2.52 4.24 4.24"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="server-list" id="serverList">
+                    <div class="empty-state">
+                        <p>No servers found. Click "Scan" to discover Watchout servers on your network.</p>
+                    </div>
+                </div>
+                
+                <div class="scan-status" id="scanStatus">Ready to scan</div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="content-panel">
+                <div class="panel-header">
+                    <h2 id="commandsPanelTitle">Select a Server</h2>
+                </div>
+                
+                <div class="commands-container" id="commandsContainer">
+                    <div class="empty-state">
+                        <p>Select a server from the left panel to see available commands.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Test step by step module loading -->
+    <script>
+        console.log('=== Step Test Starting ===');
+        
+        // Step 1: Load API adapter
+        console.log('Step 1: Loading API adapter...');
+    </script>
+    
+    <script src="api-adapter.js"></script>
+    
+    <script>
+        console.log('Step 2: API adapter loaded, type:', typeof ApiAdapter);
+        
+        // Step 3: Load BaseApp
+        console.log('Step 3: Loading BaseApp...');
+    </script>
+    
+    <script src="modules/BaseApp.js"></script>
+    
+    <script>
+        console.log('Step 4: BaseApp loaded, type:', typeof BaseApp);
+        
+        // Test creating a BaseApp instance
+        try {
+            console.log('Step 5: Testing BaseApp instantiation...');
+            const testApp = new BaseApp();
+            console.log('Step 6: BaseApp instance created successfully:', testApp);
+        } catch (error) {
+            console.error('Step 6: BaseApp instantiation failed:', error);
+        }
+        
+        // Check CSS
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('Step 7: DOM loaded, checking CSS...');
+            const titleBar = document.querySelector('.title-bar');
+            if (titleBar) {
+                const style = window.getComputedStyle(titleBar);
+                console.log('Title bar background:', style.background);
+                console.log('Title bar height:', style.height);
+            }
+        });
+    </script>
+</body>
+</html>

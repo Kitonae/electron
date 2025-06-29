@@ -44,8 +44,49 @@ function createWindow() {
   // Hide menu bar
   mainWindow.setMenuBarVisibility(false);
 
-  // Load the app
-  mainWindow.loadFile('src/index.html');
+  // Load the app - check for modular version via environment variable
+  const useModularVersion = process.env.WATCHOUT_MODULAR === 'true';
+  const useDebugVersion = process.env.WATCHOUT_DEBUG === 'true';
+  const useMinimalTest = process.env.WATCHOUT_MINIMAL === 'true';
+  const useStepTest = process.env.WATCHOUT_STEP === 'true';
+  const useCssTest = process.env.WATCHOUT_CSS === 'true';
+  const useBasicModular = process.env.WATCHOUT_BASIC === 'true';
+  const useProgressive1 = process.env.WATCHOUT_PROG1 === 'true';
+  const useTailwind = process.env.WATCHOUT_TAILWIND === 'true';
+  
+  let htmlFile;
+  let versionType;
+  if (useTailwind) {
+    htmlFile = 'src/index-tailwind.html';
+    versionType = 'Tailwind CSS';
+  } else if (useProgressive1) {
+    htmlFile = 'src/index-progressive-1.html';
+    versionType = 'progressive step 1';
+  } else if (useBasicModular) {
+    htmlFile = 'src/index-modular-basic.html';
+    versionType = 'basic modular';
+  } else if (useCssTest) {
+    htmlFile = 'src/index-css-test.html';
+    versionType = 'CSS test';
+  } else if (useStepTest) {
+    htmlFile = 'src/index-modular-step.html';
+    versionType = 'step test';
+  } else if (useMinimalTest) {
+    htmlFile = 'src/index-modular-minimal.html';
+    versionType = 'minimal test';
+  } else if (useModularVersion && useDebugVersion) {
+    htmlFile = 'src/index-modular-debug.html';
+    versionType = 'modular debug';
+  } else if (useModularVersion) {
+    htmlFile = 'src/index-modular.html';
+    versionType = 'modular';
+  } else {
+    htmlFile = 'src/index.html';
+    versionType = 'original';
+  }
+  
+  logger.info(`Loading ${versionType} version: ${htmlFile}`);
+  mainWindow.loadFile(htmlFile);
   
   // Show window when ready to prevent visual flash
   mainWindow.once('ready-to-show', () => {
@@ -62,14 +103,9 @@ function createWindow() {
     mainWindow.webContents.send('window-state-changed', { maximized: false });
   });
 
-  // Open DevTools in development
-  if (process.argv.includes('--dev')) {
-    logger.debug('Development mode detected, opening DevTools');
-    mainWindow.webContents.openDevTools();
-  }
-  // Open DevTools in development
-  if (process.argv.includes('--dev')) {
-    logger.debug('Development mode detected, opening DevTools');
+  // Open DevTools in development or debug mode
+  if (process.argv.includes('--dev') || useDebugVersion || useMinimalTest || useStepTest || useCssTest || useBasicModular || useProgressive1 || useTailwind) {
+    logger.debug('Development/Debug/Test mode detected, opening DevTools');
     mainWindow.webContents.openDevTools();
   }
 }

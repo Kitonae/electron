@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: file:; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
+    <title>WATCHOUT Assistant</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Custom Title Bar -->
+    <div class="title-bar">
+        <div class="title-bar-drag-region">
+            <div class="title-bar-left">
+                <img src="../assets/icon.png" alt="App Icon" class="title-bar-icon">
+                <span class="title-bar-title">WATCHOUT Assistant</span>
+            </div>
+            <div class="title-bar-right">
+                <button class="title-bar-button minimize-button" id="minimizeBtn" title="Minimize">
+                    <svg width="12" height="12" viewBox="0 0 12 12">
+                        <rect x="0" y="5" width="12" height="2" fill="currentColor"/>
+                    </svg>
+                </button>
+                <button class="title-bar-button maximize-button" id="maximizeBtn" title="Maximize">
+                    <svg width="12" height="12" viewBox="0 0 12 12" class="maximize-icon">
+                        <rect x="1" y="1" width="10" height="10" fill="none" stroke="currentColor" stroke-width="1"/>
+                    </svg>
+                    <svg width="12" height="12" viewBox="0 0 12 12" class="restore-icon">
+                        <rect x="1" y="3" width="8" height="8" fill="none" stroke="currentColor" stroke-width="1"/>
+                        <rect x="3" y="1" width="8" height="8" fill="none" stroke="currentColor" stroke-width="1"/>
+                    </svg>
+                </button>
+                <button class="title-bar-button close-button" id="closeBtn" title="Close">
+                    <svg width="12" height="12" viewBox="0 0 12 12">
+                        <path d="M1 1 L11 11 M11 1 L1 11" stroke="currentColor" stroke-width="1"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="main-container">
+        <div class="app-layout">
+            <!-- Left Sidebar -->
+            <div class="server-panel">
+                <div class="panel-header">
+                    <h2>Discovered Servers</h2>
+                    <div class="panel-actions">
+                        <button class="scan-button" id="scanButton" title="Scan for Watchout servers">
+                            <img src="../assets/refresh.svg" alt="Scan" class="button-icon">
+                            <span>Scan</span>
+                        </button>
+                        <button class="settings-button" id="settingsButton" title="Settings">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="3"></circle>
+                                <path d="m12 1 0 6m0 6 0 6"></path>
+                                <path d="m17.5 6.5-4.24 4.24m-2.52 2.52L6.5 17.5"></path>
+                                <path d="m6.5 6.5 4.24 4.24m2.52 2.52 4.24 4.24"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="server-list" id="serverList">
+                    <div class="empty-state">
+                        <p>Basic modular version working. CSS should be fully styled.</p>
+                    </div>
+                </div>
+                
+                <div class="scan-status" id="scanStatus">Basic modular test</div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="content-panel">
+                <div class="panel-header">
+                    <h2 id="commandsPanelTitle">Basic Modular Test</h2>
+                </div>
+                
+                <div class="commands-container" id="commandsContainer">
+                    <div class="empty-state">
+                        <p>This is a basic modular version to test CSS loading.</p>
+                        <p>If you can see proper styling (dark theme, layout), then CSS is working correctly.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load essential dependencies -->
+    <script src="api-adapter.js"></script>
+    
+    <!-- Load only BaseApp to start -->
+    <script src="modules/BaseApp.js"></script>
+    
+    <!-- Minimal app initialization -->
+    <script>
+        console.log('Basic modular version loading...');
+        
+        let app;
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                console.log('DOM loaded, creating BaseApp...');
+                app = new BaseApp();
+                console.log('BaseApp created successfully:', app);
+                
+                // Set global reference
+                window.app = app;
+                console.log('Basic modular version initialized successfully');
+                
+                // Update status to show it's working
+                const scanStatus = document.getElementById('scanStatus');
+                if (scanStatus) {
+                    scanStatus.textContent = 'Basic modular version loaded successfully!';
+                }
+                
+            } catch (error) {
+                console.error('Failed to initialize basic modular version:', error);
+                
+                // Show error in the UI
+                const scanStatus = document.getElementById('scanStatus');
+                if (scanStatus) {
+                    scanStatus.textContent = 'Error: ' + error.message;
+                    scanStatus.style.color = 'red';
+                }
+            }
+        });
+        
+        // Global error handlers
+        window.addEventListener('error', (event) => {
+            console.error('Global error:', event.error);
+        });
+
+        window.addEventListener('unhandledrejection', (event) => {
+            console.error('Unhandled promise rejection:', event.reason);
+        });
+    </script>
+</body>
+</html>

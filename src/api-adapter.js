@@ -353,7 +353,10 @@ class ApiAdapter {
         if (this.isElectron) {
             return window.electronAPI.dismissStartupWarning(warningType);
         } else {
-            return { success: true };
+            return this.webApiCall('/startup-warnings/dismiss', {
+                method: 'POST',
+                body: JSON.stringify({ type: warningType })
+            });
         }
     }
 
@@ -401,6 +404,136 @@ class ApiAdapter {
         } catch (error) {
             console.error('Web API call failed:', error);
             return { success: false, error: error.message };
+        }
+    }
+
+    // Alias methods for backward compatibility
+    async scanForServers() {
+        return this.scanForWatchoutServers();
+    }
+
+    async testApiConnection(serverIp) {
+        return this.watchoutTestConnection(serverIp);
+    }
+
+    async executeWatchoutCommand(serverIp, command, params = {}) {
+        // Map old command format to new API structure
+        switch (command) {
+            case 'run':
+                return this.watchoutPlayTimeline(serverIp, params.timelineId);
+            case 'pause':
+                return this.watchoutPauseTimeline(serverIp, params.timelineId);
+            case 'halt':
+                return this.watchoutStopTimeline(serverIp, params.timelineId);
+            case 'getStatus':
+                return this.watchoutGetStatus(serverIp);
+            case 'getTimelines':
+                return this.watchoutGetTimelines(serverIp);
+            case 'gotoTime':
+                return this.watchoutJumpToTime(serverIp, params.timelineId, params.time, params.state);
+            case 'standBy':
+            case 'online':
+            case 'load':
+                // These need custom implementation or mapping
+                return this.watchoutSendCustomRequest(serverIp, `/${command}`, 'POST', params);
+            default:
+                return { success: false, error: `Unknown command: ${command}` };
+        }
+    }
+
+    async watchoutPlayTimeline(serverIp, timelineId) {
+        if (this.isElectron) {
+            return window.electronAPI.watchout.playTimeline(serverIp, timelineId);
+        } else {
+            return this.webApiCall(`/watchout/${serverIp}/timeline/${timelineId}/play`, { method: 'POST' });
+        }
+    }
+
+    async watchoutPauseTimeline(serverIp, timelineId) {
+        if (this.isElectron) {
+            return window.electronAPI.watchout.pauseTimeline(serverIp, timelineId);
+        } else {
+            return this.webApiCall(`/watchout/${serverIp}/timeline/${timelineId}/pause`, { method: 'POST' });
+        }
+    }
+
+    async watchoutStopTimeline(serverIp, timelineId) {
+        if (this.isElectron) {
+            return window.electronAPI.watchout.stopTimeline(serverIp, timelineId);
+        } else {
+            return this.webApiCall(`/watchout/${serverIp}/timeline/${timelineId}/stop`, { method: 'POST' });
+        }
+    }
+
+    async watchoutJumpToTime(serverIp, timelineId, time, state) {
+        if (this.isElectron) {
+            return window.electronAPI.watchout.jumpToTime(serverIp, timelineId, time, state);
+        } else {
+            return this.webApiCall(`/watchout/${serverIp}/timeline/${timelineId}/jump-time`, {
+                method: 'POST',
+                body: JSON.stringify({ time, state })
+            });
+        }
+    }
+
+    async watchoutSendCustomRequest(serverIp, endpoint, method = 'GET', data = null) {
+        if (this.isElectron) {
+            return window.electronAPI.watchout.sendCustomRequest(serverIp, endpoint, method, data);
+        } else {
+            return this.webApiCall(`/watchout/${serverIp}${endpoint}`, {
+                method,
+                body: data ? JSON.stringify(data) : undefined
+            });
+        }
+    }
+
+    async sendCustomWatchoutRequest(serverIp, endpoint, method, data) {
+        return this.watchoutSendCustomRequest(serverIp, endpoint, method, data);
+    }
+
+    async getAppSettings() {
+        if (this.isElectron) {
+            return window.electronAPI.getAppSettings();
+        } else {
+            return this.webApiCall('/settings');
+        }
+    }
+
+    async saveAppSettings(settings) {
+        if (this.isElectron) {
+            return window.electronAPI.saveAppSettings(settings);
+        } else {
+            return this.webApiCall('/settings', {
+                method: 'POST',
+                body: JSON.stringify(settings)
+            });
+        }
+    }
+
+    async getWebServerStatus() {
+        if (this.isElectron) {
+            return window.electronAPI.getWebServerStatus();
+        } else {
+            return this.webApiCall('/status');
+        }
+    }
+
+    async performStartupChecks() {
+        if (this.isElectron) {
+            return window.electronAPI.performStartupChecks();
+        } else {
+            return this.webApiCall('/startup-checks');
+        }
+    }
+
+    async dismissStartupWarning(warningType) {
+        if (this.isElectron) {
+            return window.electronAPI.dismissStartupWarning(warningType);
+        } else {
+            return this.webApiCall('/startup-warnings/dismiss', {
+                method: 'POST',
+                body: JSON.stringify({ type: warningType })
+            });
         }
     }
 }
