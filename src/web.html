@@ -108,19 +108,28 @@
                                                 Stop
                                             </button>
                                         </div>
-                                        
-                                        <!-- Playback Status (moved under Timeline Control) -->
-                                        <div class="status-information-area" id="statusInformationArea" style="display: none;">
+
+                                            <!-- Playback Status (moved under Timeline Control) -->
+                                                <div class="status-information-area" id="statusInformationArea" style="display: none;">
                                             <div class="status-content" id="statusContent">
                                                 <!-- Status visualization will be inserted here -->
                                             </div>
-                                        </div>
+                                            </div>
+
+                                            <!-- Inputs -->
+                                            <div class="command-category" id="inputsCategory" style="display:none;">
+                                                <h3>Inputs</h3>
+                                                <div class="inputs-list" id="inputsList">
+                                                    <div class="inputs-empty">Loading inputs…</div>
+                                                </div>
+                                            </div>
+
+                                            
                                     </div>                                    <!-- Tools (combined) -->
                                     <div class="command-section">
                                         <h3>Tools</h3>
                                         <div class="command-buttons info-controls compact">
                                             <button id="statusBtn" class="cmd-button cmd-button-info">📊 Status</button>
-                                            <button id="timelinesBtn" class="cmd-button cmd-button-info">📑 Timelines</button>
                                             <button id="showBtn" class="cmd-button cmd-button-info">💾 Save Show</button>
                                             <button id="uploadShowBtn" class="cmd-button cmd-button-info">📤 Upload Show</button>
                                             <button id="testConnectionBtn" class="cmd-button cmd-button-test">🔗 Test Connection</button>
@@ -160,6 +169,8 @@
                             </div>
                         </div>
                     </section>
+
+                    
                 </div>
             </div>
         </main>

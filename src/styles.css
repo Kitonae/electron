@@ -1160,6 +1160,100 @@ body.dark-mode .title-bar .title-bar-title {
     filter: brightness(0.98);
 }
 
+/* Inputs section */
+.inputs-controls {
+    display: flex;
+    gap: 12px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    margin: 8px 0 12px 0;
+}
+.inputs-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+.input-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    padding: 6px 10px;
+}
+.input-key { font-weight: 600; color: #333; }
+.input-slider { flex: 1; }
+.input-value { font-family: 'Courier New', monospace; color: #555; min-width: 60px; text-align: right; }
+.input-remove {
+    margin-left: auto;
+    background: transparent;
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    padding: 2px 8px;
+    cursor: pointer;
+}
+.inputs-actions { display: flex; gap: 10px; }
+
+body.dark-mode .input-item { background: #121620; border-color: #222838; }
+body.dark-mode .input-key { color: #e6e8eb; }
+body.dark-mode .input-value { color: #aeb7c6; }
+body.dark-mode .input-slider { accent-color: #4da3ff; }
+
+/* Range slider visual styling with gradient track */
+.input-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 18px;
+    background: transparent; /* track styled via pseudo-elements */
+}
+.input-slider:focus { outline: none; }
+
+/* WebKit (Chromium/Electron, Safari) */
+.input-slider::-webkit-slider-runnable-track {
+    height: 8px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #4da3ff 0%, #9b59b6 100%);
+}
+.input-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #ffffff;
+    border: 2px solid #4da3ff;
+    margin-top: -4px; /* center on 8px track */
+    box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+}
+
+/* Firefox */
+.input-slider::-moz-range-track {
+    height: 8px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #4da3ff 0%, #9b59b6 100%);
+}
+.input-slider::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #ffffff;
+    border: 2px solid #4da3ff;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+}
+
+/* Dark mode tweaks */
+body.dark-mode .input-slider::-webkit-slider-thumb {
+    background: #0b0f18;
+    border-color: #4da3ff;
+}
+body.dark-mode .input-slider::-moz-range-thumb {
+    background: #0b0f18;
+    border-color: #4da3ff;
+}
+body.dark-mode .input-remove { border-color: #2a3246; color: #aeb7c6; }
+
 /* Playback updates (SSE) */
 .playback-updates-header {
     display: flex;
@@ -3216,6 +3310,24 @@ body.dark-mode .log-stats { color: #9aa7c4; }
     gap: 8px;
     align-items: center;
 }
+/* Align auto-scroll toggle flush with buttons in log header */
+.log-actions .toggle-label,
+.log-actions .checkbox-label {
+    display: inline-flex !important;
+    align-items: center;
+    margin: 0; /* remove extra bottom margin that lifts it */
+}
+.log-actions .toggle-switch {
+    margin-top: 0; /* ensure no vertical offset */
+}
+
+.log-filters {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: 8px;
+}
+/* Using existing .toggle-button for filter chips */
 
 .log-actions .btn {
     padding: 4px 8px;

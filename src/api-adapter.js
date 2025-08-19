@@ -196,6 +196,17 @@ class ApiAdapter {
         }
     }
 
+    async watchoutSendInputs(serverIp, inputs) {
+        if (this.isElectron) {
+            return window.electronAPI.watchout.sendInputs(serverIp, inputs);
+        } else {
+            return this.webApiCall(`/watchout/${serverIp}/inputs`, {
+                method: 'POST',
+                body: JSON.stringify(inputs)
+            });
+        }
+    }
+
     async watchoutSendCustomRequest(serverIp, endpoint, method, data) {
         if (this.isElectron) {
             return window.electronAPI.watchout.sendCustomRequest(serverIp, endpoint, method, data);

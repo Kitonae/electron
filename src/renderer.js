@@ -311,9 +311,144 @@ class WatchoutServerFinderApp {
         clearResponseBtn.addEventListener("click", () => this.clearCommandResponse());
       }
 
+      // Inputs panel (slider-based, populated from /v0/show)
+      this.pendingInputs = [];
+      // No send button; updates are sent on slider change
+
       console.log('Command events bound successfully');
     } catch (error) {
       console.error('Error binding command events:', error);
+    }
+  }
+  // Inputs panel: load from /v0/show and render as sliders
+  async loadInputsFromShow() {
+    try {
+      if (!this.selectedServerIp) return;
+      const result = await this.api.watchoutGetShow(this.selectedServerIp);
+      const showData = result?.data || result;
+      const inputs = this.extractInputsFromShow(showData);
+      this.pendingInputs = inputs;
+      this.renderInputsList();
+    } catch (e) {
+      console.warn('Failed to load inputs from show:', e);
+      this.pendingInputs = [];
+      this.renderInputsList();
+    }
+  }
+  extractInputsFromShow(showData) {
+    try {
+      let data = showData;
+      if (typeof data === 'string') {
+        try { data = JSON.parse(data); } catch {}
+      }
+      // Handle object map: data.inputs or data.show.inputs = {"0": {...}, ...}
+      const inputsObj = (data && typeof data === 'object' && data.inputs && typeof data.inputs === 'object' && !Array.isArray(data.inputs))
+        ? data.inputs
+        : (data && typeof data === 'object' && data.show && data.show.inputs && typeof data.show.inputs === 'object' && !Array.isArray(data.show.inputs))
+          ? data.show.inputs
+          : null;
+      if (inputsObj) {
+        const items = Object.values(inputsObj)
+          .filter(v => v && typeof v === 'object')
+          .map(v => ({
+            key: String(v.name ?? v.key ?? ''),
+            value: typeof v.defaultValue === 'number' ? v.defaultValue : 0,
+            min: typeof v.minValue === 'number' ? v.minValue : 0,
+            max: typeof v.maxValue === 'number' ? v.maxValue : 1,
+            step: (typeof v.minValue === 'number' && typeof v.maxValue === 'number' && (v.maxValue - v.minValue) >= 1) ? 1 : 0.01
+          }))
+          .filter(it => it.key.length > 0);
+        if (items.length) return items;
+      }
+      // Fallbacks: arrays or nested structures
+      const candidates = [];
+      if (Array.isArray(data)) candidates.push(data);
+      if (data && typeof data === 'object') {
+        if (Array.isArray(data.inputs)) candidates.push(data.inputs);
+        if (Array.isArray(data.Inputs)) candidates.push(data.Inputs);
+        if (data.show && Array.isArray(data.show.inputs)) candidates.push(data.show.inputs);
+        if (data.Show && Array.isArray(data.Show.Inputs)) candidates.push(data.Show.Inputs);
+      }
+      let names = [];
+      for (const arr of candidates) {
+        if (!arr) continue;
+        if (arr.length > 0 && typeof arr[0] === 'string') { names = arr; break; }
+        if (arr.length > 0 && typeof arr[0] === 'object') {
+          const maybe = arr.map(x => x.name || x.key || x.Name || x.id || x.Id).filter(Boolean);
+          if (maybe.length) { names = maybe; break; }
+        }
+      }
+      return names.map(k => ({ key: String(k), value: 0, min: 0, max: 1, step: 0.01 }));
+    } catch {
+      return [];
+    }
+  }
+  renderInputsList() {
+    const list = document.getElementById('inputsList');
+    const category = document.getElementById('inputsCategory');
+    if (!list) return;
+    list.innerHTML = '';
+    if (!this.pendingInputs || this.pendingInputs.length === 0) {
+      if (category) category.style.display = 'none';
+      return;
+    }
+    if (category) category.style.display = '';
+    this.pendingInputs.forEach((it, idx) => {
+      const row = document.createElement('div');
+      row.className = 'input-item';
+      const keySpan = document.createElement('span');
+      keySpan.className = 'input-key';
+      keySpan.textContent = this.escapeHtml?.(it.key) || String(it.key);
+      const slider = document.createElement('input');
+      slider.type = 'range';
+      slider.min = String(typeof it.min === 'number' ? it.min : 0);
+      slider.max = String(typeof it.max === 'number' ? it.max : 1);
+      slider.step = String(typeof it.step === 'number' ? it.step : 0.01);
+      slider.value = String(typeof it.value === 'number' ? it.value : 0);
+      slider.className = 'input-slider';
+      const valueSpan = document.createElement('span');
+      valueSpan.className = 'input-value';
+      valueSpan.textContent = `= ${slider.value}`;
+      slider.addEventListener('input', () => {
+        const v = parseFloat(slider.value);
+        this.pendingInputs[idx].value = isNaN(v) ? 0 : v;
+        valueSpan.textContent = `= ${slider.value}`;
+      });
+      slider.addEventListener('change', () => {
+        const v = parseFloat(slider.value);
+        this.pendingInputs[idx].value = isNaN(v) ? 0 : v;
+        this.sendInputUpdate(it.key, this.pendingInputs[idx].value);
+      });
+      row.appendChild(keySpan);
+      row.appendChild(slider);
+      row.appendChild(valueSpan);
+      list.appendChild(row);
+    });
+  }
+  async sendInputUpdate(key, value) {
+    if (!this.selectedServerIp) return;
+    try {
+      await this.api.watchoutSendInputs(this.selectedServerIp, [{ key, value }]);
+    } catch (e) {
+      console.warn('Input update failed:', e);
+    }
+  }
+  async sendInputs() {
+    if (!this.selectedServerIp) {
+      this.showToast?.({ title: 'No Server Selected', message: 'Select a server first.', severity: 'info' });
+      return;
+    }
+    if (!this.pendingInputs || this.pendingInputs.length === 0) return;
+    try {
+      const payload = this.pendingInputs.map(({ key, value }) => ({ key, value }));
+      const result = await this.api.watchoutSendInputs(this.selectedServerIp, payload);
+      if (result?.success) {
+        this.showToast?.({ title: 'Inputs Sent', message: `${this.pendingInputs.length} input(s) sent.`, severity: 'success' });
+      } else {
+        this.showToast?.({ title: 'Inputs Failed', message: String(result?.error || 'Unknown error'), severity: 'error' });
+      }
+    } catch (e) {
+      this.showToast?.({ title: 'Inputs Failed', message: String(e.message || e), severity: 'error' });
     }
   }
   bindWindowControls() {
@@ -675,6 +810,8 @@ class WatchoutServerFinderApp {
 
     // Test API connection for auto-selected server (prefer online servers)
     if (autoSelected && this.selectedServerIp && onlineServers.length > 0) {
+      // Load inputs immediately and test connection shortly after
+      this.loadInputsFromShow?.();
       setTimeout(() => this.testApiConnection(), 100);
     }
   }
@@ -1199,6 +1336,8 @@ class WatchoutServerFinderApp {
 
     // Show/hide commands area in the commands panel
     this.updateCommandsVisibility();
+    // Load inputs from current show for the selected server
+    this.loadInputsFromShow?.();
 
     // Load server-specific command state
     if (this.selectedServerId && this.selectedServerIp) {
@@ -2578,6 +2717,12 @@ class WatchoutServerFinderApp {
                 <span id="logTimeRange"></span>
               </div>
               <div class="log-actions">
+                <div class="log-filters" title="Filter by level">
+                  <button class="toggle-button active log-filter-btn" data-level="error" aria-pressed="true">Error</button>
+                  <button class="toggle-button active log-filter-btn" data-level="warn" aria-pressed="true">Warn</button>
+                  <button class="toggle-button active log-filter-btn" data-level="info" aria-pressed="true">Info</button>
+                  <button class="toggle-button active log-filter-btn" data-level="debug" aria-pressed="true">Debug</button>
+                </div>
                 <button id="clearLogsBtn" class="btn btn-sm btn-secondary">Clear</button>
                 <button id="exportLogsBtn" class="btn btn-sm btn-primary">Export</button>
                 <label class="toggle-label" title="Toggle auto-scroll">
@@ -2732,6 +2877,18 @@ class WatchoutServerFinderApp {
         this.autoScrollEnabled = !!autoScrollEl.checked;
       });
     }
+
+    // Level filters (toggle buttons)
+    const filterBtns = document.querySelectorAll('.log-filter-btn');
+    filterBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const active = !btn.classList.contains('active');
+        btn.classList.toggle('active', active);
+        btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+        this.applyLogFilters();
+      });
+    });
+    this.applyLogFilters();
 
     this.testLokiConnection();
   }
@@ -2938,6 +3095,9 @@ class WatchoutServerFinderApp {
       }
     }
 
+    // Apply filters to new entries
+    this.applyLogFilters();
+
     // Update stats
     this.updateLogStats();
 
@@ -3121,6 +3281,22 @@ class WatchoutServerFinderApp {
     } catch (error) {
       console.error('Error showing startup toast:', error);
     }
+  }
+  applyLogFilters() {
+    const container = document.getElementById('logContainer');
+    if (!container) return;
+    const active = new Set(Array.from(document.querySelectorAll('.log-filter-btn.active')).map(b => b.dataset.level));
+    const showError = active.has('error');
+    const showWarn = active.has('warn');
+    const showInfo = active.has('info');
+    const showDebug = active.has('debug');
+    const entries = container.querySelectorAll('.log-entry');
+    entries.forEach((el) => {
+      if (el.classList.contains('log-error')) { el.style.display = showError ? '' : 'none'; return; }
+      if (el.classList.contains('log-warn')) { el.style.display = showWarn ? '' : 'none'; return; }
+      if (el.classList.contains('log-info')) { el.style.display = showInfo ? '' : 'none'; return; }
+      if (el.classList.contains('log-debug')) { el.style.display = showDebug ? '' : 'none'; return; }
+    });
   }
 
   ensureToastContainer() {

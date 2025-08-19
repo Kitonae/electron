@@ -135,7 +135,7 @@
                                                     </div>
                                                 </div>
 
-                                                <!-- Control Buttons -->
+                                            <!-- Control Buttons -->
                                                 <div class="command-buttons">
                                                     <button class="command-btn play-btn" id="playBtn" disabled title="Select a timeline first">
                                                         <span class="cmd-icon">
@@ -155,25 +155,31 @@
                                                         </span>
                                                         <span>Stop</span>
                                                     </button>
-                                                </div>
-                                                
-                                                <!-- Playback Status (moved under Timeline Control) -->
+                                            </div>
+
+                                            <!-- Playback Status (moved under Timeline Control) -->
                                                 <div class="status-information-area" id="statusInformationArea" style="display: none;">
                                                     <div class="status-content" id="statusContent">
                                                         <!-- Status visualization will be inserted here -->
                                                     </div>
                                                 </div>
-                                            </div>                                            <!-- Tools (combined) -->
+                                            </div>
+
+                                            <!-- Inputs -->
+                                            <div class="command-category" id="inputsCategory" style="display:none;">
+                                                <h3>Inputs</h3>
+                                                <div class="inputs-list" id="inputsList">
+                                                    <div class="inputs-empty">Loading inputs…</div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Tools (combined) -->
                                             <div class="command-category">
                                                 <h3>Tools</h3>
                                                 <div class="command-buttons compact">
                                                     <button class="command-btn info-btn" id="statusBtn">
                                                         <span class="cmd-icon">📊</span>
                                                         <span>Status</span>
-                                                    </button>
-                                                    <button class="command-btn info-btn" id="timelinesBtn">
-                                                        <span class="cmd-icon">📑</span>
-                                                        <span>Timelines</span>
                                                     </button>
                                                     <button class="command-btn info-btn" id="showBtn">
                                                         <span class="cmd-icon">💾</span>
@@ -197,6 +203,8 @@
                                                     </button>
                                                 </div>
                                             </div>
+
+                                            
                                             
                                             <!-- Live Playback Updates (SSE) -->
                                             <div class="command-category">
@@ -230,6 +238,8 @@
                                 </div>
                             </div>
                         </div>
+
+                        
                     </div>
                 </div>
             </div>

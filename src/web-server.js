@@ -253,6 +253,16 @@ class WebServer {
       }
     });
 
+    // Inputs API
+    this.app.post('/api/watchout/:serverIp/inputs', async (req, res) => {
+      try {
+        const result = await this.watchoutCommands.sendInputs(req.params.serverIp, req.body);
+        res.json(result);
+      } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+      }
+    });
+
     this.app.post('/api/watchout/:serverIp/custom', async (req, res) => {
       try {
         const { endpoint, method, data } = req.body;
