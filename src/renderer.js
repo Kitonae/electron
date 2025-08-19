@@ -44,6 +44,9 @@ class WatchoutServerFinderApp {
       this.bindEvents();
       console.log('Events bound successfully');
 
+      // Step 1.5: Initialize theme early
+      await this.initializeTheme();
+
       // Step 2: Load app version (with timeout)
       try {
         await Promise.race([
@@ -1816,6 +1819,14 @@ class WatchoutServerFinderApp {
         enableWebServer.checked = settings.enableWebServer !== false; // default to true
       }
 
+      // Update dark mode toggle
+      const enableDarkMode = document.getElementById('enableDarkMode');
+      if (enableDarkMode) {
+        const dark = settings.enableDarkMode === true;
+        enableDarkMode.checked = dark;
+        this.setDarkMode(dark);
+      }
+
       // Update web server status
       await this.updateWebServerStatus();
 
@@ -1899,12 +1910,14 @@ class WatchoutServerFinderApp {
         "enableCacheFromDisk"
       );
       const enableWebServer = document.getElementById("enableWebServer");
+      const enableDarkMode = document.getElementById('enableDarkMode');
 
       const settings = {
         enableCacheFromDisk: enableCacheFromDisk
           ? enableCacheFromDisk.checked
           : true,
         enableWebServer: enableWebServer ? enableWebServer.checked : true,
+        enableDarkMode: enableDarkMode ? enableDarkMode.checked : false,
       };
 
       // Save settings to main process
@@ -1916,6 +1929,9 @@ class WatchoutServerFinderApp {
       }, 500);
 
       console.log("Settings saved successfully");
+
+      // Apply theme immediately
+      this.setDarkMode(settings.enableDarkMode === true);
     } catch (error) {
       console.error("Error saving settings:", error);
     }
@@ -2472,6 +2488,25 @@ class WatchoutServerFinderApp {
     modal.classList.add("show");
     
     this.setupLokiLogViewer();
+  }
+  async initializeTheme() {
+    try {
+      if (this.api && this.api.getAppSettings) {
+        const settings = await this.api.getAppSettings();
+        const dark = settings.enableDarkMode === true;
+        this.setDarkMode(dark);
+      }
+    } catch (e) {
+      this.setDarkMode(false);
+    }
+  }
+  setDarkMode(enabled) {
+    const cls = document.body.classList;
+    if (enabled) {
+      cls.add('dark-mode');
+    } else {
+      cls.remove('dark-mode');
+    }
   }
 
   async setupLokiLogViewer() {

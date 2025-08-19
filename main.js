@@ -564,11 +564,12 @@ ipcMain.handle('get-app-settings', async () => {
     // For now, we'll return default settings
     return {
       enableCacheFromDisk: true,
-      enableWebServer: true
+      enableWebServer: true,
+      enableDarkMode: false
     };
   } catch (error) {
     console.error('Error getting app settings:', error);
-    return { enableCacheFromDisk: true, enableWebServer: true };
+    return { enableCacheFromDisk: true, enableWebServer: true, enableDarkMode: false };
   }
 });
 
