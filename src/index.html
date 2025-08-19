@@ -11,7 +11,7 @@
     <div class="title-bar">
         <div class="title-bar-drag-region">
             <div class="title-bar-left">
-                <img src="../assets/icon.png" alt="App Icon" class="title-bar-icon">
+                <img src="../assets/head.png" alt="App Icon" class="title-bar-icon" onerror="this.onerror=null;this.src='../assets/icon.png';">
                 <span class="title-bar-title">WATCHOUT Assistant</span>
             </div>
             <div class="title-bar-right">                <button class="title-bar-button minimize-button" id="minimizeBtn" title="Minimize">
@@ -51,7 +51,7 @@
                                 <img src="../assets/plus.svg" class="button-icon" alt="Add Server">
                             </button>
                             <button id="clearOfflineButton" class="clear-offline-button-sidebar" title="Clear offline cached servers">
-                                🗑️
+                                <img src="../assets/trash.svg" class="button-icon" alt="Clear Offline">
                             </button>
                         </div>
                     </div>
@@ -122,7 +122,9 @@
                                                             <option value="">Load timelines first...</option>
                                                         </select>
                                                         <button class="command-btn refresh-btn" id="timelinesBtn" title="Load Available Timelines">
-                                                            <span class="cmd-icon">📑</span>
+                                                            <span class="cmd-icon">
+                                                                <img src="../assets/refresh.svg" alt="Refresh" class="refresh-icon">
+                                                            </span>
                                                             <span>Refresh</span>
                                                         </button>
                                                     </div>                                                    <div class="timeline-info" id="timelineInfo" style="display: none;">
@@ -220,6 +222,8 @@
                 <span>WATCHOUT Assistant v<span id="appVersion">1.0.0</span></span>
                 <span class="separator">•</span>
                 <span>Built with Electron</span>
+                <span class="separator">•</span>
+                <img src="../assets/logo.png" alt="Logo" class="footer-logo" onerror="this.onerror=null;this.src='../assets/icon.png';">
                 <button id="settingsButton" class="settings-button" title="Application Settings">
                     ⚙️
                 </button>

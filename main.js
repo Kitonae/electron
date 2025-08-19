@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs').promises;
+const fssync = require('fs');
 const { findWatchoutServers, clearOfflineServers, addManualServer, updateManualServer, removeManualServer } = require('./src/network-scanner');
 const WatchoutCommands = require('./src/watchout-commands');
 const WebServer = require('./src/web-server');
@@ -21,10 +22,69 @@ let webServer;
 let startupChecker;
 const watchoutCommands = new WatchoutCommands();
 
+// ----- App settings persistence -----
+const SETTINGS_FILE_NAME = 'settings.json';
+let settingsFilePath = null;
+let appSettings = {
+  enableCacheFromDisk: true,
+  enableWebServer: true,
+  enableDarkMode: false,
+};
+
+async function ensureSettingsPath() {
+  if (!settingsFilePath) {
+    const userDataPath = app.getPath('userData');
+    try {
+      await fs.mkdir(userDataPath, { recursive: true });
+    } catch (_) {
+      // ignore mkdir race
+    }
+    settingsFilePath = path.join(userDataPath, SETTINGS_FILE_NAME);
+  }
+  return settingsFilePath;
+}
+
+async function loadAppSettings() {
+  try {
+    const file = await ensureSettingsPath();
+    try {
+      const data = await fs.readFile(file, 'utf8');
+      const parsed = JSON.parse(data);
+      // Merge with defaults to tolerate missing keys
+      appSettings = { ...appSettings, ...parsed };
+    } catch (readErr) {
+      // If file doesn't exist or is invalid, keep defaults and write a fresh file
+      await saveAppSettingsToFile(appSettings);
+    }
+  } catch (error) {
+    console.warn('Failed to load app settings, using defaults:', error.message);
+  }
+  return appSettings;
+}
+
+async function saveAppSettingsToFile(settings) {
+  try {
+    const file = await ensureSettingsPath();
+    await fs.writeFile(file, JSON.stringify(settings, null, 2), 'utf8');
+    return true;
+  } catch (error) {
+    console.error('Error writing app settings:', error);
+    return false;
+  }
+}
+
 function createWindow() {
   logger.info('Creating main window...');
   
   // Create the browser window
+  // Prefer head.png; fallback to logo.png, then icon.png
+  const headPath = path.join(__dirname, 'assets', 'head.png');
+  const logoPath = path.join(__dirname, 'assets', 'logo.png');
+  const fallbackIconPath = path.join(__dirname, 'assets', 'icon.png');
+  const resolvedIconPath = fssync.existsSync(headPath)
+    ? headPath
+    : (fssync.existsSync(logoPath) ? logoPath : fallbackIconPath);
+
   mainWindow = new BrowserWindow({
     width: 1600,
     height: 1000,
@@ -35,7 +95,7 @@ function createWindow() {
       enableRemoteModule: false,
       preload: path.join(__dirname, 'src', 'preload.js')
     },
-    icon: path.join(__dirname, 'assets', 'icon.png'),
+    icon: resolvedIconPath,
     frame: false,
     titleBarStyle: 'hidden',
     show: false
@@ -560,23 +620,22 @@ ipcMain.handle('loki-set-tenant', async (event, tenant) => {
 // Settings IPC handlers
 ipcMain.handle('get-app-settings', async () => {
   try {
-    // In a real app, you'd load from a config file or store
-    // For now, we'll return default settings
-    return {
-      enableCacheFromDisk: true,
-      enableWebServer: true,
-      enableDarkMode: false
-    };
+    const settings = await loadAppSettings();
+    return settings;
   } catch (error) {
     console.error('Error getting app settings:', error);
-    return { enableCacheFromDisk: true, enableWebServer: true, enableDarkMode: false };
+    return appSettings; // return last-known/defaults
   }
 });
 
 ipcMain.handle('save-app-settings', async (event, settings) => {
   try {
     console.log('Saving app settings:', settings);
-    
+
+    // Merge and persist settings
+    appSettings = { ...appSettings, ...settings };
+    const persisted = await saveAppSettingsToFile(appSettings);
+
     // Handle web server enable/disable
     if (settings.enableWebServer !== undefined) {
       if (settings.enableWebServer && !webServer.isRunning()) {
@@ -587,12 +646,10 @@ ipcMain.handle('save-app-settings', async (event, settings) => {
         console.log('Web server stopped due to settings change');
       }
     }
-    
-    // In a real app, you'd save to a config file or store
-    // For now, we'll just log the settings
+
     console.log('Settings saved successfully');
-    
-    return { success: true };
+
+    return { success: persisted };
   } catch (error) {
     console.error('Error saving app settings:', error);
     return { success: false, error: error.message };

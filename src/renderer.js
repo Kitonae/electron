@@ -925,12 +925,12 @@ class WatchoutServerFinderApp {
     let manualActions = "";
     if (server.isManual) {
       manualActions = `
-                <div class="manual-server-actions">
-                    <button class="manual-edit-btn" title="Edit server" data-server-id="${serverId}">
-                        ✏️
+                <div class=\"manual-server-actions\">
+                    <button class=\"manual-edit-btn\" title=\"Edit server\" data-server-id=\"${serverId}\"> 
+                        <img src=\"../assets/pen-field.svg\" alt=\"Edit\" class=\"icon\">
                     </button>
-                    <button class="manual-remove-btn" title="Remove server" data-server-id="${serverId}">
-                        🗑️
+                    <button class=\"manual-remove-btn\" title=\"Remove server\" data-server-id=\"${serverId}\"> 
+                        <img src=\"../assets/trash.svg\" alt=\"Remove\" class=\"icon\">
                     </button>
                 </div>
             `;
