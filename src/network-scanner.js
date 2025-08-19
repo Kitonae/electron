@@ -1,4 +1,6 @@
 const dgram = require('dgram');
+const http = require('http');
+const https = require('https');
 const fs = require('fs').promises;
 const path = require('path');
 const { exec } = require('child_process');
@@ -34,6 +36,8 @@ const WATCHOUT_MULTICAST_IP = '239.2.2.2'; // Watchout multicast discovery IP
 const WATCHOUT_QUERY_PORT = 3011; // Watchout discovery query port
 const WATCHOUT_RESPONSE_PORT = 3012; // Watchout discovery response port
 const TIMEOUT_MS = 5000;
+// Optional HTTP discovery endpoint (used when local conflicts prevent scanning)
+const WATCHOUT_HTTP_DISCOVERY_URL = process.env.WATCHOUT_DISCOVERY_URL || 'http://localhost:3017/v0/discovered';
 
 // Cache configuration
 const CACHE_FILE_NAME = 'watchout-assistant-cache.json';
@@ -198,9 +202,17 @@ class WatchoutAssistant {
       this.bonjourDiscovery().catch(err => {
         console.warn('Bonjour scan failed:', err?.message || 'Bonjour service not available');
         return [];
+      }),
+      // HTTP fallback discovery: tolerate failures silently and just continue
+      this.httpDiscovery().catch(err => {
+        this.logger.debug('HTTP discovery skipped', { reason: err?.message || 'Endpoint unavailable' });
+        return [];
       })
     ];try {
       await Promise.allSettled(discoveryMethods);
+
+      // Merge duplicates from multiple discovery paths, prefer richer data
+      this.coalesceServersByIp();
         // Process cached servers and mark offline ones
       this.processCachedServers();
       
@@ -362,6 +374,297 @@ class WatchoutAssistant {
       }, TIMEOUT_MS);
     });
   }
+
+  /**
+   * HTTP-based discovery fallback
+   * Attempts to fetch discovery JSON from a local helper service.
+   */
+  async httpDiscovery() {
+    return new Promise(async (resolve) => {
+      try {
+        const url = WATCHOUT_HTTP_DISCOVERY_URL;
+        this.logger.debug('Attempting HTTP discovery', { url });
+
+        const data = await this.fetchJson(url);
+        if (!data) {
+          this.logger.debug('No data from HTTP discovery');
+          resolve();
+          return;
+        }
+
+        // Normalize possible container shapes
+        const candidates = Array.isArray(data)
+          ? data
+          : Array.isArray(data.servers)
+            ? data.servers
+            : Array.isArray(data.discovered)
+              ? data.discovered
+              : Array.isArray(data.items)
+                ? data.items
+                : Array.isArray(data.data)
+                  ? data.data
+                  : [];
+
+        for (const item of candidates) {
+          try {
+            const serverInfo = this.normalizeHttpDiscoveredItem(item);
+            if (serverInfo) {
+              this.addServer(serverInfo);
+            }
+          } catch (e) {
+            this.logger.debug('Failed to normalize HTTP discovery item', { error: e?.message });
+          }
+        }
+      } catch (error) {
+        // Swallow errors to keep this as a true fallback
+        this.logger.debug('HTTP discovery failed', { error: error?.message || String(error) });
+      } finally {
+        resolve();
+      }
+    });
+  }
+
+  /**
+   * Coalesce multiple discovered entries for the same IP into a single rich record.
+   * Prefers entries with Watchout-specific fields and merges ports/services/capabilities.
+   */
+  coalesceServersByIp() {
+    try {
+      const byIp = new Map();
+      for (const server of this.servers.values()) {
+        const ip = server.ip;
+        if (!ip) continue;
+        if (!byIp.has(ip)) {
+          byIp.set(ip, { ...server, ports: [...new Set(server.ports || [])] });
+          continue;
+        }
+
+        const existing = byIp.get(ip);
+
+        // Merge arrays with uniqueness
+        const mergeUnique = (a = [], b = []) => Array.from(new Set([...(a || []), ...(b || [])]));
+
+        const mergedPorts = mergeUnique(existing.ports, server.ports);
+        const mergedServices = mergeUnique(existing.services, server.services);
+
+        // Capabilities: merge truthy booleans
+        const mergedCaps = Object.assign({}, existing.capabilities || {}, server.capabilities || {});
+
+        // Choose more specific type if services available
+        let type = existing.type;
+        if (mergedServices.length > 0) {
+          type = this.determineServerType({ services: mergedServices, version: server.version || existing.version });
+        }
+
+        // Status: online if any entry is online
+        const status = (existing.status === 'online' || server.status === 'online') ? 'online' : (server.status || existing.status || 'online');
+
+        // Prefer more detailed identity fields when available
+        const hostRef = server.hostRef || existing.hostRef;
+        const machineId = server.machineId || existing.machineId;
+        const version = server.version || existing.version;
+        const dirShow = server.dirShow || existing.dirShow;
+        const runShow = server.runShow || existing.runShow;
+        const woTime = (server.woTime !== undefined ? server.woTime : existing.woTime);
+
+        // Interfaces: merge
+        const interfaces = mergeUnique(existing.interfaces, server.interfaces);
+
+        // Timestamps
+        const discoveredAt = existing.discoveredAt && server.discoveredAt ? (new Date(existing.discoveredAt) <= new Date(server.discoveredAt) ? existing.discoveredAt : server.discoveredAt) : (existing.discoveredAt || server.discoveredAt);
+        const lastSeenAt = existing.lastSeenAt && server.lastSeenAt ? (new Date(existing.lastSeenAt) >= new Date(server.lastSeenAt) ? existing.lastSeenAt : server.lastSeenAt) : (existing.lastSeenAt || server.lastSeenAt);
+        const firstDiscoveredAt = existing.firstDiscoveredAt || server.firstDiscoveredAt || discoveredAt;
+        const offlineSince = existing.offlineSince || server.offlineSince;
+
+        byIp.set(ip, {
+          ...existing,
+          ...server,
+          ip,
+          ports: mergedPorts,
+          services: mergedServices,
+          capabilities: mergedCaps,
+          type,
+          status,
+          hostRef,
+          machineId,
+          version,
+          dirShow,
+          runShow,
+          woTime,
+          interfaces,
+          discoveredAt,
+          lastSeenAt,
+          firstDiscoveredAt,
+          offlineSince
+        });
+      }
+
+      // Replace servers map with coalesced entries keyed by ip:ports
+      const merged = new Map();
+      for (const server of byIp.values()) {
+        const key = `${server.ip}:${(server.ports || []).join(',')}`;
+        merged.set(key, server);
+      }
+      this.servers = merged;
+    } catch (e) {
+      this.logger.debug('Failed to coalesce servers by IP', { error: e?.message });
+    }
+  }
+
+  /**
+   * Fetch JSON helper with http/https support
+   */
+  fetchJson(urlStr) {
+    return new Promise((resolve, reject) => {
+      try {
+        const u = new URL(urlStr);
+        const mod = u.protocol === 'https:' ? https : http;
+        const req = mod.get(u, (res) => {
+          if (res.statusCode && res.statusCode >= 400) {
+            reject(new Error(`HTTP ${res.statusCode}`));
+            res.resume();
+            return;
+          }
+          let raw = '';
+          res.setEncoding('utf8');
+          res.on('data', (chunk) => { raw += chunk; });
+          res.on('end', () => {
+            try {
+              const json = JSON.parse(raw);
+              resolve(json);
+            } catch (e) {
+              reject(new Error('Invalid JSON from HTTP discovery'));
+            }
+          });
+        });
+        req.on('error', reject);
+        req.setTimeout(TIMEOUT_MS, () => {
+          req.destroy(new Error('HTTP discovery timeout'));
+        });
+      } catch (e) {
+        reject(e);
+      }
+    });
+  }
+
+  /**
+   * Attempt to normalize a single record from HTTP discovery into serverInfo shape.
+   */
+  normalizeHttpDiscoveredItem(item) {
+    if (!item || typeof item !== 'object') return null;
+    const about = item.about && typeof item.about === 'object' ? item.about : {};
+
+    // Try to derive IP/host
+    const ip = item.ip || item.address || item.ipv4 ||
+               (about.interfaces && Array.isArray(about.interfaces) && about.interfaces[0] && (Array.isArray(about.interfaces[0]) ? about.interfaces[0][0] : (about.interfaces[0].ip || about.interfaces[0].address))) ||
+               (item.interfaces && Array.isArray(item.interfaces) && item.interfaces[0] && (Array.isArray(item.interfaces[0]) ? item.interfaces[0][0] : (item.interfaces[0].ip || item.interfaces[0].address))) ||
+               item.host || item.hostname;
+    if (!ip) return null;
+
+    const hostRef = about.host_ref || item.host_ref || item.hostRef || item.name || item.hostname || item.machine_name || ip;
+
+    // Services: allow alternate shapes or booleans
+    let services = [];
+    if (Array.isArray(about.services)) {
+      services = about.services;
+    } else if (Array.isArray(item.services)) {
+      services = item.services;
+    } else if (Array.isArray(item.roles)) {
+      services = item.roles;
+    } else {
+      const svc = [];
+      if (item.director || item.isDirector) svc.push('Director');
+      if (item.display || item.isDisplay) svc.push('Display');
+      if (item.assetManager || item.isAssetManager) svc.push('AssetManager');
+      if (svc.length) services = svc;
+    }
+
+    // Ports: prefer explicit array, else infer from services, else defaults
+    let ports = [];
+    if (Array.isArray(item.ports)) {
+      ports = item.ports.map((p) => parseInt(p, 10)).filter((n) => Number.isFinite(n));
+    } else if (item.ports && typeof item.ports === 'object') {
+      // Normalize object of port name -> number
+      ports = Object.values(item.ports).map((p) => parseInt(p, 10)).filter((n) => Number.isFinite(n));
+    }
+    if (ports.length === 0) {
+      // Try common Watchout ports if any hints exist
+      ports = [...WATCHOUT_PORTS];
+    }
+
+    // Normalize interfaces to [[ip, mac], ...]
+    let interfaces = [];
+    if (Array.isArray(about.interfaces)) {
+      interfaces = about.interfaces.map((iface) => {
+        if (Array.isArray(iface)) return [iface[0], iface[1]];
+        if (iface && typeof iface === 'object') return [iface.ip || iface.address || '', iface.mac || iface.macAddress || ''];
+        return [String(iface || ''), ''];
+      }).filter((pair) => pair[0]);
+    } else if (Array.isArray(item.interfaces)) {
+      interfaces = item.interfaces.map((iface) => {
+        if (Array.isArray(iface)) return [iface[0], iface[1]];
+        if (iface && typeof iface === 'object') return [iface.ip || iface.address || '', iface.mac || iface.macAddress || ''];
+        return [String(iface || ''), ''];
+      }).filter((pair) => pair[0]);
+    }
+
+    // Capabilities merging from flat booleans and nested object
+    const flatCaps = {
+      wo7: about.wo7 ?? item.wo7,
+      wo6: about.wo6 ?? item.wo6,
+      artnet: about.artnet ?? item.artnet,
+      osc: about.osc ?? item.osc,
+      webui: (about.webui ?? about.webUi) ?? (item.webui || item.webUi),
+    };
+    const capabilities = Object.assign({}, item.capabilities || {}, flatCaps);
+
+    // Version allow nested shapes
+    const version = about.version || item.version || (item.wo && item.wo.version) || (item.watchout && item.watchout.version);
+
+    // Show info
+    const dirShow = about.dir_show || item.dir_show || item.dirShow || (item.director && item.director.show) || item.show;
+    const runShow = about.run_show || item.run_show || item.runShow || (item.runtime && item.runtime.show);
+
+    // Time sync
+    const woTime = about.wo_time || item.wo_time || item.woTime || item.timeSync;
+
+    // Machine ID
+    const machineId = about.machine_id || item.machine_id || item.machineId || item.machineID;
+
+    // Status
+    const status = item.status === 'offline' || item.online === false ? 'offline' : (item.status === 'online' || item.online === true ? 'online' : undefined);
+
+    // Timestamps
+    const lastSeenAt = (item.last_seen_js_date ? new Date(item.last_seen_js_date).toISOString() : undefined) || item.last_seen_at || item.lastSeenAt || item.lastSeen || item.seenAt;
+    const firstDiscoveredAt = item.first_discovered_at || item.firstDiscoveredAt || item.firstSeenAt;
+    const offlineSince = item.offline_since || item.offlineSince;
+
+    const serverInfo = {
+      ip,
+      hostname: hostRef,
+      ports,
+      type: services.length ? this.determineServerType({ services, version }) : 'Watchout Server (HTTP)',
+      discoveryMethod: 'http',
+      services,
+      version,
+      hostRef,
+      machineId,
+      dirShow,
+      runShow,
+      woTime,
+      interfaces,
+      capabilities,
+      licensed: item.licensed ?? item.isLicensed,
+      isLocal: item.is_local,
+      status,
+      lastSeenAt,
+      firstDiscoveredAt,
+      offlineSince,
+      rawResponse: item
+    };
+
+    return serverInfo;
+  }
   sendWatchoutDiscoveryQuery(socket) {
     try {
       // Send the official Watchout 7 discovery message
@@ -514,9 +817,9 @@ class WatchoutAssistant {
     const key = `${serverInfo.ip}:${serverInfo.ports.join(',')}`;
     
     // Add timestamp for this discovery
-    serverInfo.discoveredAt = new Date().toISOString();
-    serverInfo.lastSeenAt = serverInfo.discoveredAt;
-    serverInfo.status = 'online';
+    serverInfo.discoveredAt = serverInfo.discoveredAt || new Date().toISOString();
+    serverInfo.lastSeenAt = serverInfo.lastSeenAt || serverInfo.discoveredAt;
+    if (serverInfo.status === undefined) serverInfo.status = 'online';
     
     // Reset missed scan count when server is found
     this.missedScans.delete(key);
@@ -546,10 +849,15 @@ class WatchoutAssistant {
   }  processCachedServers() {
     const currentTime = new Date().toISOString();
     const currentServerKeys = new Set(this.servers.keys());
+    const currentIps = new Set(Array.from(this.servers.values()).map(s => s.ip));
     
     // Check all cached servers
     for (const [key, cachedServer] of this.serverCache.entries()) {
       if (!currentServerKeys.has(key)) {
+        // If we already have a discovered server with the same IP, skip cached entry
+        if (currentIps.has(cachedServer.ip)) {
+          continue;
+        }
         // Check if this is a manual server - manual servers are always online
         if (cachedServer.isManual) {
           // Manual servers always stay online and skip availability checks

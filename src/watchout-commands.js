@@ -480,6 +480,16 @@ class WatchoutCommands {
         return this.lokiLogReader;
     }
 
+    // Optional: Set Loki tenant header (X-Scope-OrgID)
+    setLokiTenant(tenant) {
+        try {
+            this.lokiLogReader.setTenant(tenant);
+            return { success: true, tenant: tenant || null };
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
+    }
+
     // ==================== HELPER METHODS ====================
     
     // Format connection error messages to be more user-friendly

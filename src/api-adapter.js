@@ -273,6 +273,15 @@ class ApiAdapter {
         }
     }
 
+    async lokiSetTenant(tenant) {
+        if (this.isElectron) {
+            return window.electronAPI.lokiSetTenant(tenant);
+        } else {
+            // No-op for web mode; could be extended via headers on server
+            return { success: true, tenant: tenant || null };
+        }
+    }
+
     // Settings API
     async getAppSettings() {
         if (this.isElectron) {

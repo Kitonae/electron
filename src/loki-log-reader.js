@@ -15,7 +15,11 @@ class LokiLogReader extends EventEmitter {
         this.maxReconnectAttempts = 5;
         this.reconnectDelay = 2000; // 2 seconds
         this.lastQueryTime = null;
+        this.tenant = null; // Optional multi-tenant header (X-Scope-OrgID)
     }    // Query Loki for recent logs
+    setTenant(tenant) {
+        this.tenant = tenant && String(tenant).trim() ? String(tenant).trim() : null;
+    }
     async queryLogs(serverIp, query = '{app=~".+"}', limit = 100, since = '1h') {
         const targetPort = this.defaultPort;
         
@@ -34,13 +38,16 @@ class LokiLogReader extends EventEmitter {
         const url = `http://${serverIp}:${targetPort}/loki/api/v1/query_range?${params}`;
         
         return new Promise((resolve, reject) => {
+            const headers = {
+                'Accept': 'application/json',
+                'User-Agent': 'WATCHOUT-Assistant/1.0'
+            };
+            if (this.tenant) headers['X-Scope-OrgID'] = this.tenant;
+
             const req = http.request(url, {
                 method: 'GET',
                 timeout: this.timeout,
-                headers: {
-                    'Accept': 'application/json',
-                    'User-Agent': 'WATCHOUT-Assistant/1.0'
-                }
+                headers
             }, (res) => {
                 let responseData = '';
                 
@@ -156,13 +163,16 @@ class LokiLogReader extends EventEmitter {
 
             try {
                 // Query for logs since last query time
-                const sinceTime = new Date(this.lastQueryTime * 1000).toISOString();
+                const startNs = (this.lastQueryTime * 1000 * 1000 * 1000).toString();
+                const endNs = (Date.now() * 1000000).toString();
                 const params = new URLSearchParams({
                     query: query,
                     limit: '100',
-                    start: sinceTime
+                    start: startNs,
+                    end: endNs,
+                    direction: 'forward'
                 });
-                
+
                 const url = `http://${serverIp}:${this.defaultPort}/loki/api/v1/query_range?${params}`;
                 
                 const result = await this.makeRequest(url);
@@ -174,7 +184,8 @@ class LokiLogReader extends EventEmitter {
                         // Update last query time
                         const latestLog = logs[logs.length - 1];
                         if (latestLog && latestLog.timestamp) {
-                            this.lastQueryTime = Math.floor(new Date(latestLog.timestamp).getTime() / 1000);
+                            // advance lastQueryTime slightly to avoid duplicates
+                            this.lastQueryTime = Math.floor(new Date(latestLog.timestamp).getTime() / 1000) + 1;
                         }
                     }
                     this.reconnectAttempts = 0; // Reset on success
@@ -211,7 +222,9 @@ class LokiLogReader extends EventEmitter {
     // Make HTTP request helper
     makeRequest(url) {
         return new Promise((resolve, reject) => {
-            const req = http.request(url, { method: 'GET', timeout: 10000 }, (res) => {
+            const headers = {};
+            if (this.tenant) headers['X-Scope-OrgID'] = this.tenant;
+            const req = http.request(url, { method: 'GET', timeout: 10000, headers }, (res) => {
                 let data = '';
                 res.on('data', chunk => data += chunk);
                 res.on('end', () => {

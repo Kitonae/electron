@@ -546,6 +546,17 @@ ipcMain.handle('loki-get-common-queries', async (event) => {
   }
 });
 
+// Optional: set Loki tenant header for multi-tenant deployments
+ipcMain.handle('loki-set-tenant', async (event, tenant) => {
+  try {
+    const result = watchoutCommands.setLokiTenant(tenant);
+    return result;
+  } catch (error) {
+    console.error('Error setting Loki tenant:', error);
+    return { success: false, error: error.message };
+  }
+});
+
 // Settings IPC handlers
 ipcMain.handle('get-app-settings', async () => {
   try {

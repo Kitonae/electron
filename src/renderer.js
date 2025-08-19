@@ -15,6 +15,8 @@ class WatchoutServerFinderApp {
       this.lastServerSelectTime = null; // Track last server selection time for throttling
       this.connectionTestTimeoutId = null; // Track scheduled connection tests
       this.statusUpdateTimeout = null; // Track status update debouncing
+      this.lokiLabelKey = 'app'; // default Loki label for filtering
+      this.autoScrollEnabled = true; // track auto-scroll state
 
       // Initialize API adapter for cross-platform compatibility with error handling
       try {
@@ -600,7 +602,7 @@ class WatchoutServerFinderApp {
     const discoveredTime = new Date(server.discoveredAt).toLocaleTimeString();
 
     // Use hostRef as the primary name, fallback to hostname or IP
-    const serverName =
+    let serverName =
       server.hostRef || server.hostname || server.ip || "Unknown Server";
     if (serverName.length > 30) {
       // Truncate long names
@@ -2387,24 +2389,30 @@ class WatchoutServerFinderApp {
       <div class="modal-content log-viewer-modal">
         <div class="modal-header">
           <h3>🗂️ Real-time Log Viewer - ${this.selectedServerIp}:3022</h3>
-          <span class="close" onclick="this.closest('.modal').remove()">&times;</span>
+          <button class="modal-close" id="closeLogViewerModal">×</button>
         </div>
         <div class="modal-body">
           <div class="log-controls">
             <div class="control-group">
-              <label for="logQuery">Log Query:</label>
-              <select id="logQuerySelect">
-                <option value="">Select a common query...</option>
+              <label for="lokiAppSelect">App:</label>
+              <select id="lokiAppSelect">
+                <option value="__all__">All apps</option>
               </select>
-              <input type="text" id="logQuery" placeholder='{app=~".+"}' value='{app=~".+"}'>
+            </div>
+            <div class="control-group" style="flex: 1;">
+              <label for="logQuery">Manual Query:</label>
+              <div style="display:flex; gap:8px; align-items:center;">
+                <input type="text" id="logQuery" placeholder="{app=~\".+\"}" style="flex:1;">
+                <button id="queryLogsBtn" class="btn btn-primary">Query Logs</button>
+              </div>
             </div>
             <div class="control-group">
               <label for="logLimit">Limit:</label>
-              <input type="number" id="logLimit" value="100" min="10" max="1000">
+              <input type="number" id="logLimit" value="200" min="10" max="5000" style="width:100px;">
             </div>
             <div class="control-group">
               <label for="logSince">Since:</label>
-              <select id="logSince">
+              <select id="logSince" style="width:140px;">
                 <option value="5m">5 minutes</option>
                 <option value="15m">15 minutes</option>
                 <option value="1h" selected>1 hour</option>
@@ -2413,9 +2421,6 @@ class WatchoutServerFinderApp {
                 <option value="12h">12 hours</option>
                 <option value="24h">24 hours</option>
               </select>
-            </div>
-            <div class="control-group">
-              <button id="queryLogsBtn" class="btn btn-primary">Query Logs</button>
             </div>
           </div>
           
@@ -2445,15 +2450,16 @@ class WatchoutServerFinderApp {
               <div class="log-actions">
                 <button id="clearLogsBtn" class="btn btn-sm">Clear</button>
                 <button id="exportLogsBtn" class="btn btn-sm">Export</button>
-                <label class="checkbox-label">
+                <label class="toggle-label" title="Toggle auto-scroll">
                   <input type="checkbox" id="autoScrollLogs" checked>
-                  Auto-scroll
+                  <span class="toggle-switch"></span>
+                  <span class="toggle-text">Auto-scroll</span>
                 </label>
               </div>
             </div>
             <div id="logContainer" class="log-container">
               <div class="log-placeholder">
-                No logs to display. Click "Query Logs" or "Start Stream" to begin.
+                No logs to display. Click "Query Logs" or enable live streaming to begin.
               </div>
             </div>
           </div>
@@ -2469,38 +2475,24 @@ class WatchoutServerFinderApp {
   }
 
   async setupLokiLogViewer() {
-    // Load common queries
-    try {
-      const queriesResult = await this.api.lokiGetCommonQueries();
-      if (queriesResult.success) {
-        const select = document.getElementById('logQuerySelect');
-        queriesResult.data.forEach(query => {
-          const option = document.createElement('option');
-          option.value = query.query;
-          option.textContent = `${query.name} - ${query.description}`;
-          select.appendChild(option);
-        });
-      }
-    } catch (error) {
-      console.warn('Failed to load common queries:', error);
-    }    // Bind events
-    document.getElementById('logQuerySelect').addEventListener('change', (e) => {
-      if (e.target.value) {
-        document.getElementById('logQuery').value = e.target.value;
-      }
-    });
-
+    // Close button (match settings modal behavior)
+    const closeBtn = document.getElementById('closeLogViewerModal');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const modalEl = closeBtn.closest('.modal');
+        if (modalEl) modalEl.remove();
+      });
+    }
     const streamToggle = document.getElementById('streamToggle');
-    const queryLogsBtn = document.getElementById('queryLogsBtn');
     const clearLogsBtn = document.getElementById('clearLogsBtn');
     const exportLogsBtn = document.getElementById('exportLogsBtn');
+    const appSelect = document.getElementById('lokiAppSelect');
+    const queryBtn = document.getElementById('queryLogsBtn');
+    const queryInput = document.getElementById('logQuery');
 
-    // Add null checks for all elements
     if (streamToggle) {
       streamToggle.addEventListener('change', () => this.toggleLokiStream());
-    }
-    if (queryLogsBtn) {
-      queryLogsBtn.addEventListener('click', () => this.queryLokiLogs());
     }
     if (clearLogsBtn) {
       clearLogsBtn.addEventListener('click', () => this.clearLogViewer());
@@ -2509,15 +2501,82 @@ class WatchoutServerFinderApp {
       exportLogsBtn.addEventListener('click', () => this.exportLogs());
     }
 
-    // Set up event listeners for log updates
     if (this.api.isElectron) {
       window.electronAPI.onLokiLogs((logs) => this.displayLogs(logs));
       window.electronAPI.onLokiError((error) => this.displayLogError(error));
-      window.electronAPI.onLokiStreamStarted((data) => this.updateStreamStatus(true));
+      window.electronAPI.onLokiStreamStarted(() => this.updateStreamStatus(true));
       window.electronAPI.onLokiStreamStopped(() => this.updateStreamStatus(false));
     }
 
-    // Test connection automatically
+    // Populate selector from Loki labels: prefer 'app', fallback to 'job'
+    const populateLabelValues = async (label) => {
+      try {
+        const valuesResult = await this.api.lokiGetLabelValues(this.selectedServerIp, label);
+        if (valuesResult.success && Array.isArray(valuesResult.data) && valuesResult.data.length > 0) {
+          this.lokiLabelKey = label;
+          appSelect.innerHTML = '';
+          const allOpt = document.createElement('option');
+          allOpt.value = '__all__';
+          allOpt.textContent = label === 'app' ? 'All apps' : 'All jobs';
+          appSelect.appendChild(allOpt);
+          valuesResult.data.forEach((val) => {
+            const opt = document.createElement('option');
+            opt.value = val;
+            opt.textContent = val;
+            appSelect.appendChild(opt);
+          });
+          return true;
+        }
+      } catch (err) {
+        console.warn(`Failed to load Loki label values for ${label}:`, err);
+      }
+      return false;
+    };
+
+    if (!(await populateLabelValues('app'))) {
+      await populateLabelValues('job');
+    }
+
+    if (appSelect) {
+      appSelect.addEventListener('change', async () => {
+        const toggle = document.getElementById('streamToggle');
+        // Update manual query input to reflect current selection, if empty or previously auto-set
+        if (queryInput && (!queryInput.dataset.userEdited || queryInput.value.trim() === '')) {
+          queryInput.value = this.getSelectedAppQuery();
+        }
+        if (toggle && toggle.checked) {
+          await this.stopLokiStream();
+          await this.startLokiStream();
+        }
+      });
+    }
+
+    // Tenant input removed
+
+    // Initialize manual query with selected app query
+    if (queryInput && (!queryInput.value || queryInput.value.trim() === '')) {
+      queryInput.value = this.getSelectedAppQuery();
+    }
+    // Track user edits so we don't overwrite manual input on app changes
+    if (queryInput) {
+      queryInput.addEventListener('input', () => {
+        queryInput.dataset.userEdited = 'true';
+      });
+    }
+    if (queryBtn) {
+      queryBtn.addEventListener('click', () => this.queryLokiLogs());
+    }
+
+    // Bind auto-scroll checkbox to state
+    const autoScrollEl = document.getElementById('autoScrollLogs');
+    if (autoScrollEl) {
+      // initialize from DOM
+      this.autoScrollEnabled = !!autoScrollEl.checked;
+      autoScrollEl.addEventListener('change', () => {
+        this.autoScrollEnabled = !!autoScrollEl.checked;
+      });
+    }
+
     this.testLokiConnection();
   }
   async testLokiConnection() {
@@ -2570,28 +2629,29 @@ class WatchoutServerFinderApp {
     }
   }
   async queryLokiLogs() {
-    const query = document.getElementById('logQuery').value || '{app=~".+"}';
-    const limit = parseInt(document.getElementById('logLimit').value) || 100;
-    const since = document.getElementById('logSince').value || '1h';
-
-    const queryBtn = document.getElementById('queryLogsBtn');
-    queryBtn.disabled = true;
-    queryBtn.textContent = 'Querying...';
-
+    // Manual or selected App query snapshot with defaults
+    const manual = (document.getElementById('logQuery')?.value || '').trim();
+    const query = manual || this.getSelectedAppQuery();
+    const limit = parseInt(document.getElementById('logLimit')?.value, 10) || 200; // default snapshot size
+    const since = document.getElementById('logSince')?.value || '1h';
+    // Clear previous logs so only this query's results show
+    this.clearLogViewer();
     try {
       const result = await this.api.lokiQueryLogs(this.selectedServerIp, query, limit, since);
-      
       if (result.success) {
-        this.displayLogs(result.data);
+        if (Array.isArray(result.data) && result.data.length === 0) {
+          this.showLogPlaceholder('No logs to show for the specified timeframe.');
+          this.updateLogStats();
+        } else {
+          this.displayLogs(result.data);
+        }
       } else {
         this.displayLogError(result.error);
       }
     } catch (error) {
       this.displayLogError(error.message);
-    } finally {
-      queryBtn.disabled = false;
-      queryBtn.textContent = 'Query Logs';
-    }  }
+    }
+  }
   async toggleLokiStream() {
     const streamToggle = document.getElementById('streamToggle');
     const isStreaming = streamToggle.checked;
@@ -2602,11 +2662,10 @@ class WatchoutServerFinderApp {
       await this.stopLokiStream();
     }
   }  async startLokiStream() {
-    const query = document.getElementById('logQuery').value || '{app=~".+"}';
+    const query = this.getSelectedAppQuery();
     const refreshInterval = 2000; // 2 seconds
 
     const streamToggle = document.getElementById('streamToggle');
-    const queryBtn = document.getElementById('queryLogsBtn');
     
     // Disable toggle during operation
     streamToggle.disabled = true;
@@ -2616,11 +2675,6 @@ class WatchoutServerFinderApp {
       
       if (result.success) {
         this.updateStreamStatus(true);
-        
-        // Disable query button during streaming
-        if (queryBtn) {
-          queryBtn.disabled = true;
-        }
         
         // Keep toggle checked
         streamToggle.checked = true;
@@ -2639,7 +2693,6 @@ class WatchoutServerFinderApp {
     }
   }  async stopLokiStream() {
     const streamToggle = document.getElementById('streamToggle');
-    const queryBtn = document.getElementById('queryLogsBtn');
     
     // Disable toggle during operation
     streamToggle.disabled = true;
@@ -2649,11 +2702,6 @@ class WatchoutServerFinderApp {
       
       if (result.success) {
         this.updateStreamStatus(false);
-        
-        // Re-enable query button when streaming stops
-        if (queryBtn) {
-          queryBtn.disabled = false;
-        }
         
         // Uncheck toggle
         streamToggle.checked = false;
@@ -2666,6 +2714,15 @@ class WatchoutServerFinderApp {
         streamToggle.disabled = false;
       }
     }
+  }
+
+  getSelectedAppQuery() {
+    const appSelect = document.getElementById('lokiAppSelect');
+    const value = appSelect ? appSelect.value : '__all__';
+    const label = this.lokiLabelKey || 'app';
+    if (!value || value === '__all__') return `{${label}=~".+"}`;
+    const escaped = String(value).replace(/"/g, '\\"');
+    return `{${label}="${escaped}"}`;
   }
 
   updateStreamStatus(isStreaming) {
@@ -2686,7 +2743,7 @@ class WatchoutServerFinderApp {
 
   displayLogs(logs) {
     const container = document.getElementById('logContainer');
-    const autoScroll = document.getElementById('autoScrollLogs').checked;
+    const autoScroll = this.autoScrollEnabled;
     
     // Remove placeholder if it exists
     const placeholder = container.querySelector('.log-placeholder');
@@ -2771,8 +2828,17 @@ class WatchoutServerFinderApp {
 
   clearLogViewer() {
     const container = document.getElementById('logContainer');
-    container.innerHTML = '<div class="log-placeholder">Logs cleared. Click "Query Logs" or "Start Stream" to begin.</div>';
+    this.showLogPlaceholder('Logs cleared. Enable live streaming to begin.');
     this.updateLogStats();
+    // Keep scroll at top on clear if auto-scroll disabled
+    if (!this.autoScrollEnabled) {
+      container.scrollTop = 0;
+    }
+  }
+
+  showLogPlaceholder(message) {
+    const container = document.getElementById('logContainer');
+    container.innerHTML = `<div class="log-placeholder">${this.escapeHtml(message)}</div>`;
   }
 
   exportLogs() {
@@ -2820,7 +2886,7 @@ class WatchoutServerFinderApp {
         console.log("Renderer: Setting up startup warning listener...");
         this.api.onStartupWarning((notification) => {
           console.log('Renderer: Received startup warning:', notification);
-          this.showStartupWarning(notification);
+          this.showStartupToast(notification);
         });
         
         console.log("Startup warning listeners initialized");
@@ -2831,61 +2897,77 @@ class WatchoutServerFinderApp {
       console.error('Error initializing startup warnings:', error);
     }
   }
-  showStartupWarning(notification) {
+  showStartupWarning(notification) { this.showStartupToast(notification); }
+
+  showStartupToast(notification) {
     try {
-      const modal = document.getElementById('startupWarningModal');
-      const titleElement = document.getElementById('startupWarningTitle');
-      const iconElement = document.getElementById('startupWarningIcon');
-      const messageElement = document.getElementById('startupWarningMessage');
-      const actionsContainer = document.getElementById('startupWarningActions');
+      const container = document.getElementById('toastContainer') || this.ensureToastContainer();
+      const toast = document.createElement('div');
+      const severity = notification.severity || 'warning';
+      toast.className = `toast ${severity}`;
 
-      if (!modal || !titleElement || !iconElement || !messageElement || !actionsContainer) {
-        console.error('Startup warning modal elements not found');
-        return;
-      }
+      const icon = document.createElement('div');
+      icon.className = 'toast-icon';
+      icon.textContent = notification.icon || (severity === 'warning' ? '⚠️' : 'ℹ️');
 
-      // Set modal content
-      titleElement.textContent = notification.title || 'Startup Warning';
-      iconElement.textContent = notification.icon || '⚠️';
-      messageElement.textContent = notification.message || 'An issue was detected during startup.';
+      const content = document.createElement('div');
+      content.className = 'toast-content';
+      const title = document.createElement('div');
+      title.className = 'toast-title';
+      title.textContent = notification.title || 'Startup Warning';
+      const message = document.createElement('div');
+      message.className = 'toast-message';
+      message.textContent = notification.message || 'An issue was detected during startup.';
+      content.appendChild(title);
+      content.appendChild(message);
 
-      // Clear existing actions
-      actionsContainer.innerHTML = '';
+      const close = document.createElement('button');
+      close.className = 'toast-close';
+      close.innerHTML = '&times;';
+      close.onclick = () => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 200);
+      };
 
-      // Create action buttons
-      if (notification.actions && Array.isArray(notification.actions)) {
+      // Optional primary action if provided
+      if (notification.actions && notification.actions.length > 0) {
+        const actions = document.createElement('div');
+        actions.className = 'toast-actions';
         notification.actions.forEach(action => {
-          const button = document.createElement('button');
-          button.className = `warning-action-btn ${action.primary ? 'primary' : 'secondary'}`;
-          button.textContent = action.label;
-          button.onclick = () => this.handleStartupWarningAction(action.id, notification);
-          actionsContainer.appendChild(button);
+          const btn = document.createElement('button');
+          btn.className = action.primary ? 'btn btn-primary btn-sm' : 'btn btn-sm';
+          btn.textContent = action.label;
+          btn.onclick = () => this.handleStartupWarningAction(action.id, notification);
+          actions.appendChild(btn);
         });
-      } else {
-        // Default OK button
-        const okButton = document.createElement('button');
-        okButton.className = 'warning-action-btn primary';
-        okButton.textContent = 'OK';
-        okButton.onclick = () => this.hideStartupWarning();
-        actionsContainer.appendChild(okButton);
+        content.appendChild(actions);
       }
 
-      // Show the modal with animation
-      modal.style.display = 'flex';
-      // Force reflow before adding show class for animation
-      modal.offsetHeight;
-      modal.classList.add('show');
+      toast.appendChild(icon);
+      toast.appendChild(content);
+      toast.appendChild(close);
+      container.appendChild(toast);
 
-      // Add event listener for overlay click to close
-      const overlay = modal.querySelector('.modal-overlay');
-      if (overlay) {
-        overlay.onclick = () => this.hideStartupWarning();
-      }
-
-      console.log('Startup warning modal displayed');
+      // Trigger animation
+      setTimeout(() => toast.classList.add('show'), 10);
+      // Auto-dismiss after 6s
+      setTimeout(() => {
+        if (toast.isConnected) {
+          toast.classList.remove('show');
+          setTimeout(() => toast.remove(), 200);
+        }
+      }, 6000);
     } catch (error) {
-      console.error('Error showing startup warning:', error);
+      console.error('Error showing startup toast:', error);
     }
+  }
+
+  ensureToastContainer() {
+    const el = document.createElement('div');
+    el.id = 'toastContainer';
+    el.className = 'toast-container';
+    document.body.appendChild(el);
+    return el;
   }
 
   async handleStartupWarningAction(actionId, notification) {

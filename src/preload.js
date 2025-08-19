@@ -73,6 +73,7 @@ contextBridge.exposeInMainWorld('electronAPI', {  scanForWatchoutServers: () => 
   lokiGetLabels: (serverIp) => ipcRenderer.invoke('loki-get-labels', serverIp),
   lokiGetLabelValues: (serverIp, label) => ipcRenderer.invoke('loki-get-label-values', serverIp, label),
   lokiGetCommonQueries: () => ipcRenderer.invoke('loki-get-common-queries'),
+  lokiSetTenant: (tenant) => ipcRenderer.invoke('loki-set-tenant', tenant),
 
   // Loki event listeners
   onLokiLogs: (callback) => {
