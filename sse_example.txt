@@ -1,0 +1,31 @@
+data: {"kind":"showRevision","value":{"showId":"ea94cb16-83ab-4ed1-a6fc-2ff7f38c464e","revision":0,"temporaryEdit":0}}
+
+data: {"kind":"inputs","value":{"inputs":{"masterVolume":50.0}}}
+
+data: {"kind":"playbackState","value":{"clockTime":1755615446816,"timelines":[{"id":"0","name":"Main Timeline","playbackStatus":"stop","timelineTime":null,"startDelay":null,"clockTime":null}],"freeRunningRenders":{}}}
+
+data: {"kind":"playbackState","value":{"clockTime":1755615701229,"timelines":[{"id":"0","name":"Main Timeline","playbackStatus":"pause","timelineTime":0,"startDelay":0,"clockTime":1755615701229}],"freeRunningRenders":{}}}
+
+data: {"kind":"playbackState","value":{"clockTime":1755615702433,"timelines":[{"id":"0","name":"Main Timeline","playbackStatus":"run","timelineTime":0,"startDelay":0,"clockTime":1755615702433}],"freeRunningRenders":{}}}
+
+data: {"kind":"playbackState","value":{"clockTime":1755615704863,"timelines":[{"id":"0","name":"Main Timeline","playbackStatus":"pause","timelineTime":2430,"startDelay":0,"clockTime":1755615704863}],"freeRunningRenders":{}}}
+
+data: {"kind":"playbackState","value":{"clockTime":1755615705532,"timelines":[{"id":"0","name":"Main Timeline","playbackStatus":"stop","timelineTime":null,"startDelay":null,"clockTime":null}],"freeRunningRenders":{}}}
+
+data: {"kind":"playbackState","value":{"clockTime":1755615712677,"timelines":[{"id":"0","name":"Main Timeline","playbackStatus":"pause","timelineTime":0,"startDelay":0,"clockTime":1755615712677}],"freeRunningRenders":{}}}
+
+data: {"kind":"playbackState","value":{"clockTime":1755615713254,"timelines":[{"id":"0","name":"Main Timeline","playbackStatus":"run","timelineTime":0,"startDelay":0,"clockTime":1755615713254}],"freeRunningRenders":{}}}
+
+data: {"kind":"playbackState","value":{"clockTime":1755615714188,"timelines":[{"id":"0","name":"Main Timeline","playbackStatus":"stop","timelineTime":null,"startDelay":null,"clockTime":null}],"freeRunningRenders":{}}}
+
+data: {"kind":"playbackState","value":{"clockTime":1755615893206,"timelines":[{"id":"0","name":"Main Timeline","playbackStatus":"run","timelineTime":0,"startDelay":0,"clockTime":1755615893206}],"freeRunningRenders":{}}}
+
+data: {"kind":"playbackState","value":{"clockTime":1755615894510,"timelines":[{"id":"0","name":"Main Timeline","playbackStatus":"pause","timelineTime":1304,"startDelay":0,"clockTime":1755615894510}],"freeRunningRenders":{}}}
+
+data: {"kind":"playbackState","value":{"clockTime":1755615895651,"timelines":[{"id":"0","name":"Main Timeline","playbackStatus":"stop","timelineTime":null,"startDelay":null,"clockTime":null}],"freeRunningRenders":{}}}
+
+data: {"kind":"playbackState","value":{"clockTime":1755615901998,"timelines":[{"id":"0","name":"Main Timeline","playbackStatus":"run","timelineTime":0,"startDelay":0,"clockTime":1755615901998}],"freeRunningRenders":{}}}
+
+data: {"kind":"playbackState","value":{"clockTime":1755615904922,"timelines":[{"id":"0","name":"Main Timeline","playbackStatus":"pause","timelineTime":2924,"startDelay":0,"clockTime":1755615904922}],"freeRunningRenders":{}}}
+
+data: {"kind":"playbackState","value":{"clockTime":1755615905711,"timelines":[{"id":"0","name":"Main Timeline","playbackStatus":"stop","timelineTime":null,"startDelay":null,"clockTime":null}],"freeRunningRenders":{}}}

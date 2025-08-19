@@ -20,6 +20,7 @@ class WatchoutServerFinderWebApp {
         await this.loadAppVersion();
         this.updateUI();
         this.startBackgroundScanning();
+        this.initPlaybackUpdates();
     }
 
     bindEvents() {
@@ -33,7 +34,84 @@ class WatchoutServerFinderWebApp {
         addServerButton.addEventListener('click', () => this.showAddServerDialog());
         
         this.bindCommandEvents();
-    }    bindCommandEvents() {
+    }
+    initPlaybackUpdates() {
+        try {
+            this.sseEnabled = true;
+            this.sseAutoscroll = true;
+            const liveToggle = document.getElementById('sseToggle');
+            const autoToggle = document.getElementById('sseAutoscrollToggle');
+            if (liveToggle) {
+                liveToggle.classList.add('active');
+                liveToggle.setAttribute('aria-pressed', 'true');
+                liveToggle.addEventListener('click', () => {
+                    this.sseEnabled = !this.sseEnabled;
+                    liveToggle.classList.toggle('active', this.sseEnabled);
+                    liveToggle.setAttribute('aria-pressed', this.sseEnabled ? 'true' : 'false');
+                    if (this.sseEnabled) {
+                        this.restartSSE();
+                    } else if (this.sseSource) {
+                        try { this.sseSource.close(); } catch {}
+                        this.sseSource = null;
+                        const badge = document.getElementById('sseConnectionBadge');
+                        if (badge) { badge.textContent = 'Disconnected'; badge.className = 'connection-badge'; }
+                    }
+                });
+            }
+            if (autoToggle) {
+                autoToggle.classList.add('active');
+                autoToggle.setAttribute('aria-pressed', 'true');
+                autoToggle.addEventListener('click', () => {
+                    this.sseAutoscroll = !this.sseAutoscroll;
+                    autoToggle.classList.toggle('active', this.sseAutoscroll);
+                    autoToggle.setAttribute('aria-pressed', this.sseAutoscroll ? 'true' : 'false');
+                });
+            }
+            this.restartSSE();
+        } catch (e) {
+            console.warn('Failed to initialize playback updates:', e);
+        }
+    }
+    restartSSE() {
+        if (this.sseEnabled === false) {
+            const badge = document.getElementById('sseConnectionBadge');
+            if (badge) { badge.textContent = 'Disconnected'; badge.className = 'connection-badge'; }
+            return;
+        }
+        try { if (this.sseSource) { this.sseSource.close(); this.sseSource = null; } } catch {}
+        const badge = document.getElementById('sseConnectionBadge');
+        if (badge) { badge.textContent = 'Connecting…'; badge.className = 'connection-badge'; }
+        try {
+            const url = 'http://localhost:3019/v1/sse';
+            this.sseSource = new EventSource(url);
+            this.sseSource.onopen = () => { if (badge) { badge.textContent = 'Connected'; badge.className = 'connection-badge connected'; } };
+            this.sseSource.onerror = () => { if (badge) { badge.textContent = 'Error'; badge.className = 'connection-badge error'; } };
+            this.sseSource.onmessage = (evt) => { this.addPlaybackUpdate(evt.data); };
+        } catch (e) {
+            if (badge) { badge.textContent = 'Error'; badge.className = 'connection-badge error'; }
+            console.error('SSE init failed:', e);
+        }
+    }
+    addPlaybackUpdate(data) {
+        const list = document.getElementById('playbackUpdatesList');
+        if (!list) return;
+        const placeholder = list.querySelector('.no-updates');
+        if (placeholder) placeholder.remove();
+        let text = data;
+        try { const parsed = JSON.parse(data); text = JSON.stringify(parsed, null, 2); } catch {}
+        const item = document.createElement('pre');
+        item.className = 'playback-update-item';
+        const ts = new Date().toLocaleTimeString();
+        item.innerHTML = `<span class=\"timestamp\">${ts}</span>${text}`;
+        list.prepend(item);
+        const items = list.querySelectorAll('.playback-update-item');
+        if (items.length > 50) items[items.length - 1].remove();
+        if (this.sseAutoscroll) {
+            const area = document.getElementById('playbackUpdatesArea');
+            if (area) area.scrollTop = 0;
+        }
+    }
+    bindCommandEvents() {
         // Timeline control commands
         document.getElementById('playBtn')?.addEventListener('click', (e) => {
             this.addRippleEffect(e.currentTarget);
@@ -511,6 +589,13 @@ class WatchoutServerFinderWebApp {
             
             this.addCommandResponse(result.success ? 'success' : 'error', commandType, result);
 
+            // Auto-refresh status after transport commands
+            if (result?.success && ['play', 'pause', 'stop'].includes(commandType)) {
+                setTimeout(() => {
+                    try { this.executeCommand('status'); } catch (e) { /* ignore */ }
+                }, 400);
+            }
+
         } catch (error) {
             this.addCommandResponse('error', commandType, { error: error.message });
         } finally {
@@ -764,16 +849,17 @@ class WatchoutServerFinderWebApp {
         
         if (button) {
             button.disabled = loading;
-            
-            if (loading) {
-                // Store original text and replace with loading indicator
-                button.dataset.originalText = button.textContent;
-                button.textContent = '⏳ Processing...';
-            } else {
-                // Restore original content
-                if (button.dataset.originalText) {
-                    button.textContent = button.dataset.originalText;
-                    delete button.dataset.originalText;
+            const icon = button.querySelector('.cmd-icon');
+
+            if (icon) {
+                if (loading) {
+                    if (!button.dataset.originalIconHtml) {
+                        button.dataset.originalIconHtml = icon.innerHTML;
+                    }
+                    icon.innerHTML = '⏳';
+                } else if (button.dataset.originalIconHtml) {
+                    icon.innerHTML = button.dataset.originalIconHtml;
+                    delete button.dataset.originalIconHtml;
                 }
             }
         }

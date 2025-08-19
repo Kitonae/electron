@@ -1,2 +1,6 @@
 item 1: add dark mode UI witch switch in the settings
-item 2: Custom commands shoudl have an option to save it as a shortcut. We should then add another panel below Advanced that have this shortcut as a button.
+item 2: Custom commands should have an option to save it as a shortcut. We should then add another panel below Advanced that have this shortcut as a button.
+item 3: refresh looses icon after pressed once
+item 4: add a panel that presents playback updates (SSE curl http://localhost:3019/v1/sse)
+item 5: give a playback status panel nice rolldown animation for when it appears
+item 6: combine Show information and Advanced panels into a single one. Combine the elements of these into a compact list.

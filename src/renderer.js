@@ -83,10 +83,114 @@ class WatchoutServerFinderApp {
         this.startBackgroundScanning();
       }, 500);
 
+      // Initialize playback updates (SSE)
+      this.initPlaybackUpdates();
+
       console.log('App initialization completed successfully');
     } catch (error) {
       console.error('App initialization failed:', error);
       throw error;
+    }
+  }
+  initPlaybackUpdates() {
+    try {
+      // default toggles
+      this.sseEnabled = true;
+      this.sseAutoscroll = true;
+
+      const liveToggle = document.getElementById('sseToggle');
+      const autoToggle = document.getElementById('sseAutoscrollToggle');
+      if (liveToggle) {
+        liveToggle.classList.add('active');
+        liveToggle.setAttribute('aria-pressed', 'true');
+        liveToggle.addEventListener('click', () => {
+          this.sseEnabled = !this.sseEnabled;
+          liveToggle.classList.toggle('active', this.sseEnabled);
+          liveToggle.setAttribute('aria-pressed', this.sseEnabled ? 'true' : 'false');
+          if (this.sseEnabled) {
+            this.restartSSE();
+          } else if (this.sseSource) {
+            try { this.sseSource.close(); } catch {}
+            this.sseSource = null;
+            const badge = document.getElementById('sseConnectionBadge');
+            if (badge) { badge.textContent = 'Disconnected'; badge.className = 'connection-badge'; }
+          }
+        });
+      }
+      if (autoToggle) {
+        autoToggle.classList.add('active');
+        autoToggle.setAttribute('aria-pressed', 'true');
+        autoToggle.addEventListener('click', () => {
+          this.sseAutoscroll = !this.sseAutoscroll;
+          autoToggle.classList.toggle('active', this.sseAutoscroll);
+          autoToggle.setAttribute('aria-pressed', this.sseAutoscroll ? 'true' : 'false');
+        });
+      }
+      // Start immediately
+      this.restartSSE();
+    } catch (e) {
+      console.warn('Failed to initialize playback updates:', e);
+    }
+  }
+  restartSSE() {
+    if (this.sseEnabled === false) {
+      const badge = document.getElementById('sseConnectionBadge');
+      if (badge) { badge.textContent = 'Disconnected'; badge.className = 'connection-badge'; }
+      return;
+    }
+    try {
+      if (this.sseSource) {
+        this.sseSource.close();
+        this.sseSource = null;
+      }
+    } catch {}
+    const badge = document.getElementById('sseConnectionBadge');
+    if (badge) {
+      badge.textContent = 'Connecting…';
+      badge.className = 'connection-badge';
+    }
+    try {
+      const url = 'http://localhost:3019/v1/sse';
+      this.sseSource = new EventSource(url);
+      this.sseSource.onopen = () => {
+        if (badge) { badge.textContent = 'Connected'; badge.className = 'connection-badge connected'; }
+      };
+      this.sseSource.onerror = () => {
+        if (badge) { badge.textContent = 'Error'; badge.className = 'connection-badge error'; }
+      };
+      this.sseSource.onmessage = (evt) => {
+        this.addPlaybackUpdate(evt.data);
+      };
+    } catch (e) {
+      if (badge) { badge.textContent = 'Error'; badge.className = 'connection-badge error'; }
+      console.error('SSE init failed:', e);
+    }
+  }
+  addPlaybackUpdate(data) {
+    const list = document.getElementById('playbackUpdatesList');
+    if (!list) return;
+    // Remove placeholder
+    const placeholder = list.querySelector('.no-updates');
+    if (placeholder) placeholder.remove();
+    // Parse data if JSON
+    let text = data;
+    try {
+      const parsed = JSON.parse(data);
+      text = JSON.stringify(parsed, null, 2);
+    } catch {}
+    const item = document.createElement('pre');
+    item.className = 'playback-update-item';
+    const ts = new Date().toLocaleTimeString();
+    item.innerHTML = `<span class="timestamp">${ts}</span>${text}`;
+    list.prepend(item);
+    // Trim to last 50
+    const items = list.querySelectorAll('.playback-update-item');
+    if (items.length > 50) items[items.length - 1].remove();
+
+    // Auto-scroll to newest (top) if enabled
+    if (this.sseAutoscroll) {
+      const area = document.getElementById('playbackUpdatesArea');
+      if (area) area.scrollTop = 0;
     }
   }
   bindEvents() {
@@ -1376,6 +1480,14 @@ class WatchoutServerFinderApp {
         commandType,
         result
       );
+
+      // After transport commands, auto-refresh status
+      if (result?.success && ["play", "pause", "stop"].includes(commandType)) {
+        // slight delay to let state settle on the server
+        setTimeout(() => {
+          try { this.executeCommand("status"); } catch (e) { /* noop */ }
+        }, 400);
+      }
     } catch (error) {
       this.addCommandResponse("error", commandType, { error: error.message });
     } finally {
@@ -1401,29 +1513,18 @@ class WatchoutServerFinderApp {
       button.disabled = loading;
       const icon = button.querySelector(".cmd-icon");
 
-      if (loading) {
-        // Check if this button has SVG icons
-        const svgIcon = icon.querySelector(".timeline-icon");
-
-        if (svgIcon) {
-          // Store original SVG HTML and replace with loading emoji
-          button.dataset.originalSvg = icon.innerHTML;
+      if (icon) {
+        if (loading) {
+          // Store full HTML so we can always restore (covers img/svg/emoji)
+          if (!button.dataset.originalIconHtml) {
+            button.dataset.originalIconHtml = icon.innerHTML;
+          }
           icon.innerHTML = "⏳";
         } else {
-          // Handle emoji icons (fallback for non-timeline buttons)
-          button.dataset.originalIcon = icon.textContent;
-          icon.textContent = "⏳";
-        }
-      } else {
-        // Restore original content
-        if (button.dataset.originalSvg) {
-          // Restore original SVG
-          icon.innerHTML = button.dataset.originalSvg;
-          delete button.dataset.originalSvg;
-        } else if (button.dataset.originalIcon) {
-          // Restore original emoji
-          icon.textContent = button.dataset.originalIcon;
-          delete button.dataset.originalIcon;
+          if (button.dataset.originalIconHtml) {
+            icon.innerHTML = button.dataset.originalIconHtml;
+            delete button.dataset.originalIconHtml;
+          }
         }
       }
     }

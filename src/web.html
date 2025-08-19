@@ -108,6 +108,13 @@
                                                 Stop
                                             </button>
                                         </div>
+                                        
+                                        <!-- Playback Status (moved under Timeline Control) -->
+                                        <div class="status-information-area" id="statusInformationArea" style="display: none;">
+                                            <div class="status-content" id="statusContent">
+                                                <!-- Status visualization will be inserted here -->
+                                            </div>
+                                        </div>
                                     </div>                                    <!-- Information Section -->
                                     <div class="command-section">
                                         <h3>Information</h3>
@@ -117,13 +124,6 @@
                                             <button id="showBtn" class="cmd-button cmd-button-info">💾 Save Show</button>
                                             <button id="uploadShowBtn" class="cmd-button cmd-button-info">📤 Upload Show</button>
                                         </div>
-                                        
-                                        <!-- Status Information Display -->
-                                        <div class="status-information-area" id="statusInformationArea" style="display: none;">
-                                            <div class="status-content" id="statusContent">
-                                                <!-- Status visualization will be inserted here -->
-                                            </div>
-                                        </div>
                                     </div>
 
                                     <!-- Advanced Section -->
@@ -132,6 +132,23 @@
                                         <div class="command-buttons advanced-controls">
                                             <button id="testConnectionBtn" class="cmd-button cmd-button-test">🔗 Test Connection</button>
                                             <button id="customCommandBtn" class="cmd-button cmd-button-custom">⚙️ Custom Command</button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Live Playback Updates (SSE) -->
+                                    <div class="command-section">
+                                        <h3>Live Playback Updates</h3>
+                                        <div class="playback-updates-header">
+                                            <span class="connection-badge" id="sseConnectionBadge">Disconnected</span>
+                                            <div class="playback-controls">
+                                                <button class="toggle-button active" id="sseToggle" aria-pressed="true">Live</button>
+                                                <button class="toggle-button active" id="sseAutoscrollToggle" aria-pressed="true">Auto-scroll</button>
+                                            </div>
+                                        </div>
+                                        <div class="playback-updates-area" id="playbackUpdatesArea">
+                                            <div class="playback-updates-list" id="playbackUpdatesList">
+                                                <div class="no-updates">No updates yet</div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
