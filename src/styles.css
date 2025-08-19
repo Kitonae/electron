@@ -45,7 +45,8 @@
 .title-bar-title {
     font-size: 13px;
     font-weight: 500;
-    opacity: 0.9;
+    color: #1c1c1c;
+    opacity: 1; /* ensure exact text color */
     user-select: none;
 }
 
@@ -105,6 +106,11 @@
 
 .title-bar-button.maximize-button.maximized .restore-icon {
     display: block;
+}
+
+/* Make all controls on the right side use the same dark color */
+.title-bar-right .title-bar-button {
+    color: #1c1c1c;
 }
 
 body {
@@ -253,6 +259,11 @@ body.dark-mode .server-item.selected {
     background-color: #202636;
     border-color: #4c63d2;
     box-shadow: 0 2px 12px rgba(76, 99, 210, 0.35);
+}
+
+/* Ensure the custom title bar text color isn't overridden in dark mode */
+body.dark-mode .title-bar .title-bar-title {
+    color: #1c1c1c !important;
 }
 
 .app-main {
