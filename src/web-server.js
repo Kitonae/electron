@@ -1,5 +1,6 @@
 const express = require('express');
 const path = require('path');
+const http = require('http');
 const multer = require('multer');
 const { findWatchoutServers, clearOfflineServers } = require('./network-scanner');
 const WatchoutCommands = require('./watchout-commands');
@@ -63,9 +64,62 @@ class WebServer {
       res.sendFile(path.join(__dirname, 'web.html'));
     });
 
+    // Fullscreen playback updates view
+    this.app.get('/updates', (req, res) => {
+      res.sendFile(path.join(__dirname, 'updates.html'));
+    });
+
     // Serve static assets
     this.app.use('/assets', express.static(path.join(__dirname, '..', 'assets')));
     this.app.use(express.static(__dirname)); // Serve JS, CSS files from src directory
+
+    // SSE proxy to avoid CORS issues from 3019 -> 3080
+    this.app.get('/api/sse', (req, res) => {
+      // Set SSE headers
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+      res.setHeader('X-Accel-Buffering', 'no');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.flushHeaders?.();
+
+      const upstream = http.request({
+        hostname: 'localhost',
+        port: 3019,
+        path: '/v1/sse',
+        method: 'GET',
+        headers: { Accept: 'text/event-stream' }
+      }, (up) => {
+        up.on('data', (chunk) => {
+          res.write(chunk);
+        });
+        up.on('end', () => {
+          // Notify client and end
+          res.write('event: end\n');
+          res.write('data: upstream closed\n\n');
+          res.end();
+        });
+      });
+
+      upstream.on('error', (err) => {
+        res.write(`event: error\n`);
+        res.write(`data: ${JSON.stringify({ message: err.message })}\n\n`);
+        res.end();
+      });
+
+      upstream.end();
+
+      // Heartbeat to keep proxies from closing the stream
+      const hb = setInterval(() => {
+        try { res.write(': ping\n\n'); } catch {}
+      }, 25000);
+
+      // Close upstream when client disconnects
+      req.on('close', () => {
+        try { upstream.destroy(); } catch {}
+        clearInterval(hb);
+      });
+    });
 
     // API Routes that mirror the Electron IPC handlers
     

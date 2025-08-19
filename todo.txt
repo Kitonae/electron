@@ -9,3 +9,4 @@ item 8: log viewer modal doesn't have the blur and darken effect like other moda
 item 9: add 1px border to modal windows
 item 10: add a fade in animation for new SSE events
 item 11: change all message boxes to toast notifications.
+item 12: make the command response collapsable and collapsed by default

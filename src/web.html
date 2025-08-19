@@ -136,8 +136,8 @@
                                             <span class="connection-badge" id="sseConnectionBadge">Disconnected</span>
                                             <div class="playback-controls">
                                                 <button class="toggle-button active" id="sseToggle" aria-pressed="true">Live</button>
-                                                <button class="toggle-button active" id="sseAutoscrollToggle" aria-pressed="true">Auto-scroll</button>
                                             </div>
+                                            <button class="expand-updates-btn" id="openUpdatesBtn" title="Open fullscreen updates">⛶</button>
                                         </div>
                                         <div class="playback-updates-area" id="playbackUpdatesArea">
                                             <div class="playback-updates-list" id="playbackUpdatesList">
@@ -214,8 +214,8 @@
             </div>
         </div>    </div>
 
-    <script src="api-adapter.js"></script>
-    <script src="renderer-web.js"></script>
+    <script src="api-adapter.js?v=2"></script>
+    <script src="renderer-web.js?v=2"></script>
     <script>
         // Initialize the web version
         const app = new WatchoutServerFinderWebApp();

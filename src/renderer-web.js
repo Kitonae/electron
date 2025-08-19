@@ -107,6 +107,7 @@ class WatchoutServerFinderWebApp {
             this.sseAutoscroll = true;
             const liveToggle = document.getElementById('sseToggle');
             const autoToggle = document.getElementById('sseAutoscrollToggle');
+            const openBtn = document.getElementById('openUpdatesBtn');
             if (liveToggle) {
                 liveToggle.classList.add('active');
                 liveToggle.setAttribute('aria-pressed', 'true');
@@ -133,6 +134,9 @@ class WatchoutServerFinderWebApp {
                     autoToggle.setAttribute('aria-pressed', this.sseAutoscroll ? 'true' : 'false');
                 });
             }
+            if (openBtn) {
+                openBtn.addEventListener('click', () => window.open('/updates', '_blank'));
+            }
             this.restartSSE();
         } catch (e) {
             console.warn('Failed to initialize playback updates:', e);
@@ -148,7 +152,7 @@ class WatchoutServerFinderWebApp {
         const badge = document.getElementById('sseConnectionBadge');
         if (badge) { badge.textContent = 'Connecting…'; badge.className = 'connection-badge'; }
         try {
-            const url = 'http://localhost:3019/v1/sse';
+            const url = '/api/sse';
             this.sseSource = new EventSource(url);
             this.sseSource.onopen = () => { if (badge) { badge.textContent = 'Connected'; badge.className = 'connection-badge connected'; } };
             this.sseSource.onerror = () => { if (badge) { badge.textContent = 'Error'; badge.className = 'connection-badge error'; } };
@@ -173,7 +177,10 @@ class WatchoutServerFinderWebApp {
         const items = list.querySelectorAll('.playback-update-item');
         if (items.length > 50) items[items.length - 1].remove();
         setTimeout(() => { try { item.classList.remove('appear'); } catch {} }, 600);
-        if (this.sseAutoscroll) {
+        // Determine autoscroll from button state (fallback to internal flag)
+        const autoBtn = document.getElementById('sseAutoscrollToggle');
+        const autoOn = autoBtn ? (autoBtn.classList.contains('active') || autoBtn.getAttribute('aria-pressed') === 'true') : this.sseAutoscroll;
+        if (autoOn) {
             const area = document.getElementById('playbackUpdatesArea');
             if (area) area.scrollTop = 0;
         }

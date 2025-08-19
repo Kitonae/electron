@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: file:; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; connect-src 'self' http://localhost:* ws://localhost:* http://127.0.0.1:* ws://127.0.0.1:*;">
+  <title>Playback Updates - Fullscreen</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    html, body { height: 100%; margin: 0; }
+    body { background: #0f1115; color: #e6e8eb; }
+    .fs-container { display: flex; flex-direction: column; height: 100vh; }
+    .fs-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 16px; background: #121620; border-bottom: 1px solid #222838;
+      position: sticky; top: 0; z-index: 2;
+    }
+    .fs-title { font-size: 16px; font-weight: 600; color: #e6e8eb; }
+    .fs-content { flex: 1; overflow-y: auto; padding: 12px; }
+    /* Upscale existing playback styles for readability */
+    .playback-updates-area { background: transparent; border: none; padding: 0; max-height: none; }
+    .playback-updates-list { gap: 10px; }
+    .playback-update-item { font-size: 14px; border-color: #222838; background: #151922; color: #e6e8eb; }
+    .playback-update-item .timestamp { color: #9aa7c4; font-weight: 600; margin-right: 10px; }
+    .playback-controls { gap: 10px; }
+  </style>
+</head>
+<body class="dark-mode">
+  <div class="fs-container">
+    <div class="fs-header">
+      <div class="fs-title">Playback Updates</div>
+      <div class="playback-controls">
+        <span class="connection-badge" id="sseConnectionBadge">Disconnected</span>
+        <button class="toggle-button active" id="sseToggle" aria-pressed="true">Live</button>
+        <button class="toggle-button active" id="sseAutoscrollToggle" aria-pressed="true">Auto-scroll</button>
+        <button class="toggle-button" id="clearBtn">Clear</button>
+      </div>
+    </div>
+    <div class="fs-content">
+      <div class="playback-updates-area" id="playbackUpdatesArea">
+        <div class="playback-updates-list" id="playbackUpdatesList">
+          <div class="no-updates">No updates yet</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function(){
+      let sseSource = null;
+      let sseEnabled = true;
+      let sseAutoscroll = true;
+      const badge = document.getElementById('sseConnectionBadge');
+      const list = document.getElementById('playbackUpdatesList');
+      const area = document.getElementById('playbackUpdatesArea');
+
+      function setBadge(text, cls) {
+        badge.textContent = text;
+        badge.className = 'connection-badge' + (cls ? ' ' + cls : '');
+      }
+
+      function restartSSE() {
+        if (sseSource) { try { sseSource.close(); } catch(e){} sseSource = null; }
+        if (!sseEnabled) { setBadge('Disconnected'); return; }
+        setBadge('Connecting…');
+        try {
+          sseSource = new EventSource('/api/sse');
+          sseSource.onopen = () => setBadge('Connected','connected');
+          sseSource.onerror = () => setBadge('Error','error');
+          sseSource.onmessage = (evt) => addUpdate(evt.data);
+        } catch(e) {
+          console.error('SSE init failed', e);
+          setBadge('Error','error');
+        }
+      }
+
+      function addUpdate(data) {
+        const placeholder = list.querySelector('.no-updates');
+        if (placeholder) placeholder.remove();
+        let text = data;
+        try { const parsed = JSON.parse(data); text = JSON.stringify(parsed, null, 2); } catch {}
+        const pre = document.createElement('pre');
+        pre.className = 'playback-update-item appear';
+        pre.innerHTML = `<span class="timestamp">${new Date().toLocaleTimeString()}</span>${text}`;
+        list.prepend(pre);
+        const items = list.querySelectorAll('.playback-update-item');
+        if (items.length > 200) items[items.length - 1].remove();
+        if (sseAutoscroll && area) area.scrollTop = 0;
+        setTimeout(() => { pre.classList.remove('appear'); }, 600);
+      }
+
+      // Controls
+      const liveBtn = document.getElementById('sseToggle');
+      liveBtn.addEventListener('click', () => {
+        sseEnabled = !sseEnabled;
+        liveBtn.classList.toggle('active', sseEnabled);
+        liveBtn.setAttribute('aria-pressed', sseEnabled ? 'true' : 'false');
+        restartSSE();
+      });
+      const autoBtn = document.getElementById('sseAutoscrollToggle');
+      autoBtn.addEventListener('click', () => {
+        sseAutoscroll = !sseAutoscroll;
+        autoBtn.classList.toggle('active', sseAutoscroll);
+        autoBtn.setAttribute('aria-pressed', sseAutoscroll ? 'true' : 'false');
+      });
+      document.getElementById('clearBtn').addEventListener('click', () => {
+        list.innerHTML = '<div class="no-updates">No updates yet</div>';
+      });
+
+      // Start
+      restartSSE();
+    })();
+  </script>
+</body>
+</html>

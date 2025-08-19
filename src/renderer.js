@@ -100,6 +100,7 @@ class WatchoutServerFinderApp {
 
       const liveToggle = document.getElementById('sseToggle');
       const autoToggle = document.getElementById('sseAutoscrollToggle');
+      const openBtn = document.getElementById('openUpdatesBtn');
       if (liveToggle) {
         liveToggle.classList.add('active');
         liveToggle.setAttribute('aria-pressed', 'true');
@@ -126,6 +127,15 @@ class WatchoutServerFinderApp {
           autoToggle.setAttribute('aria-pressed', this.sseAutoscroll ? 'true' : 'false');
         });
       }
+      if (openBtn) {
+        openBtn.addEventListener('click', () => {
+          try {
+            window.open('http://localhost:3080/updates', '_blank');
+          } catch (e) {
+            this.showToast({ title: 'Open Failed', message: 'Could not open updates page.', severity: 'error' });
+          }
+        });
+      }
       // Start immediately
       this.restartSSE();
     } catch (e) {
@@ -150,7 +160,9 @@ class WatchoutServerFinderApp {
       badge.className = 'connection-badge';
     }
     try {
-      const url = 'http://localhost:3019/v1/sse';
+      // Use same-origin proxy in web UI; direct port 3019 in Electron (file:// origin)
+      const isHttpOrigin = typeof window !== 'undefined' && typeof location !== 'undefined' && /^https?:/i.test(location.origin || '');
+      const url = isHttpOrigin ? '/api/sse' : 'http://localhost:3019/v1/sse';
       this.sseSource = new EventSource(url);
       this.sseSource.onopen = () => {
         if (badge) { badge.textContent = 'Connected'; badge.className = 'connection-badge connected'; }
