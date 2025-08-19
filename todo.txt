@@ -4,3 +4,8 @@ item 3: refresh looses icon after pressed once
 item 4: add a panel that presents playback updates (SSE curl http://localhost:3019/v1/sse)
 item 5: give a playback status panel nice rolldown animation for when it appears
 item 6: combine Show information and Advanced panels into a single one. Combine the elements of these into a compact list.
+item 7: clear and export button in the log viewer have light styling
+item 8: log viewer modal doesn't have the blur and darken effect like other modals
+item 9: add 1px border to modal windows
+item 10: add a fade in animation for new SSE events
+item 11: change all message boxes to toast notifications.

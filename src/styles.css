@@ -219,7 +219,7 @@ body.dark-mode .no-selection {
 }
 
 /* Modals */
-body.dark-mode .modal-content { background: #151922; color: #e6e8eb; }
+body.dark-mode .modal-content { background: #151922; color: #e6e8eb; border: 1px solid #222838; }
 body.dark-mode .modal-header { background: #121620; border-bottom: 1px solid #222838; }
 body.dark-mode .modal-header h3 { color: #e6e8eb; }
 body.dark-mode .modal-footer { background: #121620; border-top: 1px solid #222838; }
@@ -1122,6 +1122,16 @@ body.dark-mode .title-bar .title-bar-title {
     gap: 0.8rem;
 }
 
+/* Compact variant for dense tool lists */
+.command-buttons.compact {
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 0.6rem;
+}
+.command-buttons.compact .command-btn {
+    padding: 0.6rem 0.5rem;
+    min-height: 56px;
+}
+
 .command-btn {
     display: flex;
     flex-direction: column;
@@ -1672,6 +1682,7 @@ body.dark-mode .connection-status {
 
 .modal-content {
     background: white;
+    border: 1px solid #e9ecef;
     border-radius: 15px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
     max-width: 600px; /* Increased width for better spacing */
@@ -3296,6 +3307,12 @@ body.dark-mode .log-message { color: #e6e8eb; }
     padding: 4px 8px;
     border-radius: 3px;
     margin-top: 4px;
+}
+/* Dark mode: log labels */
+body.dark-mode .log-labels {
+    color: #aeb7c6;
+    background: #0f131c;
+    border: 1px solid #2a3246;
 }
 
 /* Responsive design for log viewer */

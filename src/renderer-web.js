@@ -1559,10 +1559,11 @@ class WatchoutServerFinderWebApp {
         const modal = document.createElement('div');
         modal.className = 'modal';
         modal.innerHTML = `
+            <div class="modal-overlay"></div>
             <div class="modal-content log-viewer-modal">
                 <div class="modal-header">
                     <h3>🗂️ Real-time Log Viewer - ${this.selectedServerIp}:3022</h3>
-                    <span class="close" onclick="this.closest('.modal').remove()">&times;</span>
+                    <button class="modal-close" id="closeLogViewerModal">×</button>
                 </div>
                 <div class="modal-body">
                     <div class="log-controls">
@@ -1615,8 +1616,8 @@ class WatchoutServerFinderWebApp {
                                 <span id="logTimeRange"></span>
                             </div>
                             <div class="log-actions">
-                                <button id="clearLogsBtn" class="btn btn-sm">Clear</button>
-                                <button id="exportLogsBtn" class="btn btn-sm">Export</button>
+                                <button id="clearLogsBtn" class="btn btn-sm btn-secondary">Clear</button>
+                                <button id="exportLogsBtn" class="btn btn-sm btn-primary">Export</button>
                                 <label class="checkbox-label">
                                     <input type="checkbox" id="autoScrollLogs" checked>
                                     Auto-scroll
@@ -1634,6 +1635,11 @@ class WatchoutServerFinderWebApp {
         `;
 
         document.body.appendChild(modal);
+        // Show and wire overlay close
+        modal.style.display = 'flex';
+        modal.classList.add('show');
+        const overlayEl = modal.querySelector('.modal-overlay');
+        if (overlayEl) overlayEl.addEventListener('click', () => modal.remove());
         this.setupLokiLogViewer();
     }
 
