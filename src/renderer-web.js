@@ -15,6 +15,72 @@ class WatchoutServerFinderWebApp {
         this.initializeApp();
     }
 
+    // Toast helpers (web)
+    ensureToastContainer() {
+        let el = document.getElementById('toastContainer');
+        if (!el) {
+            el = document.createElement('div');
+            el.id = 'toastContainer';
+            el.className = 'toast-container';
+            document.body.appendChild(el);
+        }
+        return el;
+    }
+    showToast({ title = 'Notice', message = '', severity = 'info', icon = '', actions = [], duration = 6000 } = {}) {
+        try {
+            const container = this.ensureToastContainer();
+            const toast = document.createElement('div');
+            toast.className = `toast ${severity}`;
+            const iconEl = document.createElement('div');
+            iconEl.className = 'toast-icon';
+            iconEl.textContent = icon || (severity === 'error' ? '⛔' : severity === 'warning' ? '⚠️' : 'ℹ️');
+            const content = document.createElement('div');
+            content.className = 'toast-content';
+            const titleEl = document.createElement('div');
+            titleEl.className = 'toast-title';
+            titleEl.textContent = title;
+            const msgEl = document.createElement('div');
+            msgEl.className = 'toast-message';
+            msgEl.textContent = message;
+            content.appendChild(titleEl);
+            content.appendChild(msgEl);
+            if (actions && actions.length) {
+                const actionsEl = document.createElement('div');
+                actionsEl.className = 'toast-actions';
+                actions.forEach(a => {
+                    const btn = document.createElement('button');
+                    btn.className = a.primary ? 'btn btn-primary btn-sm' : 'btn btn-sm';
+                    btn.textContent = a.label;
+                    btn.onclick = () => { try { a.onClick && a.onClick(); } finally { closeNow(); } };
+                    actionsEl.appendChild(btn);
+                });
+                content.appendChild(actionsEl);
+            }
+            const close = document.createElement('button');
+            close.className = 'toast-close';
+            close.innerHTML = '&times;';
+            const closeNow = () => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 200); };
+            close.onclick = closeNow;
+            toast.appendChild(iconEl);
+            toast.appendChild(content);
+            toast.appendChild(close);
+            container.appendChild(toast);
+            setTimeout(() => toast.classList.add('show'), 10);
+            if (duration > 0) setTimeout(() => { if (toast.isConnected) closeNow(); }, duration);
+        } catch (e) { console.error('showToast failed', e); }
+    }
+    confirmToast(message, { title = 'Please Confirm', okLabel = 'OK', cancelLabel = 'Cancel', severity = 'warning' } = {}) {
+        return new Promise((resolve) => {
+            this.showToast({
+                title, message, severity, duration: 0,
+                actions: [
+                    { label: cancelLabel, onClick: () => resolve(false) },
+                    { label: okLabel, primary: true, onClick: () => resolve(true) },
+                ]
+            });
+        });
+    }
+
     async initializeApp() {
         this.bindEvents();
         await this.loadAppVersion();
@@ -100,12 +166,13 @@ class WatchoutServerFinderWebApp {
         let text = data;
         try { const parsed = JSON.parse(data); text = JSON.stringify(parsed, null, 2); } catch {}
         const item = document.createElement('pre');
-        item.className = 'playback-update-item';
+        item.className = 'playback-update-item appear';
         const ts = new Date().toLocaleTimeString();
         item.innerHTML = `<span class=\"timestamp\">${ts}</span>${text}`;
         list.prepend(item);
         const items = list.querySelectorAll('.playback-update-item');
         if (items.length > 50) items[items.length - 1].remove();
+        setTimeout(() => { try { item.classList.remove('appear'); } catch {} }, 600);
         if (this.sseAutoscroll) {
             const area = document.getElementById('playbackUpdatesArea');
             if (area) area.scrollTop = 0;
@@ -245,7 +312,7 @@ class WatchoutServerFinderWebApp {
         try {
             const fileInput = document.getElementById('uploadShowFile');
             if (!fileInput.files.length) {
-                alert('Please select a file to upload');
+                this.showToast({ title: 'No File Selected', message: 'Please select a file to upload.', severity: 'warning' });
                 return;
             }
 
@@ -254,12 +321,12 @@ class WatchoutServerFinderWebApp {
             const fileExtension = fileName.substring(fileName.lastIndexOf('.')).toLowerCase();
 
             if (!fileExtension.match(/\.(watch|json)$/)) {
-                alert('Please select a .watch or .json file');
+                this.showToast({ title: 'Invalid File', message: 'Please select a .watch or .json file.', severity: 'warning' });
                 return;
             }
 
-            const showName = prompt('Enter show name (or leave empty to use filename):') || 
-                            fileName.substring(0, fileName.lastIndexOf('.'));
+            const showName = fileName.substring(0, fileName.lastIndexOf('.'));
+            this.showToast({ title: 'Using Show Name', message: `Using "${showName}" as show name.`, severity: 'info', duration: 3000 });
 
             setCommandButtonLoading('uploadShow', true);            if (fileExtension === '.json') {
                 // Handle JSON files with /v0/show endpoint
@@ -986,7 +1053,7 @@ class WatchoutServerFinderWebApp {
             
             // Validate IP address
             if (!this.isValidIpAddress(serverIp)) {
-                alert('Please enter a valid IP address (e.g., 192.168.1.100)');
+            this.showToast({ title: 'Invalid IP Address', message: 'Please enter a valid IP address (e.g., 192.168.1.100).', severity: 'warning' });
                 return;
             }
             
@@ -1041,7 +1108,7 @@ class WatchoutServerFinderWebApp {
             
         } catch (error) {
             console.error('Error adding manual server:', error);
-            alert('Failed to add server. Please check the details and try again.');
+            this.showToast({ title: 'Add Server Failed', message: 'Please check the details and try again.', severity: 'error' });
         }
     }
 
@@ -1104,7 +1171,7 @@ class WatchoutServerFinderWebApp {
             
             // Validate IP address
             if (!this.isValidIpAddress(serverIp)) {
-                alert('Please enter a valid IP address (e.g., 192.168.1.100)');
+            this.showToast({ title: 'Invalid IP Address', message: 'Please enter a valid IP address (e.g., 192.168.1.100).', severity: 'warning' });
                 return;
             }
             
@@ -1149,11 +1216,11 @@ class WatchoutServerFinderWebApp {
                 console.log('Manual server updated successfully:', updatedServerData);
             } else {
                 console.error('Failed to update manual server:', result.error);
-                alert('Failed to update server: ' + result.error);
+                this.showToast({ title: 'Update Failed', message: String(result.error || 'Unknown error'), severity: 'error' });
             }
         } catch (error) {
             console.error('Error updating manual server:', error);
-            alert('Failed to update server. Please check the details and try again.');
+            this.showToast({ title: 'Update Failed', message: 'Please check the details and try again.', severity: 'error' });
         }
     }
 
@@ -1167,9 +1234,8 @@ class WatchoutServerFinderWebApp {
 
         // Confirm removal
         const serverName = server.hostname || server.ip;
-        if (!confirm(`Are you sure you want to remove the manual server "${serverName}"?`)) {
-            return;
-        }
+        const confirmed = await this.confirmToast(`Are you sure you want to remove the manual server "${serverName}"?`, { title: 'Remove Server', okLabel: 'Remove', cancelLabel: 'Cancel', severity: 'warning' });
+        if (!confirmed) return;
 
         try {
             // Remove from backend
@@ -1193,11 +1259,11 @@ class WatchoutServerFinderWebApp {
                 this.updateScanStatus(`Removed manual server: ${serverName}`);
                 console.log('Manual server removed successfully:', serverName);            } else {
                 console.error('Failed to remove manual server:', result.error);
-                alert('Failed to remove server: ' + result.error);
+                this.showToast({ title: 'Remove Failed', message: String(result.error || 'Unknown error'), severity: 'error' });
             }
         } catch (error) {
             console.error('Error removing manual server:', error);
-            alert('Failed to remove server. Please try again.');
+            this.showToast({ title: 'Remove Failed', message: 'Failed to remove server. Please try again.', severity: 'error' });
         }
     }    // Add ripple effect animation to buttons (no-op to remove visual effect)
     addRippleEffect(button) {
@@ -1529,7 +1595,13 @@ class WatchoutServerFinderWebApp {
         }
 
         // Show the status information area
+        // Show; animate only the first time
         statusInformationArea.style.display = 'block';
+        if (!statusInformationArea.dataset.animPlayed) {
+            statusInformationArea.classList.add('roll-in');
+            statusInformationArea.dataset.animPlayed = '1';
+            setTimeout(() => { try { statusInformationArea.classList.remove('roll-in'); } catch {} }, 600);
+        }
 
         // Generate the status visualization
         const statusVisualization = this.renderStatusVisualization(statusResult);
@@ -1551,7 +1623,7 @@ class WatchoutServerFinderWebApp {
     
     showLokiLogViewer() {
         if (!this.selectedServerIp) {
-            alert('Please select a server first');
+            this.showToast({ title: 'No Server Selected', message: 'Select a server first.', severity: 'info' });
             return;
         }
 
@@ -1924,7 +1996,7 @@ class WatchoutServerFinderWebApp {
         const logEntries = container.querySelectorAll('.log-entry:not(.log-error)');
         
         if (logEntries.length === 0) {
-            alert('No logs to export');
+            this.showToast({ title: 'No Logs', message: 'There are no logs to export yet.', severity: 'info' });
             return;
         }
 

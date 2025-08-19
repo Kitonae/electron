@@ -1240,6 +1240,18 @@ body.dark-mode .toggle-button.active { background: #202636; border-color: #4c63d
     padding: 6px 8px;
 }
 
+/* Fade-in animation for new SSE events */
+@keyframes sseFadeIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.playback-update-item.appear {
+    animation: sseFadeIn 180ms ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+    .playback-update-item.appear { animation: none; }
+}
+
 .playback-update-item .timestamp {
     color: #888;
     margin-right: 6px;
@@ -2341,7 +2353,7 @@ body.dark-mode .status-indicator-text {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    z-index: 9999;
+    z-index: 12000; /* Above .modal (10000) */
     pointer-events: none; /* allow clicks through gaps */
 }
 
@@ -2423,13 +2435,27 @@ body.dark-mode ::-webkit-scrollbar-thumb:hover {
 }
 
 .toast .toast-close {
-    background: transparent;
+    background: none;
     border: none;
-    color: #888;
-    font-size: 1rem;
+    color: #6c757d;
+    font-size: 1.2rem;
     cursor: pointer;
-    padding: 2px 6px;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
 }
+.toast .toast-close:hover {
+    background: #e9ecef;
+    color: #333;
+}
+/* Dark mode: toast close button to match modal */
+body.dark-mode .toast .toast-close { color: #aeb7c6; }
+body.dark-mode .toast .toast-close:hover { background: #2a3246; color: #fff; }
 
 .toast.warning { border-left-color: #f0ad4e; }
 .toast.info { border-left-color: #17a2b8; }
@@ -2512,6 +2538,17 @@ body.dark-mode ::-webkit-scrollbar-thumb:hover {
     background: #f8f9fa;
     border: 1px solid #e9ecef;
     border-radius: 8px;
+    overflow: hidden; /* enable roll-down animation clipping */
+}
+
+/* Roll-down appearance animation for playback status */
+@keyframes statusRollDown {
+    0% { opacity: 0; transform: scaleY(0.95); }
+    100% { opacity: 1; transform: scaleY(1); }
+}
+.status-information-area.roll-in {
+    transform-origin: top;
+    animation: statusRollDown 500ms ease-out;
 }
 
 /* Dark mode: playback status panel (status visualization) */

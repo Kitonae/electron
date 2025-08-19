@@ -371,8 +371,8 @@ class ApiAdapter {
         if (this.isElectron) {
             return window.electronAPI.testStartupWarning();
         } else {
-            // For web version, just show a browser alert
-            alert('Test startup warning (web version)');
+            // For web version, no blocking alerts
+            console.log('Test startup warning (web version)');
             return { success: true };
         }
     }

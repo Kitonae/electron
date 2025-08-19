@@ -179,7 +179,7 @@ class WatchoutServerFinderApp {
       text = JSON.stringify(parsed, null, 2);
     } catch {}
     const item = document.createElement('pre');
-    item.className = 'playback-update-item';
+    item.className = 'playback-update-item appear';
     const ts = new Date().toLocaleTimeString();
     item.innerHTML = `<span class="timestamp">${ts}</span>${text}`;
     list.prepend(item);
@@ -192,6 +192,8 @@ class WatchoutServerFinderApp {
       const area = document.getElementById('playbackUpdatesArea');
       if (area) area.scrollTop = 0;
     }
+    // Optionally remove the appear class after animation completes
+    setTimeout(() => { try { item.classList.remove('appear'); } catch {} }, 600);
   }
   bindEvents() {
     try {
@@ -2201,7 +2203,7 @@ class WatchoutServerFinderApp {
 
       // Validate IP address
       if (!this.isValidIpAddress(serverIp)) {
-        alert("Please enter a valid IP address (e.g., 192.168.1.100)");
+        this.showToast({ title: 'Invalid IP Address', message: 'Please enter a valid IP address (e.g., 192.168.1.100).', severity: 'warning' });
         return;
       }
 
@@ -2273,7 +2275,7 @@ class WatchoutServerFinderApp {
       console.log("Manual server added successfully:", manualServer);
     } catch (error) {
       console.error("Error adding manual server:", error);
-      alert("Failed to add server. Please check the details and try again.");
+      this.showToast({ title: 'Add Server Failed', message: 'Please check the details and try again.', severity: 'error' });
     }
   }
   async updateManualServer(serverId) {
@@ -2283,7 +2285,7 @@ class WatchoutServerFinderApp {
 
       // Validate IP address
       if (!this.isValidIpAddress(serverIp)) {
-        alert("Please enter a valid IP address (e.g., 192.168.1.100)");
+        this.showToast({ title: 'Invalid IP Address', message: 'Please enter a valid IP address (e.g., 192.168.1.100).', severity: 'warning' });
         return;
       }
 
@@ -2333,11 +2335,11 @@ class WatchoutServerFinderApp {
         console.log("Manual server updated successfully:", updatedServerData);
       } else {
         console.error("Failed to update manual server:", result.error);
-        alert("Failed to update server: " + result.error);
+        this.showToast({ title: 'Update Failed', message: String(result.error || 'Unknown error'), severity: 'error' });
       }
     } catch (error) {
       console.error("Error updating manual server:", error);
-      alert("Failed to update server. Please check the details and try again.");
+      this.showToast({ title: 'Update Failed', message: 'Please check the details and try again.', severity: 'error' });
     }
   }
 
@@ -2408,13 +2410,11 @@ class WatchoutServerFinderApp {
 
     // Confirm removal
     const serverName = server.hostname || server.ip;
-    if (
-      !confirm(
-        `Are you sure you want to remove the manual server "${serverName}"?`
-      )
-    ) {
-      return;
-    }
+    const confirmed = await this.confirmToast(
+      `Are you sure you want to remove the manual server "${serverName}"?`,
+      { title: 'Remove Server', okLabel: 'Remove', cancelLabel: 'Cancel', severity: 'warning' }
+    );
+    if (!confirmed) return;
 
     try {
       // Remove from backend
@@ -2439,11 +2439,11 @@ class WatchoutServerFinderApp {
         console.log("Manual server removed successfully:", serverName);
       } else {
         console.error("Failed to remove manual server:", result.error);
-        alert("Failed to remove server: " + result.error);
+        this.showToast({ title: 'Remove Failed', message: String(result.error || 'Unknown error'), severity: 'error' });
       }
     } catch (error) {
       console.error("Error removing manual server:", error);
-      alert("Failed to remove server. Please try again.");
+      this.showToast({ title: 'Remove Failed', message: 'Failed to remove server. Please try again.', severity: 'error' });
     }
   }
 
@@ -2451,7 +2451,7 @@ class WatchoutServerFinderApp {
     showLokiLogViewer() {
     // Enhanced server selection validation
     if (!this.selectedServerIp) {
-      alert('Please select a server first before opening the log viewer.');
+      this.showToast({ title: 'No Server Selected', message: 'Select a server first before opening the log viewer.', severity: 'info' });
       return;
     }
     
@@ -2461,7 +2461,7 @@ class WatchoutServerFinderApp {
     );
     
     if (!selectedServer) {
-      alert('Selected server not found. Please refresh the server list and try again.');
+      this.showToast({ title: 'Server Not Found', message: 'Refresh the server list and try again.', severity: 'error' });
       return;
     }
     
@@ -2995,7 +2995,7 @@ class WatchoutServerFinderApp {
     const logEntries = container.querySelectorAll('.log-entry:not(.log-error)');
     
     if (logEntries.length === 0) {
-      alert('No logs to export');
+      this.showToast({ title: 'No Logs', message: 'There are no logs to export yet.', severity: 'info' });
       return;
     }
 
@@ -3117,6 +3117,73 @@ class WatchoutServerFinderApp {
     el.className = 'toast-container';
     document.body.appendChild(el);
     return el;
+  }
+
+  // Generic toast helper
+  showToast({ title = 'Notice', message = '', severity = 'info', icon = '', actions = [], duration = 6000 } = {}) {
+    try {
+      const container = document.getElementById('toastContainer') || this.ensureToastContainer();
+      const toast = document.createElement('div');
+      toast.className = `toast ${severity}`;
+
+      const iconEl = document.createElement('div');
+      iconEl.className = 'toast-icon';
+      iconEl.textContent = icon || (severity === 'error' ? '⛔' : severity === 'warning' ? '⚠️' : 'ℹ️');
+
+      const content = document.createElement('div');
+      content.className = 'toast-content';
+      const titleEl = document.createElement('div');
+      titleEl.className = 'toast-title';
+      titleEl.textContent = title;
+      const msgEl = document.createElement('div');
+      msgEl.className = 'toast-message';
+      msgEl.textContent = message;
+      content.appendChild(titleEl);
+      content.appendChild(msgEl);
+
+      if (actions && actions.length) {
+        const actionsEl = document.createElement('div');
+        actionsEl.className = 'toast-actions';
+        actions.forEach(a => {
+          const btn = document.createElement('button');
+          btn.className = a.primary ? 'btn btn-primary btn-sm' : 'btn btn-sm';
+          btn.textContent = a.label;
+          btn.onclick = () => { try { a.onClick && a.onClick(); } finally { closeNow(); } };
+          actionsEl.appendChild(btn);
+        });
+        content.appendChild(actionsEl);
+      }
+
+      const close = document.createElement('button');
+      close.className = 'toast-close';
+      close.innerHTML = '&times;';
+      const closeNow = () => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 200); };
+      close.onclick = closeNow;
+
+      toast.appendChild(iconEl);
+      toast.appendChild(content);
+      toast.appendChild(close);
+      container.appendChild(toast);
+      setTimeout(() => toast.classList.add('show'), 10);
+      if (duration > 0) setTimeout(() => { if (toast.isConnected) closeNow(); }, duration);
+    } catch (e) {
+      console.error('showToast failed', e);
+    }
+  }
+
+  confirmToast(message, { title = 'Please Confirm', okLabel = 'OK', cancelLabel = 'Cancel', severity = 'warning' } = {}) {
+    return new Promise((resolve) => {
+      this.showToast({
+        title,
+        message,
+        severity,
+        actions: [
+          { label: cancelLabel, onClick: () => resolve(false) },
+          { label: okLabel, primary: true, onClick: () => resolve(true) },
+        ],
+        duration: 0,
+      });
+    });
   }
 
   async handleStartupWarningAction(actionId, notification) {
@@ -3658,8 +3725,13 @@ class WatchoutServerFinderApp {
       return;
     }
 
-    // Show the status information area
+    // Show the status information area; animate only the first time
     statusInformationArea.style.display = 'block';
+    if (!statusInformationArea.dataset.animPlayed) {
+      statusInformationArea.classList.add('roll-in');
+      statusInformationArea.dataset.animPlayed = '1';
+      setTimeout(() => { try { statusInformationArea.classList.remove('roll-in'); } catch {} }, 600);
+    }
 
     // Generate the status visualization
     const statusVisualization = this.renderStatusVisualization(statusResult);
