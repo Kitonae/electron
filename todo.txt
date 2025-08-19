@@ -1,2 +1,2 @@
 item 1: add dark mode UI witch switch in the settings
-item 2: Add ability
+item 2: Custom commands shoudl have an option to save it as a shortcut. We should then add another panel below Advanced that have this shortcut as a button.

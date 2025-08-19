@@ -27,9 +27,9 @@ class StartupChecker {
                 warnings.push({
                     type: 'watchout-running',
                     title: 'Watchout Software Detected',
-                    message: `The following Watchout processes are running: ${watchoutCheck.processes.join(', ')}. This may interfere with server discovery. Consider closing Watchout before continuing.`,
+                    message: 'Watchout running, using existing director for discovery to avoid conflicts',
                     processes: watchoutCheck.processes,
-                    severity: 'warning'
+                    severity: 'info'
                 });
             }            // Check if web server port is occupied
             this.logger.debug('Checking web server port', { port: webServerPort });

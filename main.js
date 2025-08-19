@@ -696,13 +696,13 @@ ipcMain.handle('test-startup-warning', async () => {
     const testNotification = {
       type: 'watchout-running',
       title: 'TEST: Watchout Software Detected',
-      message: 'This is a test warning. The following Watchout processes are running: TestProcess1, TestProcess2. This may interfere with the WATCHOUT Assistant.',
+      message: 'Watchout running, using existing director for discovery to avoid conflicts',
       icon: '⚠️',
       actions: [
         { id: 'refresh', label: 'Refresh Check', primary: true },
         { id: 'continue', label: 'Continue Anyway', secondary: true }
       ],
-      severity: 'warning'
+      severity: 'info'
     };
     
     console.log('Sending test startup warning to renderer...');

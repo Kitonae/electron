@@ -2743,6 +2743,7 @@ class WatchoutServerFinderApp {
 
   displayLogs(logs) {
     const container = document.getElementById('logContainer');
+    if (!container) return;
     const autoScroll = this.autoScrollEnabled;
     
     // Remove placeholder if it exists
@@ -2792,6 +2793,7 @@ class WatchoutServerFinderApp {
 
   displayLogError(error) {
     const container = document.getElementById('logContainer');
+    if (!container) return;
     const errorElement = document.createElement('div');
     errorElement.className = 'log-entry log-error';
     errorElement.innerHTML = `
@@ -2807,6 +2809,7 @@ class WatchoutServerFinderApp {
 
   updateLogStats() {
     const container = document.getElementById('logContainer');
+    if (!container) return;
     const logEntries = container.querySelectorAll('.log-entry:not(.log-error)');
     const countElement = document.getElementById('logCount');
     
@@ -2828,6 +2831,7 @@ class WatchoutServerFinderApp {
 
   clearLogViewer() {
     const container = document.getElementById('logContainer');
+    if (!container) return;
     this.showLogPlaceholder('Logs cleared. Enable live streaming to begin.');
     this.updateLogStats();
     // Keep scroll at top on clear if auto-scroll disabled
@@ -2838,6 +2842,7 @@ class WatchoutServerFinderApp {
 
   showLogPlaceholder(message) {
     const container = document.getElementById('logContainer');
+    if (!container) return;
     container.innerHTML = `<div class="log-placeholder">${this.escapeHtml(message)}</div>`;
   }
 
@@ -3046,9 +3051,9 @@ class WatchoutServerFinderApp {
         icon: '⚠️',
         actions: [
           { id: 'refresh', label: 'Refresh Check', primary: true },
-          { id: 'continue', label: 'Continue Anyway', secondary: true }
+          { id: 'continue', label: 'Continue', secondary: true }
         ],
-        severity: 'warning'
+        severity: 'info'
       };
     }
 
